@@ -5,37 +5,50 @@ class DashboardRepository {
     async buscarResumo(empresaId) {
 
         const [
-            produtos,
+
             clientes,
+
+            produtos,
+
             categorias,
+
             orcamentos,
-            valorOrcamentos,
-            estoqueBaixo,
+
+            variacoes,
+
+            totalOrcamentos,
+
             ultimosOrcamentos,
-            produtosEstoqueBaixo
+
+            estoqueBaixoProdutos
+
         ] = await Promise.all([
 
-            prisma.produto.count({
-                where: {
-                    empresaId
-                }
+            prisma.cliente.count({
+                where: { empresaId }
             }),
 
-            prisma.cliente.count({
-                where: {
-                    empresaId
-                }
+            prisma.produto.count({
+                where: { empresaId }
             }),
 
             prisma.categoriaProduto.count({
-                where: {
-                    empresaId
-                }
+                where: { empresaId }
             }),
 
             prisma.orcamento.count({
+                where: { empresaId }
+            }),
+
+            prisma.variacaoProduto.findMany({
                 where: {
-                    empresaId
+                    produto: {
+                        empresaId
+                    }
+                },
+                select: {
+                    estoqueAtual: true,
+                    estoqueMinimo: true
                 }
             }),
 
@@ -48,67 +61,58 @@ class DashboardRepository {
                 }
             }),
 
-            prisma.variacaoProduto.count({
-                where: {
-                    estoqueAtual: {
-                        lte: 5
-                    }
-                }
-            }),
-
             prisma.orcamento.findMany({
-
                 where: {
                     empresaId
                 },
-
                 include: {
                     cliente: true
                 },
-
                 orderBy: {
                     criadoEm: "desc"
                 },
-
                 take: 5
-
             }),
 
             prisma.variacaoProduto.findMany({
-
                 where: {
-                    estoqueAtual: {
-                        lte: 5
+                    produto: {
+                        empresaId
                     }
                 },
-
                 include: {
                     produto: true
                 },
-
+                orderBy: {
+                    estoqueAtual: "asc"
+                },
                 take: 5
-
             })
 
         ]);
 
+        const estoqueBaixo = variacoes.filter(v =>
+            Number(v.estoqueAtual) <= Number(v.estoqueMinimo)
+        ).length;
+
         return {
 
-            produtos,
-
             clientes,
+
+            produtos,
 
             categorias,
 
             orcamentos,
 
-            valorOrcamentos: valorOrcamentos._sum.total ?? 0,
-
             estoqueBaixo,
+
+            valorTotal:
+                Number(totalOrcamentos._sum.total || 0),
 
             ultimosOrcamentos,
 
-            produtosEstoqueBaixo
+            estoqueBaixoProdutos
 
         };
 

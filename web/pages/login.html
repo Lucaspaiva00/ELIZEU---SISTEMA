@@ -16,58 +16,215 @@
 
 </head>
 
-<body class="login-body">
+<body>
 
     <div class="login-container">
 
-        <div class="login-card">
+        <div class="login-left">
 
-            <div class="login-header">
+            <div class="overlay"></div>
 
-                <h1>ERP Elizeu</h1>
+            <div class="left-content">
 
-                <p>Faça login para continuar</p>
+                <div class="brand">
 
-            </div>
+                    <i class="fas fa-cubes"></i>
 
-            <form id="formLogin">
-
-                <div class="form-group">
-
-                    <label>E-mail</label>
-
-                    <input type="email" id="email" class="form-control" placeholder="Digite seu e-mail" required>
+                    <h1>ERP Elizeu</h1>
 
                 </div>
 
-                <div class="form-group">
+                <h2>
+                    Gestão completa para sua empresa.
+                </h2>
 
-                    <label>Senha</label>
+                <p>
 
-                    <input type="password" id="senha" class="form-control" placeholder="Digite sua senha" required>
+                    Controle clientes, produtos, estoque,
+                    orçamentos e acompanhe toda a operação
+                    da empresa em um único sistema.
+
+                </p>
+
+                <div class="features">
+
+                    <div>
+
+                        <i class="fas fa-check-circle"></i>
+
+                        Gestão de Clientes
+
+                    </div>
+
+                    <div>
+
+                        <i class="fas fa-check-circle"></i>
+
+                        Produtos e Variações
+
+                    </div>
+
+                    <div>
+
+                        <i class="fas fa-check-circle"></i>
+
+                        Controle de Estoque
+
+                    </div>
+
+                    <div>
+
+                        <i class="fas fa-check-circle"></i>
+
+                        Orçamentos Inteligentes
+
+                    </div>
 
                 </div>
-
-                <button type="submit" class="btn btn-primary btn-block">
-
-                    <i class="fas fa-sign-in-alt"></i>
-
-                    Entrar
-
-                </button>
-
-            </form>
-
-            <div id="mensagem" class="mt-2 text-center text-danger">
 
             </div>
 
         </div>
+        <div class="login-right">
+
+            <div class="login-card">
+
+                <div class="login-header">
+
+                    <div class="logo-circle">
+
+                        <i class="fas fa-cubes"></i>
+
+                    </div>
+
+                    <h2>Bem-vindo!</h2>
+
+                    <p>
+                        Faça login para acessar o ERP Elizeu.
+                    </p>
+
+                </div>
+
+                <form id="formLogin">
+
+                    <div class="form-group">
+
+                        <label>E-mail</label>
+
+                        <div class="input-icon">
+
+                            <i class="fas fa-envelope"></i>
+
+                            <input type="email" id="email" placeholder="Digite seu e-mail" autocomplete="username"
+                                required>
+
+                        </div>
+
+                    </div>
+
+                    <div class="form-group">
+
+                        <label>Senha</label>
+
+                        <div class="input-icon">
+
+                            <i class="fas fa-lock"></i>
+
+                            <input type="password" id="senha" placeholder="Digite sua senha"
+                                autocomplete="current-password" required>
+
+                            <button type="button" class="toggle-password" onclick="alternarSenha()">
+
+                                <i id="iconeSenha" class="fas fa-eye">
+                                </i>
+
+                            </button>
+
+                        </div>
+
+                    </div>
+
+                    <div class="login-options">
+
+                        <label class="remember-me">
+
+                            <input type="checkbox" id="lembrar">
+
+                            <span>
+                                Lembrar acesso
+                            </span>
+
+                        </label>
+
+                    </div>
+
+                    <button id="btnEntrar" type="submit" class="btn-login">
+
+                        <i class="fas fa-right-to-bracket"></i>
+
+                        Entrar no Sistema
+
+                    </button>
+                    <div id="mensagem" class="login-message"></div>
+                </form>
+
+                <div class="login-footer">
+
+                    <small>
+
+                        ERP Elizeu • Versão 1.0
+
+                    </small>
+
+                    <small>
+
+                        Desenvolvido por
+                        <strong>Paiva Tech</strong>
+
+                    </small>
+
+                </div>
+
+            </div>
+
+        </div>
+    </div>
 
     </div>
 
     <script src="../js/api.js"></script>
+    <script src="../js/utils.js"></script>
     <script src="../js/login.js"></script>
+
+    <script>
+
+        function alternarSenha() {
+
+            const senha = document.getElementById("senha");
+
+            const icone = document.getElementById("iconeSenha");
+
+            if (senha.type === "password") {
+
+                senha.type = "text";
+
+                icone.classList.remove("fa-eye");
+
+                icone.classList.add("fa-eye-slash");
+
+            } else {
+
+                senha.type = "password";
+
+                icone.classList.remove("fa-eye-slash");
+
+                icone.classList.add("fa-eye");
+
+            }
+
+        }
+
+    </script>
 
 </body>
 

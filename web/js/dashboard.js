@@ -1,47 +1,22 @@
 async function carregarDashboard() {
 
-    try {
+    const resposta = await get("/dashboard");
 
-        const resposta = await get("/dashboard");
+    if (!resposta.sucesso) return;
 
-        if (!resposta.sucesso) {
-            throw new Error("Erro ao carregar dashboard.");
-        }
+    const r = resposta.resumo;
 
-        const resumo = resposta.resumo;
+    document.getElementById("kpiClientes").innerHTML = r.clientes;
+    document.getElementById("kpiProdutos").innerHTML = r.produtos;
+    document.getElementById("kpiCategorias").innerHTML = r.categorias;
+    document.getElementById("kpiOrcamentos").innerHTML = r.orcamentos;
+    document.getElementById("kpiValor").innerHTML = moeda(r.valorTotal);
+    document.getElementById("kpiEstoque").innerHTML = r.estoqueBaixo;
 
-        document.getElementById("kpiClientes").innerText =
-            resumo.clientes;
-
-        document.getElementById("kpiProdutos").innerText =
-            resumo.produtos;
-
-        document.getElementById("kpiCategorias").innerText =
-            resumo.categorias;
-
-        document.getElementById("kpiOrcamentos").innerText =
-            resumo.orcamentos;
-
-        document.getElementById("kpiValor").innerText =
-            moeda(resumo.valorOrcamentos);
-
-        document.getElementById("kpiEstoque").innerText =
-            resumo.estoqueBaixo;
-
-        preencherUltimosOrcamentos(resumo.ultimosOrcamentos);
-
-        preencherEstoqueBaixo(resumo.produtosEstoqueBaixo);
-
-    } catch (erro) {
-
-        console.error(erro);
-
-        mostrarMensagem("Erro ao carregar dashboard.");
-
-    }
+    preencherUltimosOrcamentos(r.ultimosOrcamentos);
+    preencherEstoqueBaixo(r.estoqueBaixoProdutos);
 
 }
-
 function preencherUltimosOrcamentos(lista) {
 
     const tbody = document.getElementById("tabelaOrcamentos");

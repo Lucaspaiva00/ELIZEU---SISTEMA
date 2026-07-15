@@ -28,13 +28,37 @@ async function carregarClientes() {
 
 function configurarEventosFormulario() {
 
-    document
-        .getElementById("cep")
-        .addEventListener("blur", buscarCep);
+    const campoCep = document.getElementById("cep");
 
-    document
-        .getElementById("cpfCnpj")
-        .addEventListener("blur", buscarCnpj);
+    campoCep.addEventListener("blur", buscarCep);
+
+    campoCep.addEventListener("input", (e) => {
+
+        const cep = e.target.value.replace(/\D/g, "");
+
+        if (cep.length === 8) {
+
+            buscarCep();
+
+        }
+
+    });
+
+    const campoCnpj = document.getElementById("cpfCnpj");
+
+    campoCnpj.addEventListener("blur", buscarCnpj);
+
+    campoCnpj.addEventListener("input", (e) => {
+
+        const cnpj = e.target.value.replace(/\D/g, "");
+
+        if (cnpj.length === 14) {
+
+            buscarCnpj();
+
+        }
+
+    });
 
 }
 
@@ -46,34 +70,50 @@ async function buscarCep() {
         .replace(/\D/g, "");
 
     if (cep.length !== 8) {
-
         return;
-
     }
 
     try {
 
-        const resposta = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+        const resposta = await fetch(
+            `https://viacep.com.br/ws/${cep}/json/`
+        );
 
         const endereco = await resposta.json();
 
         if (endereco.erro) {
 
+            mostrarMensagem("CEP não encontrado.");
+
             return;
 
         }
 
-        preencherCampo("endereco", endereco.logradouro);
+        preencherCampo(
+            "endereco",
+            endereco.logradouro || ""
+        );
 
-        preencherCampo("bairro", endereco.bairro);
+        preencherCampo(
+            "bairro",
+            endereco.bairro || ""
+        );
 
-        preencherCampo("cidade", endereco.localidade);
+        preencherCampo(
+            "cidade",
+            endereco.localidade || ""
+        );
 
-        preencherCampo("estado", endereco.uf);
+        preencherCampo(
+            "estado",
+            endereco.uf || ""
+        );
 
     } catch (erro) {
 
         console.error(erro);
+
+        mostrarMensagem("Erro ao consultar CEP.");
 
     }
 
@@ -81,14 +121,10 @@ async function buscarCep() {
 
 async function buscarCnpj() {
 
-    const tipo = document
-        .getElementById("tipoPessoa")
-        .value;
+    const tipoPessoa = document.getElementById("tipoPessoa").value;
 
-    if (tipo !== "JURIDICA") {
-
+    if (tipoPessoa !== "JURIDICA") {
         return;
-
     }
 
     const cnpj = document
@@ -97,16 +133,18 @@ async function buscarCnpj() {
         .replace(/\D/g, "");
 
     if (cnpj.length !== 14) {
-
         return;
-
     }
 
     try {
 
-        const resposta = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`);
+        const resposta = await fetch(
+            `https://brasilapi.com.br/api/cnpj/v1/${cnpj}`
+        );
 
         if (!resposta.ok) {
+
+            mostrarMensagem("CNPJ não encontrado.");
 
             return;
 
@@ -114,29 +152,51 @@ async function buscarCnpj() {
 
         const empresa = await resposta.json();
 
-        preencherCampo("nome", empresa.razao_social);
+        console.log(empresa);
 
-        preencherCampo("nomeFantasia", empresa.nome_fantasia);
+        preencherCampo("nome", empresa.razao_social || "");
 
-        preencherCampo("telefone", empresa.ddd_telefone_1);
+        preencherCampo(
+            "nomeFantasia",
+            empresa.nome_fantasia || ""
+        );
 
-        preencherCampo("email", empresa.email);
+        preencherCampo(
+            "telefone",
+            empresa.ddd_telefone_1 || ""
+        );
 
-        preencherCampo("cep", empresa.cep);
+        preencherCampo(
+            "email",
+            empresa.email || ""
+        );
 
-        preencherCampo("endereco", empresa.logradouro);
+        preencherCampo(
+            "cep",
+            empresa.cep || ""
+        );
 
-        preencherCampo("numero", empresa.numero);
+        preencherCampo(
+            "numero",
+            empresa.numero || ""
+        );
 
-        preencherCampo("bairro", empresa.bairro);
+        preencherCampo(
+            "complemento",
+            empresa.complemento || ""
+        );
 
-        preencherCampo("cidade", empresa.municipio);
+        if (empresa.cep) {
 
-        preencherCampo("estado", empresa.uf);
+            await buscarCep();
+
+        }
 
     } catch (erro) {
 
         console.error(erro);
+
+        mostrarMensagem("Erro ao consultar CNPJ.");
 
     }
 

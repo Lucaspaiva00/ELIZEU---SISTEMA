@@ -6,20 +6,30 @@ class DashboardController {
 
         try {
 
-            const resumo = await dashboardService.buscarResumo(
-                req.usuario.empresaId
-            );
+            const resumo =
+                await dashboardService.buscarResumo(
+                    req.usuario.empresaId
+                );
 
             return res.json({
+
                 sucesso: true,
+
                 resumo
+
             });
 
-        } catch (error) {
+        } catch (erro) {
+
+            console.error(erro);
 
             return res.status(500).json({
+
                 sucesso: false,
-                mensagem: error.message
+
+                mensagem:
+                    "Erro ao carregar dashboard."
+
             });
 
         }
