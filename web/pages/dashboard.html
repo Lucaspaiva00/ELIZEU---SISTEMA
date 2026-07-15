@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Dashboard | ERP Elizeu</title>
+
+    <link rel="stylesheet" href="../css/app.css">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+
+</head>
+
+<body>
+
+    <div class="wrapper">
+
+        <!-- Sidebar -->
+
+        <div id="sidebar"></div>
+
+        <!-- Conteúdo -->
+
+        <main class="main">
+
+            <!-- Topbar -->
+
+            <div id="topbar"></div>
+
+            <section class="content">
+
+                <div class="page-header">
+
+                    <div>
+
+                        <h1 class="page-title">
+                            Dashboard
+                        </h1>
+
+                        <p class="page-subtitle">
+                            Visão geral do sistema.
+                        </p>
+
+                    </div>
+
+                </div>
+
+                <!-- Cards -->
+
+                <div class="kpi-grid">
+
+                    <div class="kpi-card">
+
+                        <div class="kpi-icon">
+                            <i class="fas fa-user-friends"></i>
+                        </div>
+
+                        <div class="kpi-label">
+                            Clientes
+                        </div>
+
+                        <div class="kpi-value" id="kpiClientes">
+                            0
+                        </div>
+
+                        <div class="kpi-description">
+                            Clientes cadastrados
+                        </div>
+
+                    </div>
+
+                    <div class="kpi-card">
+
+                        <div class="kpi-icon">
+                            <i class="fas fa-boxes"></i>
+                        </div>
+
+                        <div class="kpi-label">
+                            Produtos
+                        </div>
+
+                        <div class="kpi-value" id="kpiProdutos">
+                            0
+                        </div>
+
+                        <div class="kpi-description">
+                            Produtos cadastrados
+                        </div>
+
+                    </div>
+
+                    <div class="kpi-card">
+
+                        <div class="kpi-icon">
+                            <i class="fas fa-tags"></i>
+                        </div>
+
+                        <div class="kpi-label">
+                            Categorias
+                        </div>
+
+                        <div class="kpi-value" id="kpiCategorias">
+                            0
+                        </div>
+
+                        <div class="kpi-description">
+                            Categorias cadastradas
+                        </div>
+
+                    </div>
+
+                    <div class="kpi-card">
+
+                        <div class="kpi-icon">
+                            <i class="fas fa-file-invoice-dollar"></i>
+                        </div>
+
+                        <div class="kpi-label">
+                            Orçamentos
+                        </div>
+
+                        <div class="kpi-value" id="kpiOrcamentos">
+                            0
+                        </div>
+
+                        <div class="kpi-description">
+                            Total de orçamentos
+                        </div>
+
+                    </div>
+
+                    <div class="kpi-card">
+
+                        <div class="kpi-icon">
+                            <i class="fas fa-dollar-sign"></i>
+                        </div>
+
+                        <div class="kpi-label">
+                            Valor Total
+                        </div>
+
+                        <div class="kpi-value" id="kpiValor">
+                            R$ 0,00
+                        </div>
+
+                        <div class="kpi-description">
+                            Valor total orçado
+                        </div>
+
+                    </div>
+
+                    <div class="kpi-card">
+
+                        <div class="kpi-icon">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+
+                        <div class="kpi-label">
+                            Estoque Baixo
+                        </div>
+
+                        <div class="kpi-value" id="kpiEstoque">
+                            0
+                        </div>
+
+                        <div class="kpi-description">
+                            Produtos em alerta
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- Últimos Orçamentos -->
+
+                <div class="row">
+
+                    <div class="col">
+
+                        <div class="card">
+
+                            <div class="card-header">
+
+                                <h2 class="card-title">
+
+                                    Últimos Orçamentos
+
+                                </h2>
+
+                            </div>
+
+                            <div class="card-body">
+
+                                <div class="table-responsive">
+
+                                    <table class="table">
+
+                                        <thead>
+
+                                            <tr>
+
+                                                <th>Número</th>
+
+                                                <th>Cliente</th>
+
+                                                <th>Total</th>
+
+                                                <th>Data</th>
+
+                                            </tr>
+
+                                        </thead>
+
+                                        <tbody id="tabelaOrcamentos">
+
+                                        </tbody>
+
+                                    </table>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- Estoque Baixo -->
+
+                <div class="row mt-3">
+
+                    <div class="col">
+
+                        <div class="card">
+
+                            <div class="card-header">
+
+                                <h2 class="card-title">
+
+                                    Produtos com Estoque Baixo
+
+                                </h2>
+
+                            </div>
+
+                            <div class="card-body">
+
+                                <div class="table-responsive">
+
+                                    <table class="table">
+
+                                        <thead>
+
+                                            <tr>
+
+                                                <th>Produto</th>
+
+                                                <th>SKU</th>
+
+                                                <th>Estoque Atual</th>
+
+                                                <th>Estoque Mínimo</th>
+
+                                            </tr>
+
+                                        </thead>
+
+                                        <tbody id="tabelaEstoqueBaixo">
+
+                                        </tbody>
+
+                                    </table>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+        </main>
+
+    </div>
+
+    <script src="../js/layout.js"></script>
+
+    <script src="../js/api.js"></script>
+
+    <script src="../js/utils.js"></script>
+
+    <script src="../js/app.js"></script>
+
+    <script src="../js/menu.js"></script>
+
+    <script src="../js/dashboard.js"></script>
+
+</body>
+
+</html>

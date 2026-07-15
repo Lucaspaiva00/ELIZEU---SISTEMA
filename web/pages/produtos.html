@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Produtos | ERP Elizeu</title>
+
+    <link rel="stylesheet" href="../css/app.css">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+
+</head>
+
+<body>
+
+    <div class="wrapper">
+
+        <div id="sidebar"></div>
+
+        <main class="main">
+
+            <div id="topbar"></div>
+
+            <section class="content">
+
+                <div class="page-header">
+
+                    <div>
+
+                        <h1 class="page-title">
+
+                            Produtos
+
+                        </h1>
+
+                        <p class="page-subtitle">
+
+                            Cadastro de produtos e variações.
+
+                        </p>
+
+                    </div>
+
+                    <div class="page-actions">
+
+                        <button class="btn btn-primary" onclick="abrirModalProduto()">
+
+                            <i class="fas fa-plus"></i>
+
+                            Novo Produto
+
+                        </button>
+
+                    </div>
+
+                </div>
+
+                <div class="card">
+
+                    <div class="card-body">
+
+                        <div class="filters">
+
+                            <div class="form-group">
+
+                                <label>Pesquisar</label>
+
+                                <input id="pesquisa" class="form-control" placeholder="Código, nome..."
+                                    onkeyup="filtrarProdutos()">
+
+                            </div>
+
+                        </div>
+
+                        <div class="table-responsive">
+
+                            <table class="table">
+
+                                <thead>
+
+                                    <tr>
+
+                                        <th>Código</th>
+
+                                        <th>Produto</th>
+
+                                        <th>Categoria</th>
+
+                                        <th>Marca</th>
+
+                                        <th>Variações</th>
+
+                                        <th width="130">
+
+                                            Ações
+
+                                        </th>
+
+                                    </tr>
+
+                                </thead>
+
+                                <tbody id="tabelaProdutos">
+
+                                </tbody>
+
+                            </table>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div class="modal-overlay" id="modalProduto">
+
+                    <div class="modal modal-lg">
+
+                        <div class="modal-header">
+
+                            <h2 class="modal-title">
+
+                                Cadastro de Produto
+
+                            </h2>
+
+                            <button class="modal-close" onclick="fecharModalProduto()">
+
+                                &times;
+
+                            </button>
+
+                        </div>
+
+                        <div class="modal-body">
+
+                            <form id="formProduto">
+
+                                <div class="row">
+
+                                    <div class="col-3">
+
+                                        <div class="form-group">
+
+                                            <label>Código</label>
+
+                                            <input id="codigo" class="form-control">
+
+                                        </div>
+
+                                    </div>
+
+                                    <div class="col">
+
+                                        <div class="form-group">
+
+                                            <label>Nome</label>
+
+                                            <input id="nome" class="form-control">
+
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+                                <div class="row">
+
+                                    <div class="col">
+
+                                        <div class="form-group">
+
+                                            <label>Categoria</label>
+
+                                            <select id="categoriaId" class="form-control">
+
+                                            </select>
+
+                                        </div>
+
+                                    </div>
+
+                                    <div class="col">
+
+                                        <div class="form-group">
+
+                                            <label>Marca</label>
+
+                                            <input id="marca" class="form-control">
+
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+                                <div class="form-group">
+
+                                    <label>Descrição</label>
+
+                                    <textarea id="descricao" class="form-control"></textarea>
+
+                                </div>
+                                <hr class="mb-3 mt-3">
+
+                                <div class="d-flex justify-between align-center mb-2">
+
+                                    <h3>
+
+                                        Variações do Produto
+
+                                    </h3>
+
+                                    <button type="button" class="btn btn-success" onclick="adicionarVariacao()">
+
+                                        <i class="fas fa-plus"></i>
+
+                                        Nova Variação
+
+                                    </button>
+
+                                </div>
+
+                                <div class="table-responsive">
+
+                                    <table class="table">
+
+                                        <thead>
+
+                                            <tr>
+
+                                                <th width="180">
+
+                                                    SKU
+
+                                                </th>
+
+                                                <th width="120">
+
+                                                    Cor
+
+                                                </th>
+
+                                                <th width="120">
+
+                                                    Tamanho
+
+                                                </th>
+
+                                                <th width="160">
+
+                                                    Código Barras
+
+                                                </th>
+
+                                                <th width="130">
+
+                                                    Custo
+
+                                                </th>
+
+                                                <th width="130">
+
+                                                    Venda
+
+                                                </th>
+
+                                                <th width="120">
+
+                                                    Estoque
+
+                                                </th>
+
+                                                <th width="90">
+
+                                                    Ações
+
+                                                </th>
+
+                                            </tr>
+
+                                        </thead>
+
+                                        <tbody id="tabelaVariacoes">
+
+                                        </tbody>
+
+                                    </table>
+
+                                </div>
+
+                                <div class="row mt-3">
+
+                                    <div class="col">
+
+                                        <div class="form-group">
+
+                                            <label>
+
+                                                Unidade
+
+                                            </label>
+
+                                            <select id="unidadeMedida" class="form-control">
+
+                                                <option value="UN">UN</option>
+                                                <option value="KG">KG</option>
+                                                <option value="G">G</option>
+                                                <option value="L">L</option>
+                                                <option value="ML">ML</option>
+                                                <option value="M">M</option>
+                                                <option value="CM">CM</option>
+                                                <option value="CX">CX</option>
+                                                <option value="PC">PC</option>
+                                                <option value="PAR">PAR</option>
+
+                                            </select>
+
+                                        </div>
+
+                                    </div>
+
+                                    <div class="col">
+
+                                        <div class="form-group">
+
+                                            <label>
+
+                                                NCM
+
+                                            </label>
+
+                                            <input id="ncm" class="form-control">
+
+                                        </div>
+
+                                    </div>
+
+                                    <div class="col">
+
+                                        <div class="form-group">
+
+                                            <label>
+
+                                                CFOP
+
+                                            </label>
+
+                                            <input id="cfopPadrao" class="form-control">
+
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+                                <div class="row">
+
+                                    <div class="col">
+
+                                        <label>
+
+                                            <input id="controlaEstoque" type="checkbox" checked>
+
+                                            Controlar estoque
+
+                                        </label>
+
+                                    </div>
+
+                                    <div class="col">
+
+                                        <label>
+
+                                            <input id="permiteVendaSemEstoque" type="checkbox">
+
+                                            Permitir venda sem estoque
+
+                                        </label>
+
+                                    </div>
+
+                                </div>
+
+                            </form>
+
+                        </div>
+                        <div class="modal-footer">
+
+                            <button type="button" class="btn btn-light" onclick="fecharModalProduto()">
+
+                                Cancelar
+
+                            </button>
+
+                            <button type="button" class="btn btn-primary" onclick="salvarProduto()">
+
+                                <i class="fas fa-save"></i>
+
+                                Salvar Produto
+
+                            </button>
+
+                        </div>
+
+                    </div>
+
+                </div>
+                <div class="modal-overlay" id="modalDetalhesProduto">
+
+                    <div class="modal modal-lg">
+
+                        <div class="modal-header">
+
+                            <h2 class="modal-title">
+                                Detalhes do Produto
+                            </h2>
+
+                            <button type="button" class="modal-close" onclick="fecharDetalhesProduto()">
+
+                                &times;
+
+                            </button>
+
+                        </div>
+
+                        <div class="modal-body">
+
+                            <div class="row">
+
+                                <div class="col-3">
+
+                                    <div class="form-group">
+
+                                        <label>Código</label>
+
+                                        <div id="detalheCodigo" class="form-control"></div>
+
+                                    </div>
+
+                                </div>
+
+                                <div class="col">
+
+                                    <div class="form-group">
+
+                                        <label>Produto</label>
+
+                                        <div id="detalheNome" class="form-control"></div>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                            <div class="row">
+
+                                <div class="col">
+
+                                    <div class="form-group">
+
+                                        <label>Categoria</label>
+
+                                        <div id="detalheCategoria" class="form-control"></div>
+
+                                    </div>
+
+                                </div>
+
+                                <div class="col">
+
+                                    <div class="form-group">
+
+                                        <label>Marca</label>
+
+                                        <div id="detalheMarca" class="form-control"></div>
+
+                                    </div>
+
+                                </div>
+
+                                <div class="col">
+
+                                    <div class="form-group">
+
+                                        <label>Unidade</label>
+
+                                        <div id="detalheUnidade" class="form-control"></div>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                            <div class="form-group">
+
+                                <label>Descrição</label>
+
+                                <div id="detalheDescricao" class="form-control"
+                                    style="height: auto; min-height: 70px; padding-top: 12px;">
+                                </div>
+
+                            </div>
+
+                            <div class="row">
+
+                                <div class="col">
+
+                                    <div class="form-group">
+
+                                        <label>NCM</label>
+
+                                        <div id="detalheNcm" class="form-control"></div>
+
+                                    </div>
+
+                                </div>
+
+                                <div class="col">
+
+                                    <div class="form-group">
+
+                                        <label>CFOP</label>
+
+                                        <div id="detalheCfop" class="form-control"></div>
+
+                                    </div>
+
+                                </div>
+
+                                <div class="col">
+
+                                    <div class="form-group">
+
+                                        <label>Status</label>
+
+                                        <div id="detalheStatus"></div>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                            <div class="d-flex justify-between align-center mt-3 mb-2">
+
+                                <h3>
+                                    Variações do Produto
+                                </h3>
+
+                                <span id="detalheQuantidadeVariacoes" class="badge badge-primary">
+                                    0 variações
+                                </span>
+
+                            </div>
+
+                            <div class="table-responsive">
+
+                                <table class="table">
+
+                                    <thead>
+
+                                        <tr>
+
+                                            <th>SKU</th>
+                                            <th>Descrição</th>
+                                            <th>Cor</th>
+                                            <th>Tamanho</th>
+                                            <th>Código de barras</th>
+                                            <th>Custo</th>
+                                            <th>Venda</th>
+                                            <th>Estoque</th>
+
+                                        </tr>
+
+                                    </thead>
+
+                                    <tbody id="tabelaDetalhesVariacoes">
+
+                                    </tbody>
+
+                                </table>
+
+                            </div>
+
+                        </div>
+
+                        <div class="modal-footer">
+
+                            <button type="button" class="btn btn-light" onclick="fecharDetalhesProduto()">
+
+                                Fechar
+
+                            </button>
+
+                            <button type="button" class="btn btn-warning" id="btnEditarDetalhesProduto">
+
+                                <i class="fas fa-edit"></i>
+
+                                Editar Produto
+
+                            </button>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+        </main>
+
+    </div>
+
+    <script src="../js/layout.js"></script>
+
+    <script src="../js/api.js"></script>
+
+    <script src="../js/utils.js"></script>
+
+    <script src="../js/app.js"></script>
+
+    <script src="../js/menu.js"></script>
+
+    <script src="../js/produtos.js"></script>
+
+</body>
+
+</html>

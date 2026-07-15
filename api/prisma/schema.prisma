@@ -1,0 +1,309 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum PerfilUsuario {
+  ADMIN
+  GERENTE
+  VENDEDOR
+  FINANCEIRO
+  ESTOQUE
+}
+
+enum TipoPessoa {
+  FISICA
+  JURIDICA
+}
+
+enum UnidadeMedida {
+  UN
+  KG
+  G
+  L
+  ML
+  M
+  CM
+  CX
+  PC
+  PAR
+}
+
+model Empresa {
+  id Int @id @default(autoincrement())
+
+  razaoSocial  String
+  nomeFantasia String?
+
+  cnpj String @unique
+
+  inscricaoEstadual String?
+
+  telefone String?
+  celular  String?
+
+  email String?
+
+  cep         String?
+  endereco    String?
+  numero      String?
+  complemento String?
+  bairro      String?
+  cidade      String?
+  estado      String?
+
+  logo String?
+
+  ativa Boolean @default(true)
+
+  usuarios Usuario[]
+
+  categorias CategoriaProduto[]
+
+  produtos Produto[]
+
+  clientes Cliente[]
+
+  orcamentos Orcamento[]
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+}
+
+model Usuario {
+  id Int @id @default(autoincrement())
+
+  empresaId Int
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  nome String
+
+  email String @unique
+
+  senha String
+
+  telefone String?
+
+  perfil PerfilUsuario @default(VENDEDOR)
+
+  ativo Boolean @default(true)
+
+  ultimoLogin DateTime?
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+}
+
+model CategoriaProduto {
+  id Int @id @default(autoincrement())
+
+  empresaId Int
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  nome String
+
+  descricao String?
+
+  ativo Boolean @default(true)
+
+  produtos Produto[]
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+}
+
+model Produto {
+  id Int @id @default(autoincrement())
+
+  empresaId Int
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  categoriaId Int
+
+  categoria CategoriaProduto @relation(fields: [categoriaId], references: [id])
+
+  codigo String
+
+  nome String
+
+  descricao String?
+
+  marca String?
+
+  unidadeMedida UnidadeMedida @default(UN)
+
+  controlaEstoque Boolean @default(true)
+
+  permiteVendaSemEstoque Boolean @default(false)
+
+  ncm String?
+
+  cfopPadrao String?
+
+  origemMercadoria String?
+
+  ativo Boolean @default(true)
+
+  variacoes VariacaoProduto[]
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  @@unique([empresaId, codigo])
+}
+
+model VariacaoProduto {
+  id Int @id @default(autoincrement())
+
+  produtoId Int
+
+  produto Produto @relation(fields: [produtoId], references: [id], onDelete: Cascade)
+
+  sku String @unique
+
+  codigoBarras String?
+
+  descricao String?
+
+  cor String?
+
+  tamanho String?
+
+  imagemPrincipal String?
+
+  gtin String?
+
+  localizacaoEstoque String?
+
+  peso Decimal? @db.Decimal(10, 3)
+
+  precoCusto Decimal @db.Decimal(12, 2)
+
+  precoVenda Decimal @db.Decimal(12, 2)
+
+  estoqueAtual Decimal @default(0) @db.Decimal(12, 3)
+
+  estoqueMinimo Decimal @default(0) @db.Decimal(12, 3)
+
+  ativo Boolean @default(true)
+
+  itensOrcamento ItemOrcamento[]
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+}
+
+model Cliente {
+  id Int @id @default(autoincrement())
+
+  empresaId Int
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  tipoPessoa TipoPessoa
+
+  nome String
+
+  nomeFantasia String?
+
+  cpfCnpj String
+
+  inscricaoEstadual String?
+
+  telefone String?
+
+  celular String?
+
+  email String?
+
+  cep String?
+
+  endereco String?
+
+  numero String?
+
+  complemento String?
+
+  bairro String?
+
+  cidade String?
+
+  estado String?
+
+  limiteCredito Decimal? @db.Decimal(12, 2)
+
+  prazoPagamentoPadrao Int?
+
+  observacoes String?
+
+  ativo Boolean @default(true)
+
+  orcamentos Orcamento[]
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  @@unique([empresaId, cpfCnpj])
+}
+
+model Orcamento {
+  id Int @id @default(autoincrement())
+
+  empresaId Int
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  numero Int
+
+  clienteId Int
+
+  cliente Cliente @relation(fields: [clienteId], references: [id])
+
+  itens ItemOrcamento[]
+
+  subtotal Decimal @default(0) @db.Decimal(12, 2)
+
+  desconto Decimal @default(0) @db.Decimal(12, 2)
+
+  frete Decimal @default(0) @db.Decimal(12, 2)
+
+  outrasDespesas Decimal @default(0) @db.Decimal(12, 2)
+
+  total Decimal @default(0) @db.Decimal(12, 2)
+
+  observacoes String?
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  @@unique([empresaId, numero])
+}
+
+model ItemOrcamento {
+  id Int @id @default(autoincrement())
+
+  orcamentoId Int
+
+  variacaoProdutoId Int
+
+  orcamento Orcamento @relation(fields: [orcamentoId], references: [id], onDelete: Cascade)
+
+  variacaoProduto VariacaoProduto @relation(fields: [variacaoProdutoId], references: [id])
+
+  quantidade Decimal @db.Decimal(12, 3)
+
+  valorUnitario Decimal @db.Decimal(12, 2)
+
+  desconto Decimal @default(0) @db.Decimal(12, 2)
+
+  total Decimal @db.Decimal(12, 2)
+
+  criadoEm DateTime @default(now())
+}

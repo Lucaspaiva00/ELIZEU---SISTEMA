@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Orçamentos | ERP Elizeu</title>
+
+    <link rel="stylesheet" href="../css/app.css">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+
+</head>
+
+<body>
+
+    <div class="wrapper">
+
+        <div id="sidebar"></div>
+
+        <main class="main">
+
+            <div id="topbar"></div>
+
+            <section class="content">
+
+                <div class="page-header">
+
+                    <div>
+
+                        <h1 class="page-title">
+
+                            Orçamentos
+
+                        </h1>
+
+                        <p class="page-subtitle">
+
+                            Cadastro e gerenciamento de orçamentos.
+
+                        </p>
+
+                    </div>
+
+                    <div class="page-actions">
+
+                        <button class="btn btn-primary" onclick="abrirModalOrcamento()">
+
+                            <i class="fas fa-plus"></i>
+
+                            Novo Orçamento
+
+                        </button>
+
+                    </div>
+
+                </div>
+
+                <div class="card">
+
+                    <div class="card-body">
+
+                        <div class="filters">
+
+                            <div class="form-group">
+
+                                <label>Pesquisar</label>
+
+                                <input id="pesquisa" class="form-control" placeholder="Número ou Cliente..."
+                                    onkeyup="filtrarOrcamentos()">
+
+                            </div>
+
+                        </div>
+
+                        <div class="table-responsive">
+
+                            <table class="table">
+
+                                <thead>
+
+                                    <tr>
+
+                                        <th>Número</th>
+
+                                        <th>Cliente</th>
+
+                                        <th>Data</th>
+
+                                        <th>Total</th>
+
+                                        <th>Status</th>
+
+                                        <th width="170">
+
+                                            Ações
+
+                                        </th>
+
+                                    </tr>
+
+                                </thead>
+
+                                <tbody id="tabelaOrcamentos">
+
+                                </tbody>
+
+                            </table>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div class="modal-overlay" id="modalOrcamento">
+
+                    <div class="modal modal-xl">
+
+                        <div class="modal-header">
+
+                            <h2 class="modal-title">
+
+                                Novo Orçamento
+
+                            </h2>
+
+                            <button class="modal-close" onclick="fecharModalOrcamento()">
+
+                                &times;
+
+                            </button>
+
+                        </div>
+
+                        <div class="modal-body">
+
+                            <form id="formOrcamento">
+
+                                <div class="row">
+
+                                    <div class="col">
+
+                                        <div class="form-group">
+
+                                            <label>
+
+                                                Cliente
+
+                                            </label>
+
+                                            <select id="clienteId" class="form-control">
+
+                                            </select>
+
+                                        </div>
+
+                                    </div>
+
+                                    <div class="col-2">
+
+                                        <div class="form-group">
+
+                                            <label>
+
+                                                Número
+
+                                            </label>
+
+                                            <input id="numero" class="form-control" readonly>
+
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+                                <hr class="mb-3 mt-3">
+
+                                <div class="d-flex justify-between align-center mb-3">
+
+                                    <h3>
+
+                                        Itens do Orçamento
+
+                                    </h3>
+
+                                    <button type="button" class="btn btn-success" onclick="abrirModalProduto()">
+
+                                        <i class="fas fa-plus"></i>
+
+                                        Adicionar Produto
+
+                                    </button>
+
+                                </div>
+
+                                <div class="table-responsive">
+
+                                    <table class="table">
+
+                                        <thead>
+
+                                            <tr>
+
+                                                <th>Produto</th>
+
+                                                <th>Variação</th>
+
+                                                <th width="120">
+
+                                                    Quantidade
+
+                                                </th>
+
+                                                <th width="140">
+
+                                                    Unitário
+
+                                                </th>
+
+                                                <th width="140">
+
+                                                    Total
+
+                                                </th>
+
+                                                <th width="80">
+
+                                                    Ações
+
+                                                </th>
+
+                                            </tr>
+
+                                        </thead>
+
+                                        <tbody id="tabelaItens">
+
+                                        </tbody>
+
+                                    </table>
+
+                                </div>
+                                <hr class="mt-4 mb-4">
+
+                                <div class="row">
+
+                                    <div class="col-3">
+
+                                        <div class="form-group">
+
+                                            <label>
+
+                                                Subtotal
+
+                                            </label>
+
+                                            <input id="subtotal" class="form-control" readonly value="0,00">
+
+                                        </div>
+
+                                    </div>
+
+                                    <div class="col-3">
+
+                                        <div class="form-group">
+
+                                            <label>
+
+                                                Desconto
+
+                                            </label>
+
+                                            <input id="desconto" class="form-control" type="number" step="0.01"
+                                                value="0" oninput="calcularTotais()">
+
+                                        </div>
+
+                                    </div>
+
+                                    <div class="col-3">
+
+                                        <div class="form-group">
+
+                                            <label>
+
+                                                Frete
+
+                                            </label>
+
+                                            <input id="frete" class="form-control" type="number" step="0.01" value="0"
+                                                oninput="calcularTotais()">
+
+                                        </div>
+
+                                    </div>
+
+                                    <div class="col-3">
+
+                                        <div class="form-group">
+
+                                            <label>
+
+                                                Outras Despesas
+
+                                            </label>
+
+                                            <input id="outrasDespesas" class="form-control" type="number" step="0.01"
+                                                value="0" oninput="calcularTotais()">
+
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+                                <div class="row">
+
+                                    <div class="col">
+
+                                        <div class="form-group">
+
+                                            <label>
+
+                                                Observações
+
+                                            </label>
+
+                                            <textarea id="observacoes" class="form-control" rows="4"></textarea>
+
+                                        </div>
+
+                                    </div>
+
+                                    <div class="col-3">
+
+                                        <div class="card resumo-orcamento">
+
+                                            <div class="card-body">
+
+                                                <h3>
+
+                                                    Total
+
+                                                </h3>
+
+                                                <h1 id="valorTotal">
+
+                                                    R$ 0,00
+
+                                                </h1>
+
+                                            </div>
+
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+                            </form>
+
+                        </div>
+
+                        <div class="modal-footer">
+
+                            <button type="button" class="btn btn-light" onclick="fecharModalOrcamento()">
+
+                                Cancelar
+
+                            </button>
+
+                            <button type="button" class="btn btn-primary" onclick="salvarOrcamento()">
+
+                                <i class="fas fa-save"></i>
+
+                                Salvar Orçamento
+
+                            </button>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+
+
+
+                <div class="modal-overlay" id="modalSelecionarProduto">
+
+                    <div class="modal modal-lg">
+
+                        <div class="modal-header">
+
+                            <h2>
+
+                                Adicionar Produto
+
+                            </h2>
+
+                            <button class="modal-close" onclick="fecharModalProduto()">
+
+                                &times;
+
+                            </button>
+
+                        </div>
+
+                        <div class="modal-body">
+
+                            <div class="form-group">
+
+                                <label>
+
+                                    Produto
+
+                                </label>
+
+                                <select id="produtoId" class="form-control">
+
+                                </select>
+
+                            </div>
+
+                            <div class="form-group">
+
+                                <label>
+
+                                    Variação
+
+                                </label>
+
+                                <select id="variacaoProdutoId" class="form-control">
+
+                                </select>
+
+                            </div>
+
+                            <div class="row">
+
+                                <div class="col">
+
+                                    <div class="form-group">
+
+                                        <label>
+
+                                            Quantidade
+
+                                        </label>
+
+                                        <input id="quantidade" class="form-control" type="number" step="1" value="1">
+
+                                    </div>
+
+                                </div>
+
+                                <div class="col">
+
+                                    <div class="form-group">
+
+                                        <label>
+
+                                            Valor Unitário
+
+                                        </label>
+
+                                        <input id="valorUnitario" class="form-control" readonly>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+                        <div class="modal-footer">
+
+                            <button type="button" class="btn btn-light" onclick="fecharModalProduto()">
+
+                                Cancelar
+
+                            </button>
+
+                            <button type="button" class="btn btn-success" onclick="adicionarItemOrcamento()">
+
+                                <i class="fas fa-plus"></i>
+
+                                Adicionar Item
+
+                            </button>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div class="modal-overlay" id="modalVisualizarOrcamento">
+
+                    <div class="modal modal-xl">
+
+                        <div class="modal-header">
+
+                            <h2 id="tituloVisualizarOrcamento">
+
+                                Orçamento
+
+                            </h2>
+
+                            <button class="modal-close" onclick="fecharVisualizacaoOrcamento()">
+
+                                &times;
+
+                            </button>
+
+                        </div>
+
+                        <div class="modal-body">
+
+                            <div class="row">
+
+                                <div class="col-3">
+
+                                    <div class="form-group">
+
+                                        <label>Número</label>
+
+                                        <input id="viewNumero" class="form-control" readonly>
+
+                                    </div>
+
+                                </div>
+
+                                <div class="col">
+
+                                    <div class="form-group">
+
+                                        <label>Cliente</label>
+
+                                        <input id="viewCliente" class="form-control" readonly>
+
+                                    </div>
+
+                                </div>
+
+                                <div class="col-3">
+
+                                    <div class="form-group">
+
+                                        <label>Status</label>
+
+                                        <input id="viewStatus" class="form-control" readonly>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                            <hr>
+
+                            <h3>
+
+                                Itens do Orçamento
+
+                            </h3>
+
+                            <div class="table-responsive">
+
+                                <table class="table">
+
+                                    <thead>
+
+                                        <tr>
+
+                                            <th>Produto</th>
+
+                                            <th>Variação</th>
+
+                                            <th>Qtd</th>
+
+                                            <th>Unitário</th>
+
+                                            <th>Total</th>
+
+                                        </tr>
+
+                                    </thead>
+
+                                    <tbody id="viewTabelaItens">
+
+                                    </tbody>
+
+                                </table>
+
+                            </div>
+
+                            <hr>
+
+                            <div class="row">
+
+                                <div class="col">
+
+                                    <div class="form-group">
+
+                                        <label>Observações</label>
+
+                                        <textarea id="viewObservacoes" class="form-control" rows="4"
+                                            readonly></textarea>
+
+                                    </div>
+
+                                </div>
+
+                                <div class="col-3">
+
+                                    <div class="card resumo-orcamento">
+
+                                        <div class="card-body">
+
+                                            <h4>Total</h4>
+
+                                            <h1 id="viewTotal">
+
+                                                R$ 0,00
+
+                                            </h1>
+
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <div class="modal-footer">
+
+                            <button class="btn btn-light" onclick="fecharVisualizacaoOrcamento()">
+
+                                Fechar
+
+                            </button>
+
+                            <button class="btn btn-warning" onclick="editarOrcamentoVisualizado()">
+
+                                <i class="fas fa-edit"></i>
+
+                                Editar Orçamento
+
+                            </button>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+        </main>
+
+    </div>
+
+    <script src="../js/layout.js"></script>
+
+    <script src="../js/api.js"></script>
+
+    <script src="../js/utils.js"></script>
+
+    <script src="../js/app.js"></script>
+
+    <script src="../js/menu.js"></script>
+
+    <script src="../js/orcamentos.js"></script>
+
+</body>
+
+</html>
