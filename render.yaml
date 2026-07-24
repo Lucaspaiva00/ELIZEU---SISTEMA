@@ -1,6 +1,6 @@
 databases:
   - name: sistema-elizeu-db
-    plan: basic
+    plan: free
     databaseName: sistema_elizeu
     user: elizeu
 
@@ -8,7 +8,7 @@ services:
   - type: web
     name: sistema-elizeu-api
     runtime: docker
-    plan: basic
+    plan: free
     region: oregon
     dockerfilePath: ./api/Dockerfile
     dockerContext: ./api
@@ -26,8 +26,6 @@ services:
   - type: web
     name: sistema-elizeu-web
     runtime: static
-    plan: basic
-    region: oregon
     staticPublishPath: ./web
     buildFilter:
       paths:
