@@ -1,0 +1,34 @@
+databases:
+  - name: sistema-elizeu-db
+    plan: basic
+    databaseName: sistema_elizeu
+    user: elizeu
+
+services:
+  - type: web
+    name: sistema-elizeu-api
+    runtime: docker
+    plan: basic
+    region: oregon
+    dockerfilePath: ./api/Dockerfile
+    dockerContext: ./api
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: sistema-elizeu-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: NODE_ENV
+        value: production
+
+  - type: web
+    name: sistema-elizeu-web
+    runtime: static
+    plan: basic
+    region: oregon
+    staticPublishPath: ./web
+    buildFilter:
+      paths:
+        - web/**

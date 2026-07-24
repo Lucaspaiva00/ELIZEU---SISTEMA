@@ -1,4 +1,18 @@
-const API = "http://localhost:3000/api";
+function resolveApiBase() {
+    if (window.__API_URL__) {
+        return window.__API_URL__;
+    }
+
+    const host = window.location.hostname;
+
+    if (host === "localhost" || host === "127.0.0.1") {
+        return "http://localhost:3000/api";
+    }
+
+    return "https://sistema-elizeu-api.onrender.com/api";
+}
+
+const API = resolveApiBase();
 const TOKEN_KEY = "token";
 
 function getToken() {
