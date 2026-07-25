@@ -27,6 +27,14 @@ services:
     name: sistema-elizeu-web
     runtime: static
     staticPublishPath: ./web
+    buildCommand: "true"
+    routes:
+      - type: redirect
+        source: /
+        destination: /pages/login.html
+      - type: redirect
+        source: /pages/login
+        destination: /pages/login.html
     buildFilter:
       paths:
         - web/**
