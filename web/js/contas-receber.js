@@ -2,6 +2,8 @@ let paginaAtual = 1;
 let contasReceber = [];
 let clientesDisponiveis = [];
 let contasFinanceiras = [];
+let categoriasFinanceiras = [];
+let centrosCusto = [];
 let temporizadorBusca;
 
 const formasPagamento = {
@@ -70,10 +72,27 @@ async function inicializar() {
 
     await Promise.all([
         carregarClientes(),
-        carregarContasFinanceiras()
+        carregarContasFinanceiras(),
+        carregarCadastrosFinanceiros()
     ]);
 
     await carregarDados();
+}
+
+async function carregarCadastrosFinanceiros() {
+    const [respostaCategorias, respostaCentros] = await Promise.all([
+        get("/categorias-financeiras"),
+        get("/centros-custo")
+    ]);
+
+    categoriasFinanceiras = (respostaCategorias?.categoriasFinanceiras || [])
+        .filter(categoria => ["RECEITA", "AMBAS"].includes(categoria.natureza));
+    centrosCusto = respostaCentros?.centrosCusto || [];
+
+    document.getElementById("categoriaFinanceiraId").innerHTML = '<option value="">Categoria padrão</option>'
+        + categoriasFinanceiras.map(categoria => `<option value="${categoria.id}">${escapar(categoria.nome)}</option>`).join("");
+    document.getElementById("centroCustoId").innerHTML = '<option value="">Geral</option>'
+        + centrosCusto.map(centro => `<option value="${centro.id}">${escapar(centro.codigo)} — ${escapar(centro.nome)}</option>`).join("");
 }
 
 function configurarEventos() {
@@ -237,6 +256,8 @@ async function editarConta(id) {
     document.getElementById("dataEmissao").value = String(titulo.dataEmissao).slice(0, 10);
     document.getElementById("dataVencimento").value = String(titulo.dataVencimento).slice(0, 10);
     document.getElementById("formaPagamento").value = titulo.formaPagamento || "";
+    document.getElementById("categoriaFinanceiraId").value = titulo.categoriaFinanceiraId || "";
+    document.getElementById("centroCustoId").value = titulo.centroCustoId || "";
     document.getElementById("parcelaNumero").value = titulo.parcelaNumero || 1;
     document.getElementById("totalParcelas").value = titulo.totalParcelas || 1;
     document.getElementById("observacoes").value = titulo.observacoes || "";
@@ -257,6 +278,8 @@ async function salvarConta(evento) {
         dataEmissao: document.getElementById("dataEmissao").value,
         dataVencimento: document.getElementById("dataVencimento").value,
         formaPagamento: document.getElementById("formaPagamento").value || null,
+        categoriaFinanceiraId: document.getElementById("categoriaFinanceiraId").value ? Number(document.getElementById("categoriaFinanceiraId").value) : null,
+        centroCustoId: document.getElementById("centroCustoId").value ? Number(document.getElementById("centroCustoId").value) : null,
         parcelaNumero: Number(document.getElementById("parcelaNumero").value || 1),
         totalParcelas: Number(document.getElementById("totalParcelas").value || 1),
         observacoes: document.getElementById("observacoes").value.trim() || null

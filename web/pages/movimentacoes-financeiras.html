@@ -50,6 +50,8 @@
                 <div class="form-group"><label>Data de competência</label><input id="competenciaLancamento" type="date" class="form-control"></div>
                 <div class="form-group"><label>Forma de pagamento</label><select id="formaLancamento" class="form-control"></select></div>
                 <div class="form-group"><label>Documento</label><input id="documentoLancamento" class="form-control" placeholder="Referência opcional"></div>
+                <div class="form-group"><label>Categoria financeira</label><select id="categoriaLancamento" class="form-control"><option value="">Categoria padrão</option></select></div>
+                <div class="form-group"><label>Centro de custo</label><select id="centroLancamento" class="form-control"><option value="">Geral</option></select></div>
                 <div class="form-group form-span-2"><label>Observações</label><textarea id="observacoesLancamento" class="form-control" rows="3"></textarea></div>
             </div>
         </div><div class="modal-footer"><button type="button" class="btn btn-light" onclick="fecharModalLancamento()">Cancelar</button><button type="submit" class="btn btn-primary" id="btnSalvarLancamento"><i class="fas fa-check"></i> Registrar lançamento</button></div></form>
@@ -64,6 +66,7 @@
                 <div class="form-group"><label>Data *</label><input id="dataTransferencia" type="date" class="form-control" required></div>
                 <div class="form-group"><label>Descrição</label><input id="descricaoTransferencia" class="form-control" placeholder="Gerada automaticamente se vazia"></div>
                 <div class="form-group"><label>Documento</label><input id="documentoTransferencia" class="form-control"></div>
+                <div class="form-group form-span-2"><label>Centro de custo</label><select id="centroTransferencia" class="form-control"><option value="">Geral</option></select></div>
                 <div class="form-group form-span-2"><label>Observações</label><textarea id="observacoesTransferencia" class="form-control" rows="3"></textarea></div>
             </div>
         </div><div class="modal-footer"><button type="button" class="btn btn-light" onclick="fecharModalTransferencia()">Cancelar</button><button type="submit" class="btn btn-primary" id="btnTransferir"><i class="fas fa-right-left"></i> Confirmar transferência</button></div></form>

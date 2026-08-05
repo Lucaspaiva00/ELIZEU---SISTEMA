@@ -1,6 +1,8 @@
 let paginaAtual = 1;
 let contasPagar = [];
 let contasFinanceiras = [];
+let categoriasFinanceiras = [];
+let centrosCusto = [];
 let temporizadorBusca;
 
 const formasPagamento = {
@@ -43,7 +45,16 @@ async function inicializar() {
     document.getElementById("formaPagamentoBaixa").innerHTML = htmlFormas;
     configurarEventos();
     await carregarContasFinanceiras();
+    await carregarCadastrosFinanceiros();
     await carregarDados();
+}
+
+async function carregarCadastrosFinanceiros() {
+    const [respostaCategorias, respostaCentros] = await Promise.all([get("/categorias-financeiras"), get("/centros-custo")]);
+    categoriasFinanceiras = (respostaCategorias?.categoriasFinanceiras || []).filter(categoria => ["DESPESA", "AMBAS"].includes(categoria.natureza));
+    centrosCusto = respostaCentros?.centrosCusto || [];
+    document.getElementById("categoriaFinanceiraId").innerHTML = '<option value="">Despesas Operacionais</option>' + categoriasFinanceiras.map(categoria => `<option value="${categoria.id}">${escapar(categoria.nome)}</option>`).join("");
+    document.getElementById("centroCustoId").innerHTML = '<option value="">Geral</option>' + centrosCusto.map(centro => `<option value="${centro.id}">${escapar(centro.codigo)} — ${escapar(centro.nome)}</option>`).join("");
 }
 
 function configurarEventos() {
@@ -175,6 +186,8 @@ async function editarConta(id) {
     document.getElementById("valorOriginal").value = Number(titulo.valorOriginal);
     ["dataCompetencia", "dataEmissao", "dataVencimento"].forEach(idCampo => document.getElementById(idCampo).value = String(titulo[idCampo]).slice(0, 10));
     document.getElementById("formaPagamento").value = titulo.formaPagamento || "";
+    document.getElementById("categoriaFinanceiraId").value = titulo.categoriaFinanceiraId || "";
+    document.getElementById("centroCustoId").value = titulo.centroCustoId || "";
     document.getElementById("blocoGeracao").classList.add("d-none");
     document.getElementById("modalConta").classList.add("active");
 }
@@ -191,6 +204,8 @@ async function salvarConta(evento) {
         valorOriginal: Number(document.getElementById("valorOriginal").value), dataCompetencia: document.getElementById("dataCompetencia").value,
         dataEmissao: document.getElementById("dataEmissao").value, dataVencimento: document.getElementById("dataVencimento").value,
         formaPagamento: document.getElementById("formaPagamento").value || null, observacoes: document.getElementById("observacoes").value.trim() || null,
+        categoriaFinanceiraId: document.getElementById("categoriaFinanceiraId").value ? Number(document.getElementById("categoriaFinanceiraId").value) : null,
+        centroCustoId: document.getElementById("centroCustoId").value ? Number(document.getElementById("centroCustoId").value) : null,
         quantidadeParcelas: multiplos ? Number(document.getElementById("quantidadeParcelas").value) : 1,
         modoGeracao: multiplos ? document.getElementById("modoGeracao").value : "PARCELAMENTO",
         periodicidadeParcelas: multiplos ? document.getElementById("periodicidadeParcelas").value : "MENSAL",
