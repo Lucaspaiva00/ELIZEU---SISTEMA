@@ -281,7 +281,6 @@ function abrirModalReceber(id) {
     document.getElementById("saldoPendenteModal").textContent = moeda(saldo);
     document.getElementById("descricaoRecebimento").textContent = `${titulo.cliente?.nome || "Cliente"} • ${titulo.descricao}`;
     document.getElementById("valorRecebimento").value = saldo.toFixed(2);
-    document.getElementById("valorRecebimento").max = saldo.toFixed(2);
     document.getElementById("dataRecebimento").value = dataInput();
     document.getElementById("formaRecebimento").value = titulo.formaPagamento || "";
     document.getElementById("valorDesconto").value = 0;

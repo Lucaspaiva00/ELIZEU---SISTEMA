@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contas a Pagar | ERP Elizeu</title>
+    <link rel="stylesheet" href="../css/app.css">
+    <link rel="stylesheet" href="../css/financeiro.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+</head>
+<body>
+    <div class="wrapper">
+        <div id="sidebar"></div>
+        <main class="main">
+            <div id="topbar"></div>
+            <section class="content financial-page">
+                <div class="page-header">
+                    <div><span class="financial-eyebrow">Financeiro</span><h1 class="page-title">Contas a pagar</h1><p class="page-subtitle">Controle despesas, fornecedores, parcelas e pagamentos.</p></div>
+                    <div class="page-actions"><button class="btn btn-primary" onclick="abrirModalConta()"><i class="fas fa-plus"></i> Nova conta a pagar</button></div>
+                </div>
+                <div id="mensagemPagina" class="financial-message d-none"></div>
+
+                <section class="financial-summary-grid">
+                    <article class="summary-card summary-blue"><span class="summary-card-icon"><i class="fas fa-hourglass-half"></i></span><div><small>Em aberto</small><strong id="resumoEmAberto">R$ 0,00</strong><span id="quantidadeEmAberto">0 títulos pendentes</span></div></article>
+                    <article class="summary-card summary-green"><span class="summary-card-icon"><i class="fas fa-circle-check"></i></span><div><small>Total pago</small><strong id="resumoPago">R$ 0,00</strong><span id="quantidadePagos">0 títulos pagos</span></div></article>
+                    <article class="summary-card summary-red"><span class="summary-card-icon"><i class="fas fa-triangle-exclamation"></i></span><div><small>Em atraso</small><strong id="resumoAtrasado">R$ 0,00</strong><span id="quantidadeAtrasados">0 títulos atrasados</span></div></article>
+                    <article class="summary-card summary-orange"><span class="summary-card-icon"><i class="fas fa-calendar-day"></i></span><div><small>Vencendo hoje</small><strong id="resumoVencendoHoje">R$ 0,00</strong><span>Atenção necessária</span></div></article>
+                </section>
+
+                <div class="financial-panel">
+                    <div class="financial-filters">
+                        <div class="filter-search"><i class="fas fa-magnifying-glass"></i><input id="filtroBusca" placeholder="Buscar fornecedor, descrição ou documento..."></div>
+                        <select id="filtroStatus" class="financial-select"><option value="">Todos os status</option><option value="PENDENTE">Pendente</option><option value="PARCIAL">Parcial</option><option value="ATRASADO">Atrasado</option><option value="PAGO">Pago</option><option value="CANCELADO">Cancelado</option></select>
+                        <input id="filtroInicio" type="date" class="financial-date" title="Vencimento inicial">
+                        <input id="filtroFim" type="date" class="financial-date" title="Vencimento final">
+                        <button class="btn btn-light" onclick="limparFiltros()"><i class="fas fa-rotate-left"></i> Limpar</button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table financial-table"><thead><tr><th>Fornecedor / descrição</th><th>Documento</th><th>Vencimento</th><th>Valor</th><th>Pago</th><th>Saldo</th><th>Status</th><th class="text-right">Ações</th></tr></thead><tbody id="tabelaContasPagar"></tbody></table>
+                    </div>
+                    <div class="financial-pagination"><span id="textoPaginacao">0 registros</span><div id="botoesPaginacao"></div></div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div class="modal-overlay" id="modalConta">
+        <div class="modal modal-lg">
+            <div class="modal-header"><div><span class="modal-eyebrow">Conta a pagar</span><h2 class="modal-title" id="tituloModalConta">Nova despesa</h2></div><button class="modal-close" onclick="fecharModalConta()">&times;</button></div>
+            <form id="formConta">
+                <div class="modal-body">
+                    <input type="hidden" id="contaId">
+                    <div class="form-grid form-grid-2">
+                        <div class="form-group"><label>Fornecedor</label><input id="fornecedorNome" class="form-control" placeholder="Nome ou razão social"></div>
+                        <div class="form-group"><label>CPF/CNPJ do fornecedor</label><input id="fornecedorDocumento" class="form-control" placeholder="Documento opcional"></div>
+                        <div class="form-group form-span-2"><label>Descrição *</label><input id="descricao" class="form-control" required placeholder="Ex.: Aluguel do escritório"></div>
+                        <div class="form-group"><label>Número do documento</label><input id="numeroDocumento" class="form-control" placeholder="Nota, boleto ou referência"></div>
+                        <div class="form-group"><label>Valor total *</label><input id="valorOriginal" type="number" min="0.01" step="0.01" class="form-control" required></div>
+                        <div class="form-group"><label>Data de competência</label><input id="dataCompetencia" type="date" class="form-control"></div>
+                        <div class="form-group"><label>Data de emissão</label><input id="dataEmissao" type="date" class="form-control"></div>
+                        <div class="form-group"><label>Primeiro vencimento *</label><input id="dataVencimento" type="date" class="form-control" required></div>
+                        <div class="form-group"><label>Forma de pagamento</label><select id="formaPagamento" class="form-control"></select></div>
+                    </div>
+
+                    <div id="blocoGeracao" class="generation-box">
+                        <div class="generation-header"><div><strong>Gerar mais de um lançamento</strong><span>Parcelamento divide o valor; recorrência repete o valor.</span></div><label class="switch-control"><input id="gerarMultiplos" type="checkbox"><span></span></label></div>
+                        <div id="camposGeracao" class="form-grid form-grid-3 d-none">
+                            <div class="form-group"><label>Modo de geração</label><select id="modoGeracao" class="form-control"><option value="PARCELAMENTO">Parcelamento</option><option value="RECORRENCIA">Recorrência</option></select></div>
+                            <div class="form-group"><label>Quantidade</label><input id="quantidadeParcelas" type="number" min="2" max="120" value="2" class="form-control"></div>
+                            <div class="form-group"><label>Periodicidade</label><select id="periodicidadeParcelas" class="form-control"><option value="SEMANAL">Semanal</option><option value="QUINZENAL">Quinzenal</option><option value="MENSAL" selected>Mensal</option><option value="BIMESTRAL">Bimestral</option><option value="TRIMESTRAL">Trimestral</option><option value="SEMESTRAL">Semestral</option><option value="ANUAL">Anual</option><option value="PERSONALIZADA">Personalizada</option></select></div>
+                            <div class="form-group d-none" id="grupoIntervalo"><label>Intervalo em dias</label><input id="intervaloPersonalizadoDias" type="number" min="1" value="30" class="form-control"></div>
+                            <div class="generation-preview form-span-2" id="textoGeracao"></div>
+                        </div>
+                    </div>
+
+                    <div class="form-group"><label>Observações</label><textarea id="observacoes" class="form-control" rows="3"></textarea></div>
+                </div>
+                <div class="modal-footer"><button type="button" class="btn btn-light" onclick="fecharModalConta()">Cancelar</button><button type="submit" class="btn btn-primary" id="btnSalvarConta"><i class="fas fa-check"></i> Salvar despesa</button></div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modalPagar">
+        <div class="modal modal-sm">
+            <div class="modal-header"><div><span class="modal-eyebrow">Baixa financeira</span><h2 class="modal-title">Registrar pagamento</h2></div><button class="modal-close" onclick="fecharModalPagar()">&times;</button></div>
+            <form id="formPagar">
+                <div class="modal-body">
+                    <input type="hidden" id="pagarContaId">
+                    <div class="receive-highlight pay-highlight"><span>Saldo pendente</span><strong id="saldoPendenteModal">R$ 0,00</strong><small id="descricaoPagamento"></small></div>
+                    <div class="form-group"><label>Conta de saída *</label><select id="contaFinanceiraId" class="form-control" required></select></div>
+                    <div class="form-group"><label>Valor pago *</label><input id="valorPagamento" type="number" min="0.01" step="0.01" class="form-control" required></div>
+                    <div class="form-grid form-grid-3">
+                        <div class="form-group"><label>Desconto</label><input id="valorDesconto" type="number" min="0" step="0.01" value="0" class="form-control"></div>
+                        <div class="form-group"><label>Juros</label><input id="valorJuros" type="number" min="0" step="0.01" value="0" class="form-control"></div>
+                        <div class="form-group"><label>Multa</label><input id="valorMulta" type="number" min="0" step="0.01" value="0" class="form-control"></div>
+                    </div>
+                    <div class="form-grid form-grid-2">
+                        <div class="form-group"><label>Data do pagamento</label><input id="dataPagamento" type="date" class="form-control"></div>
+                        <div class="form-group"><label>Forma de pagamento</label><select id="formaPagamentoBaixa" class="form-control"></select></div>
+                    </div>
+                    <div class="form-group"><label>Observações</label><textarea id="observacoesPagamento" class="form-control" rows="2"></textarea></div>
+                </div>
+                <div class="modal-footer"><button type="button" class="btn btn-light" onclick="fecharModalPagar()">Cancelar</button><button type="submit" class="btn btn-danger" id="btnConfirmarPagamento"><i class="fas fa-circle-check"></i> Confirmar pagamento</button></div>
+            </form>
+        </div>
+    </div>
+
+    <script src="../js/layout.js"></script><script src="../js/api.js"></script><script src="../js/utils.js"></script><script src="../js/app.js"></script><script src="../js/menu.js"></script><script src="../js/contas-pagar.js"></script>
+</body>
+</html>
