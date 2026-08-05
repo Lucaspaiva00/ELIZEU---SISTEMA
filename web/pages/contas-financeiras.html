@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Caixas e Bancos | ERP Elizeu</title>
+    <link rel="stylesheet" href="../css/app.css">
+    <link rel="stylesheet" href="../css/financeiro.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+</head>
+<body>
+    <div class="wrapper">
+        <div id="sidebar"></div>
+        <main class="main">
+            <div id="topbar"></div>
+            <section class="content financial-page">
+                <div class="page-header">
+                    <div><span class="financial-eyebrow">Financeiro</span><h1 class="page-title">Caixas e bancos</h1><p class="page-subtitle">Gerencie as contas que movimentam o caixa da empresa.</p></div>
+                    <div class="page-actions"><button class="btn btn-primary" onclick="abrirModalConta()"><i class="fas fa-plus"></i> Nova conta</button></div>
+                </div>
+                <div id="mensagemPagina" class="financial-message d-none"></div>
+
+                <section class="bank-summary">
+                    <article class="bank-balance-hero">
+                        <div><span class="bank-hero-label">Saldo consolidado</span><strong id="saldoConsolidado">R$ 0,00</strong><small id="quantidadeContas">0 contas ativas</small></div>
+                        <span class="bank-hero-icon"><i class="fas fa-wallet"></i></span>
+                    </article>
+                    <article class="bank-mini-summary"><span class="summary-card-icon summary-in"><i class="fas fa-arrow-down"></i></span><div><small>Total de entradas</small><strong id="totalEntradas">R$ 0,00</strong><span>Histórico de movimentações</span></div></article>
+                    <article class="bank-mini-summary"><span class="summary-card-icon summary-out"><i class="fas fa-arrow-up"></i></span><div><small>Total de saídas</small><strong id="totalSaidas">R$ 0,00</strong><span>Histórico de movimentações</span></div></article>
+                </section>
+
+                <div class="accounts-toolbar">
+                    <div><h2>Contas financeiras</h2><p>O saldo é atualizado automaticamente pelas movimentações.</p></div>
+                    <label class="inactive-toggle"><input type="checkbox" id="incluirInativas"><span></span> Exibir contas inativas</label>
+                </div>
+
+                <section id="gradeContas" class="bank-accounts-grid"></section>
+            </section>
+        </main>
+    </div>
+
+    <div class="modal-overlay" id="modalConta">
+        <div class="modal modal-lg">
+            <div class="modal-header"><div><span class="modal-eyebrow">Conta financeira</span><h2 class="modal-title" id="tituloModalConta">Nova conta</h2></div><button class="modal-close" onclick="fecharModalConta()">&times;</button></div>
+            <form id="formConta">
+                <div class="modal-body">
+                    <input type="hidden" id="contaId">
+                    <div class="form-grid form-grid-2">
+                        <div class="form-group form-span-2"><label>Nome da conta *</label><input id="nome" class="form-control" required placeholder="Ex.: Caixa Principal ou Banco do Brasil"></div>
+                        <div class="form-group"><label>Tipo de conta *</label><select id="tipo" class="form-control" required><option value="CAIXA">Caixa</option><option value="CONTA_CORRENTE">Conta corrente</option><option value="POUPANCA">Poupança</option><option value="CARTEIRA_DIGITAL">Carteira digital</option><option value="OUTRA">Outra</option></select></div>
+                        <div class="form-group"><label>Banco ou instituição</label><input id="banco" class="form-control" placeholder="Nome do banco"></div>
+                        <div class="form-group"><label>Agência</label><input id="agencia" class="form-control" placeholder="Agência"></div>
+                        <div class="form-group"><label>Número da conta</label><input id="numeroConta" class="form-control" placeholder="Conta e dígito"></div>
+                        <div class="form-group"><label>Saldo inicial *</label><input id="saldoInicial" type="number" step="0.01" class="form-control" required></div>
+                        <div class="form-group"><label>Data do saldo inicial *</label><input id="dataSaldoInicial" type="date" class="form-control" required></div>
+                    </div>
+                    <label class="default-account-check"><input id="padrao" type="checkbox"><span><strong>Definir como conta padrão</strong><small>Será utilizada automaticamente nas baixas sem uma conta selecionada.</small></span></label>
+                    <div id="avisoSaldo" class="balance-lock-warning d-none"><i class="fas fa-lock"></i><span>Esta conta já possui movimentações. O saldo inicial não pode mais ser alterado.</span></div>
+                </div>
+                <div class="modal-footer"><button type="button" class="btn btn-light" onclick="fecharModalConta()">Cancelar</button><button type="submit" class="btn btn-primary" id="btnSalvarConta"><i class="fas fa-check"></i> Salvar conta</button></div>
+            </form>
+        </div>
+    </div>
+
+    <script src="../js/layout.js"></script><script src="../js/api.js"></script><script src="../js/utils.js"></script><script src="../js/app.js"></script><script src="../js/menu.js"></script><script src="../js/contas-financeiras.js"></script>
+</body>
+</html>
