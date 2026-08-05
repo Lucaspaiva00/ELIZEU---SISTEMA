@@ -6,6 +6,8 @@ const auth = require("../middlewares/auth.middleware");
 
 const dashboardController = require("../controllers/dashboard.controller");
 
+router.get("/financeiro", auth, dashboardController.buscarFinanceiro);
+
 router.get("/", auth, dashboardController.buscarResumo);
 
 module.exports = router;

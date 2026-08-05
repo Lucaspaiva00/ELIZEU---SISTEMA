@@ -2,6 +2,37 @@ const dashboardService = require("../services/dashboard.service");
 
 class DashboardController {
 
+    async buscarFinanceiro(req, res) {
+
+        try {
+
+            const dashboard = await dashboardService.buscarFinanceiro(
+                req.usuario.empresaId,
+                req.query
+            );
+
+            return res.json({
+                sucesso: true,
+                dashboard
+            });
+
+        } catch (erro) {
+
+            console.error(erro);
+
+            const status = erro.status || 500;
+
+            return res.status(status).json({
+                sucesso: false,
+                mensagem: status === 500
+                    ? "Erro ao carregar dashboard financeiro."
+                    : erro.message
+            });
+
+        }
+
+    }
+
     async buscarResumo(req, res) {
 
         try {
