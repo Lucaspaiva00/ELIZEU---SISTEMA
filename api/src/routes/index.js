@@ -13,6 +13,8 @@ router.use("/contas-receber", require("./contaReceber.routes"));
 router.use("/contas-pagar", require("./contaPagar.routes"));
 router.use("/contas-financeiras", require("./contaFinanceira.routes"));
 router.use("/movimentacoes-financeiras", require("./movimentacaoFinanceira.routes"));
+router.use("/categorias-financeiras", require("./categoriaFinanceira.routes"));
+router.use("/centros-custo", require("./centroCusto.routes"));
 router.use("/dashboard", require("./dashboard.routes"));
 
 module.exports = router;

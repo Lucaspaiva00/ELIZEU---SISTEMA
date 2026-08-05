@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>Cadastros Financeiros | ERP Elizeu</title>
+    <link rel="stylesheet" href="../css/app.css">
+    <link rel="stylesheet" href="../css/financeiro.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+</head>
+
+<body>
+    <div class="wrapper">
+        <div id="sidebar"></div>
+        <main class="main">
+            <div id="topbar"></div>
+            <section class="content financial-page">
+                <div class="page-header">
+                    <div><span class="financial-eyebrow">Configurações</span>
+                        <h1 class="page-title">Cadastros financeiros</h1>
+                        <p class="page-subtitle">Organize receitas, despesas e áreas responsáveis.</p>
+                    </div>
+                </div>
+                <div id="mensagemPagina" class="financial-message d-none"></div>
+                <div class="register-tabs"><button class="active" data-tab="categorias"><i class="fas fa-tags"></i>
+                        Categorias financeiras</button><button data-tab="centros"><i class="fas fa-sitemap"></i> Centros
+                        de custo</button></div>
+                <section id="tabCategorias" class="register-tab-content active">
+                    <div class="register-heading">
+                        <div>
+                            <h2>Categorias financeiras</h2>
+                            <p>Classifique entradas e saídas nos relatórios.</p>
+                        </div><button class="btn btn-primary" onclick="abrirCategoria()"><i class="fas fa-plus"></i>
+                            Nova categoria</button>
+                    </div>
+                    <div class="register-summary">
+                        <article><i class="fas fa-arrow-down text-success"></i>
+                            <div><span>Receitas</span><strong id="totalReceitas">0</strong></div>
+                        </article>
+                        <article><i class="fas fa-arrow-up text-danger"></i>
+                            <div><span>Despesas</span><strong id="totalDespesas">0</strong></div>
+                        </article>
+                        <article><i class="fas fa-right-left"></i>
+                            <div><span>Ambas</span><strong id="totalAmbas">0</strong></div>
+                        </article>
+                    </div>
+                    <div class="financial-panel">
+                        <div class="register-options"><label><input id="categoriasInativas" type="checkbox"> Exibir
+                                inativas</label></div>
+                        <div class="table-responsive">
+                            <table class="table financial-table">
+                                <thead>
+                                    <tr>
+                                        <th>Categoria</th>
+                                        <th>Natureza</th>
+                                        <th>Categoria superior</th>
+                                        <th>Utilizações</th>
+                                        <th>Status</th>
+                                        <th class="text-right">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tabelaCategorias"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+                <section id="tabCentros" class="register-tab-content">
+                    <div class="register-heading">
+                        <div>
+                            <h2>Centros de custo</h2>
+                            <p>Identifique os setores responsáveis por receitas e despesas.</p>
+                        </div><button class="btn btn-primary" onclick="abrirCentro()"><i class="fas fa-plus"></i> Novo
+                            centro de custo</button>
+                    </div>
+                    <div class="financial-panel">
+                        <div class="register-options"><label><input id="centrosInativos" type="checkbox"> Exibir
+                                inativos</label></div>
+                        <div class="table-responsive">
+                            <table class="table financial-table">
+                                <thead>
+                                    <tr>
+                                        <th>Código</th>
+                                        <th>Centro de custo</th>
+                                        <th>Descrição</th>
+                                        <th>Utilizações</th>
+                                        <th>Status</th>
+                                        <th class="text-right">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tabelaCentros"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+            </section>
+        </main>
+    </div>
+    <div class="modal-overlay" id="modalCategoria">
+        <div class="modal modal-sm">
+            <div class="modal-header">
+                <div><span class="modal-eyebrow">Classificação</span>
+                    <h2 class="modal-title" id="tituloCategoria">Nova categoria</h2>
+                </div><button class="modal-close" onclick="fecharCategoria()">&times;</button>
+            </div>
+            <form id="formCategoria">
+                <div class="modal-body"><input type="hidden" id="categoriaId">
+                    <div class="form-group"><label>Nome *</label><input id="categoriaNome" class="form-control"
+                            required></div>
+                    <div class="form-group"><label>Natureza *</label><select id="categoriaNatureza" class="form-control"
+                            required>
+                            <option value="RECEITA">Receita</option>
+                            <option value="DESPESA">Despesa</option>
+                            <option value="AMBAS">Receita e despesa</option>
+                        </select></div>
+                    <div class="form-group"><label>Categoria superior</label><select id="categoriaPaiId"
+                            class="form-control">
+                            <option value="">Nenhuma</option>
+                        </select></div>
+                    <div class="form-group"><label>Descrição</label><textarea id="categoriaDescricao"
+                            class="form-control" rows="3"></textarea></div><label class="default-account-check"><input
+                            id="categoriaAtiva" type="checkbox" checked><span><strong>Categoria
+                                ativa</strong><small>Disponível para novos lançamentos.</small></span></label>
+                </div>
+                <div class="modal-footer"><button type="button" class="btn btn-light"
+                        onclick="fecharCategoria()">Cancelar</button><button type="submit" class="btn btn-primary"
+                        id="salvarCategoria">Salvar</button></div>
+            </form>
+        </div>
+    </div>
+    <div class="modal-overlay" id="modalCentro">
+        <div class="modal modal-sm">
+            <div class="modal-header">
+                <div><span class="modal-eyebrow">Estrutura</span>
+                    <h2 class="modal-title" id="tituloCentro">Novo centro de custo</h2>
+                </div><button class="modal-close" onclick="fecharCentro()">&times;</button>
+            </div>
+            <form id="formCentro">
+                <div class="modal-body"><input type="hidden" id="centroId">
+                    <div class="form-group"><label>Código *</label><input id="centroCodigo" class="form-control"
+                            required placeholder="Ex.: ADM"></div>
+                    <div class="form-group"><label>Nome *</label><input id="centroNome" class="form-control" required>
+                    </div>
+                    <div class="form-group"><label>Descrição</label><textarea id="centroDescricao" class="form-control"
+                            rows="3"></textarea></div><label class="default-account-check"><input id="centroAtivo"
+                            type="checkbox" checked><span><strong>Centro ativo</strong><small>Disponível para novos
+                                lançamentos.</small></span></label>
+                </div>
+                <div class="modal-footer"><button type="button" class="btn btn-light"
+                        onclick="fecharCentro()">Cancelar</button><button type="submit" class="btn btn-primary"
+                        id="salvarCentro">Salvar</button></div>
+            </form>
+        </div>
+    </div>
+    <script src="../js/layout.js"></script>
+    <script src="../js/api.js"></script>
+    <script src="../js/utils.js"></script>
+    <script src="../js/app.js"></script>
+    <script src="../js/menu.js"></script>
+    <script src="../js/cadastros-financeiros.js"></script>
+</body>
+
+</html>
