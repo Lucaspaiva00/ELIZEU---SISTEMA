@@ -2,309 +2,252 @@
 <html lang="pt-BR">
 
 <head>
-
     <meta charset="UTF-8">
-
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <title>Dashboard | ERP Elizeu</title>
-
+    <title>Dashboard Financeiro | ERP Elizeu</title>
     <link rel="stylesheet" href="../css/app.css">
-
+    <link rel="stylesheet" href="../css/dashboard.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
-
 </head>
 
 <body>
-
     <div class="wrapper">
-
-        <!-- Sidebar -->
-
         <div id="sidebar"></div>
 
-        <!-- Conteúdo -->
-
         <main class="main">
-
-            <!-- Topbar -->
-
             <div id="topbar"></div>
 
-            <section class="content">
-
-                <div class="page-header">
-
+            <section class="content dashboard-content">
+                <div class="page-header dashboard-header">
                     <div>
-
-                        <h1 class="page-title">
-                            Dashboard
-                        </h1>
-
-                        <p class="page-subtitle">
-                            Visão geral do sistema.
-                        </p>
-
+                        <span class="page-eyebrow">Visão consolidada</span>
+                        <h1 class="page-title">Dashboard financeiro</h1>
+                        <p class="page-subtitle" id="periodoDescricao">Acompanhe a saúde financeira da empresa.</p>
                     </div>
 
+                    <div class="dashboard-filter">
+                        <label for="filtroPeriodo">Período</label>
+                        <div class="filter-control">
+                            <i class="far fa-calendar"></i>
+                            <select id="filtroPeriodo" aria-label="Filtrar período do dashboard">
+                                <option value="DIARIO">Hoje</option>
+                                <option value="SEMANAL">Últimos 7 dias</option>
+                                <option value="MENSAL" selected>Este mês</option>
+                                <option value="TRIMESTRAL">Últimos 3 meses</option>
+                                <option value="SEMESTRAL">Últimos 6 meses</option>
+                                <option value="ANUAL">Este ano</option>
+                            </select>
+                            <i class="fas fa-chevron-down filter-chevron"></i>
+                        </div>
+                    </div>
                 </div>
 
-                <!-- Cards -->
+                <div id="dashboardErro" class="dashboard-error d-none"></div>
 
-                <div class="kpi-grid">
-
-                    <div class="kpi-card">
-
-                        <div class="kpi-icon">
-                            <i class="fas fa-user-friends"></i>
+                <section class="financial-kpis" aria-label="Indicadores financeiros">
+                    <article class="financial-kpi financial-kpi-primary">
+                        <div class="financial-kpi-top">
+                            <span class="financial-kpi-icon"><i class="fas fa-wallet"></i></span>
+                            <span class="financial-kpi-pill">Disponível</span>
                         </div>
+                        <span class="financial-kpi-label">Saldo consolidado</span>
+                        <strong class="financial-kpi-value" id="kpiSaldoConsolidado">R$ 0,00</strong>
+                        <span class="financial-kpi-caption" id="kpiQuantidadeContas">0 contas financeiras</span>
+                    </article>
 
-                        <div class="kpi-label">
-                            Clientes
+                    <article class="financial-kpi">
+                        <div class="financial-kpi-top">
+                            <span class="financial-kpi-icon icon-success"><i class="fas fa-arrow-trend-up"></i></span>
+                            <span class="financial-kpi-trend text-success"><i class="fas fa-arrow-up"></i> Entradas</span>
                         </div>
+                        <span class="financial-kpi-label">Receitas no período</span>
+                        <strong class="financial-kpi-value" id="kpiEntradas">R$ 0,00</strong>
+                        <span class="financial-kpi-caption">Valores efetivamente recebidos</span>
+                    </article>
 
-                        <div class="kpi-value" id="kpiClientes">
-                            0
+                    <article class="financial-kpi">
+                        <div class="financial-kpi-top">
+                            <span class="financial-kpi-icon icon-danger"><i class="fas fa-arrow-trend-down"></i></span>
+                            <span class="financial-kpi-trend text-danger"><i class="fas fa-arrow-down"></i> Saídas</span>
                         </div>
+                        <span class="financial-kpi-label">Despesas no período</span>
+                        <strong class="financial-kpi-value" id="kpiSaidas">R$ 0,00</strong>
+                        <span class="financial-kpi-caption">Valores efetivamente pagos</span>
+                    </article>
 
-                        <div class="kpi-description">
-                            Clientes cadastrados
+                    <article class="financial-kpi" id="cardResultado">
+                        <div class="financial-kpi-top">
+                            <span class="financial-kpi-icon icon-result"><i class="fas fa-chart-line"></i></span>
+                            <span class="financial-kpi-pill pill-neutral" id="resultadoStatus">Equilíbrio</span>
                         </div>
+                        <span class="financial-kpi-label">Resultado do período</span>
+                        <strong class="financial-kpi-value" id="kpiResultado">R$ 0,00</strong>
+                        <span class="financial-kpi-caption">Entradas menos saídas</span>
+                    </article>
+                </section>
 
-                    </div>
-
-                    <div class="kpi-card">
-
-                        <div class="kpi-icon">
-                            <i class="fas fa-boxes"></i>
-                        </div>
-
-                        <div class="kpi-label">
-                            Produtos
-                        </div>
-
-                        <div class="kpi-value" id="kpiProdutos">
-                            0
-                        </div>
-
-                        <div class="kpi-description">
-                            Produtos cadastrados
-                        </div>
-
-                    </div>
-
-                    <div class="kpi-card">
-
-                        <div class="kpi-icon">
-                            <i class="fas fa-tags"></i>
-                        </div>
-
-                        <div class="kpi-label">
-                            Categorias
-                        </div>
-
-                        <div class="kpi-value" id="kpiCategorias">
-                            0
-                        </div>
-
-                        <div class="kpi-description">
-                            Categorias cadastradas
-                        </div>
-
-                    </div>
-
-                    <div class="kpi-card">
-
-                        <div class="kpi-icon">
-                            <i class="fas fa-file-invoice-dollar"></i>
-                        </div>
-
-                        <div class="kpi-label">
-                            Orçamentos
-                        </div>
-
-                        <div class="kpi-value" id="kpiOrcamentos">
-                            0
-                        </div>
-
-                        <div class="kpi-description">
-                            Total de orçamentos
-                        </div>
-
-                    </div>
-
-                    <div class="kpi-card">
-
-                        <div class="kpi-icon">
-                            <i class="fas fa-dollar-sign"></i>
-                        </div>
-
-                        <div class="kpi-label">
-                            Valor Total
-                        </div>
-
-                        <div class="kpi-value" id="kpiValor">
-                            R$ 0,00
-                        </div>
-
-                        <div class="kpi-description">
-                            Valor total orçado
-                        </div>
-
-                    </div>
-
-                    <div class="kpi-card">
-
-                        <div class="kpi-icon">
-                            <i class="fas fa-exclamation-triangle"></i>
-                        </div>
-
-                        <div class="kpi-label">
-                            Estoque Baixo
-                        </div>
-
-                        <div class="kpi-value" id="kpiEstoque">
-                            0
-                        </div>
-
-                        <div class="kpi-description">
-                            Produtos em alerta
-                        </div>
-
-                    </div>
-
-                </div>
-
-                <!-- Últimos Orçamentos -->
-
-                <div class="row">
-
-                    <div class="col">
-
-                        <div class="card">
-
-                            <div class="card-header">
-
-                                <h2 class="card-title">
-
-                                    Últimos Orçamentos
-
-                                </h2>
-
+                <section class="dashboard-grid dashboard-grid-main">
+                    <article class="dashboard-card chart-card chart-card-wide">
+                        <div class="dashboard-card-header">
+                            <div>
+                                <h2>Fluxo de caixa</h2>
+                                <p>Entradas e saídas realizadas no período</p>
                             </div>
-
-                            <div class="card-body">
-
-                                <div class="table-responsive">
-
-                                    <table class="table">
-
-                                        <thead>
-
-                                            <tr>
-
-                                                <th>Número</th>
-
-                                                <th>Cliente</th>
-
-                                                <th>Total</th>
-
-                                                <th>Data</th>
-
-                                            </tr>
-
-                                        </thead>
-
-                                        <tbody id="tabelaOrcamentos">
-
-                                        </tbody>
-
-                                    </table>
-
-                                </div>
-
+                            <div class="chart-legend">
+                                <span><i class="legend-dot legend-green"></i> Entradas</span>
+                                <span><i class="legend-dot legend-red"></i> Saídas</span>
                             </div>
+                        </div>
+                        <div class="chart-container"><canvas id="graficoFluxo"></canvas></div>
+                    </article>
 
+                    <article class="dashboard-card titles-card">
+                        <div class="dashboard-card-header">
+                            <div>
+                                <h2>Compromissos</h2>
+                                <p>Posição atual dos títulos</p>
+                            </div>
+                            <span class="header-icon"><i class="fas fa-receipt"></i></span>
                         </div>
 
-                    </div>
-
-                </div>
-
-                <!-- Estoque Baixo -->
-
-                <div class="row mt-3">
-
-                    <div class="col">
-
-                        <div class="card">
-
-                            <div class="card-header">
-
-                                <h2 class="card-title">
-
-                                    Produtos com Estoque Baixo
-
-                                </h2>
-
+                        <div class="title-summary title-summary-receive">
+                            <span class="summary-icon"><i class="fas fa-arrow-down"></i></span>
+                            <div class="summary-content">
+                                <span>Contas a receber</span>
+                                <strong id="kpiReceberAberto">R$ 0,00</strong>
+                                <small id="quantidadeReceber">0 títulos em aberto</small>
                             </div>
-
-                            <div class="card-body">
-
-                                <div class="table-responsive">
-
-                                    <table class="table">
-
-                                        <thead>
-
-                                            <tr>
-
-                                                <th>Produto</th>
-
-                                                <th>SKU</th>
-
-                                                <th>Estoque Atual</th>
-
-                                                <th>Estoque Mínimo</th>
-
-                                            </tr>
-
-                                        </thead>
-
-                                        <tbody id="tabelaEstoqueBaixo">
-
-                                        </tbody>
-
-                                    </table>
-
-                                </div>
-
-                            </div>
-
                         </div>
 
+                        <div class="title-summary title-summary-pay">
+                            <span class="summary-icon"><i class="fas fa-arrow-up"></i></span>
+                            <div class="summary-content">
+                                <span>Contas a pagar</span>
+                                <strong id="kpiPagarAberto">R$ 0,00</strong>
+                                <small id="quantidadePagar">0 títulos em aberto</small>
+                            </div>
+                        </div>
+
+                        <div class="overdue-box">
+                            <div><span>A receber em atraso</span><strong id="kpiReceberAtrasado">R$ 0,00</strong></div>
+                            <div><span>A pagar em atraso</span><strong id="kpiPagarAtrasado">R$ 0,00</strong></div>
+                        </div>
+                    </article>
+                </section>
+
+                <section class="dashboard-grid dashboard-grid-secondary">
+                    <article class="dashboard-card projection-card">
+                        <div class="dashboard-card-header">
+                            <div>
+                                <h2>Projeção de caixa</h2>
+                                <p>Saldo previsto para os próximos 30 dias</p>
+                            </div>
+                            <div class="projection-value">
+                                <span>Saldo projetado</span>
+                                <strong id="saldoProjetado">R$ 0,00</strong>
+                            </div>
+                        </div>
+                        <div class="chart-container chart-container-small"><canvas id="graficoProjecao"></canvas></div>
+                    </article>
+
+                    <article class="dashboard-card accounts-card">
+                        <div class="dashboard-card-header">
+                            <div>
+                                <h2>Caixas e bancos</h2>
+                                <p>Saldo atual por conta</p>
+                            </div>
+                            <span class="header-icon"><i class="fas fa-building-columns"></i></span>
+                        </div>
+                        <div id="listaContas" class="account-list"></div>
+                    </article>
+                </section>
+
+                <section class="dashboard-grid dashboard-grid-tables">
+                    <article class="dashboard-card table-card">
+                        <div class="dashboard-card-header">
+                            <div>
+                                <h2>Próximos recebimentos</h2>
+                                <p>Títulos pendentes por vencimento</p>
+                            </div>
+                            <span class="header-icon icon-success"><i class="fas fa-hand-holding-dollar"></i></span>
+                        </div>
+                        <div id="listaRecebimentos" class="due-list"></div>
+                    </article>
+
+                    <article class="dashboard-card table-card">
+                        <div class="dashboard-card-header">
+                            <div>
+                                <h2>Próximos pagamentos</h2>
+                                <p>Despesas pendentes por vencimento</p>
+                            </div>
+                            <span class="header-icon icon-danger"><i class="fas fa-file-invoice-dollar"></i></span>
+                        </div>
+                        <div id="listaPagamentos" class="due-list"></div>
+                    </article>
+
+                    <article class="dashboard-card table-card movements-card">
+                        <div class="dashboard-card-header">
+                            <div>
+                                <h2>Últimas movimentações</h2>
+                                <p>Histórico financeiro recente</p>
+                            </div>
+                            <span class="header-icon"><i class="fas fa-clock-rotate-left"></i></span>
+                        </div>
+                        <div id="listaMovimentacoes" class="movement-list"></div>
+                    </article>
+                </section>
+
+                <section class="commercial-section">
+                    <div class="section-heading">
+                        <div>
+                            <span class="page-eyebrow">Visão comercial</span>
+                            <h2>Vendas e operação</h2>
+                        </div>
+                        <span>Indicadores complementares do negócio</span>
                     </div>
 
-                </div>
+                    <div class="commercial-kpis">
+                        <article class="mini-kpi"><span class="mini-kpi-icon"><i class="fas fa-cart-shopping"></i></span><div><small>Vendas no período</small><strong id="kpiVendasPeriodo">R$ 0,00</strong><span id="kpiQuantidadeVendas">0 vendas realizadas</span></div></article>
+                        <article class="mini-kpi"><span class="mini-kpi-icon"><i class="fas fa-ticket"></i></span><div><small>Ticket médio</small><strong id="kpiTicketMedio">R$ 0,00</strong><span>Valor médio por venda</span></div></article>
+                        <article class="mini-kpi"><span class="mini-kpi-icon"><i class="fas fa-file-signature"></i></span><div><small>Orçamentos</small><strong id="kpiOrcamentosPeriodo">0</strong><span id="kpiOrcamentosAprovados">0 aprovados</span></div></article>
+                        <article class="mini-kpi"><span class="mini-kpi-icon"><i class="fas fa-bullseye"></i></span><div><small>Taxa de conversão</small><strong id="kpiConversao">0%</strong><span>Orçamentos aprovados</span></div></article>
+                    </div>
 
+                    <div class="operational-kpis">
+                        <article><i class="fas fa-user-friends"></i><div><span>Clientes</span><strong id="kpiClientes">0</strong></div></article>
+                        <article><i class="fas fa-boxes-stacked"></i><div><span>Produtos</span><strong id="kpiProdutos">0</strong></div></article>
+                        <article><i class="fas fa-tags"></i><div><span>Categorias</span><strong id="kpiCategorias">0</strong></div></article>
+                        <article><i class="fas fa-file-lines"></i><div><span>Total de orçamentos</span><strong id="kpiOrcamentos">0</strong></div></article>
+                        <article><i class="fas fa-coins"></i><div><span>Valor total orçado</span><strong id="kpiValor">R$ 0,00</strong></div></article>
+                        <article class="operational-alert"><i class="fas fa-triangle-exclamation"></i><div><span>Estoque baixo</span><strong id="kpiEstoque">0</strong></div></article>
+                    </div>
+
+                    <div class="dashboard-grid operational-tables">
+                        <article class="dashboard-card">
+                            <div class="dashboard-card-header"><div><h2>Últimos orçamentos</h2><p>Propostas comerciais recentes</p></div></div>
+                            <div class="table-responsive">
+                                <table class="table"><thead><tr><th>Número</th><th>Cliente</th><th>Total</th><th>Data</th></tr></thead><tbody id="tabelaOrcamentos"></tbody></table>
+                            </div>
+                        </article>
+                        <article class="dashboard-card">
+                            <div class="dashboard-card-header"><div><h2>Alertas de estoque</h2><p>Itens próximos ou abaixo do mínimo</p></div></div>
+                            <div class="table-responsive">
+                                <table class="table"><thead><tr><th>Produto</th><th>SKU</th><th>Atual</th><th>Mínimo</th></tr></thead><tbody id="tabelaEstoqueBaixo"></tbody></table>
+                            </div>
+                        </article>
+                    </div>
+                </section>
             </section>
-
         </main>
-
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
     <script src="../js/layout.js"></script>
-
     <script src="../js/api.js"></script>
-
     <script src="../js/utils.js"></script>
-
     <script src="../js/app.js"></script>
-
     <script src="../js/menu.js"></script>
-
     <script src="../js/dashboard.js"></script>
-
 </body>
 
 </html>
