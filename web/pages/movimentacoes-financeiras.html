@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Movimentações Financeiras | ERP Elizeu</title>
+    <link rel="stylesheet" href="../css/app.css"><link rel="stylesheet" href="../css/financeiro.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+</head>
+<body>
+    <div class="wrapper"><div id="sidebar"></div><main class="main"><div id="topbar"></div>
+        <section class="content financial-page">
+            <div class="page-header">
+                <div><span class="financial-eyebrow">Financeiro</span><h1 class="page-title">Movimentações financeiras</h1><p class="page-subtitle">Extrato consolidado de caixas e contas bancárias.</p></div>
+                <div class="page-actions"><button class="btn btn-light" onclick="abrirModalTransferencia()"><i class="fas fa-right-left"></i> Transferir</button><button class="btn btn-primary" onclick="abrirModalLancamento()"><i class="fas fa-plus"></i> Novo lançamento</button></div>
+            </div>
+            <div id="mensagemPagina" class="financial-message d-none"></div>
+
+            <section class="statement-summary-grid">
+                <article class="statement-summary statement-balance"><span><i class="fas fa-wallet"></i></span><div><small>Saldo atual</small><strong id="saldoAtual">R$ 0,00</strong><em>Saldo consolidado das contas</em></div></article>
+                <article class="statement-summary"><span class="statement-in"><i class="fas fa-arrow-trend-up"></i></span><div><small>Entradas no período</small><strong id="entradasPeriodo">R$ 0,00</strong><em id="quantidadeEntradas">0 movimentações</em></div></article>
+                <article class="statement-summary"><span class="statement-out"><i class="fas fa-arrow-trend-down"></i></span><div><small>Saídas no período</small><strong id="saidasPeriodo">R$ 0,00</strong><em id="quantidadeSaidas">0 movimentações</em></div></article>
+                <article class="statement-summary"><span class="statement-result"><i class="fas fa-chart-line"></i></span><div><small>Resultado do período</small><strong id="resultadoPeriodo">R$ 0,00</strong><em>Entradas menos saídas</em></div></article>
+            </section>
+
+            <div class="financial-panel">
+                <div class="financial-filters statement-filters">
+                    <div class="filter-search"><i class="fas fa-magnifying-glass"></i><input id="filtroBusca" placeholder="Buscar descrição, documento ou observação..."></div>
+                    <select id="filtroConta" class="financial-select"><option value="">Todas as contas</option></select>
+                    <select id="filtroTipo" class="financial-select"><option value="">Entradas e saídas</option><option value="ENTRADA">Somente entradas</option><option value="SAIDA">Somente saídas</option></select>
+                    <select id="filtroOrigem" class="financial-select"><option value="">Todas as origens</option><option value="CONTA_RECEBER">Contas a receber</option><option value="CONTA_PAGAR">Contas a pagar</option><option value="LANCAMENTO_MANUAL">Lançamento manual</option><option value="TRANSFERENCIA">Transferência</option><option value="ESTORNO">Estorno</option><option value="VENDA">Venda</option><option value="AJUSTE">Ajuste</option></select>
+                    <input id="filtroInicio" type="date" class="financial-date"><input id="filtroFim" type="date" class="financial-date">
+                    <button class="btn btn-light" onclick="limparFiltros()"><i class="fas fa-rotate-left"></i></button>
+                </div>
+                <div class="statement-options"><label><input id="incluirEstornadas" type="checkbox" checked> Exibir movimentações estornadas</label></div>
+                <div class="table-responsive"><table class="table financial-table statement-table"><thead><tr><th>Data</th><th>Descrição</th><th>Conta</th><th>Origem</th><th>Documento</th><th class="text-right">Valor</th><th class="text-right">Ações</th></tr></thead><tbody id="tabelaMovimentacoes"></tbody></table></div>
+                <div class="financial-pagination"><span id="textoPaginacao">0 registros</span><div id="botoesPaginacao"></div></div>
+            </div>
+        </section>
+    </main></div>
+
+    <div class="modal-overlay" id="modalLancamento"><div class="modal modal-lg">
+        <div class="modal-header"><div><span class="modal-eyebrow">Movimentação manual</span><h2 class="modal-title">Novo lançamento</h2></div><button class="modal-close" onclick="fecharModalLancamento()">&times;</button></div>
+        <form id="formLancamento"><div class="modal-body">
+            <div class="movement-type-picker"><label class="movement-type-option movement-entry"><input type="radio" name="tipoLancamento" value="ENTRADA" checked><span><i class="fas fa-arrow-down"></i><strong>Entrada</strong><small>Adicionar valor à conta</small></span></label><label class="movement-type-option movement-exit"><input type="radio" name="tipoLancamento" value="SAIDA"><span><i class="fas fa-arrow-up"></i><strong>Saída</strong><small>Retirar valor da conta</small></span></label></div>
+            <div class="form-grid form-grid-2">
+                <div class="form-group form-span-2"><label>Descrição *</label><input id="descricaoLancamento" class="form-control" required placeholder="Ex.: Recebimento avulso ou despesa de manutenção"></div>
+                <div class="form-group"><label>Conta financeira *</label><select id="contaLancamento" class="form-control" required></select></div>
+                <div class="form-group"><label>Valor *</label><input id="valorLancamento" type="number" min="0.01" step="0.01" class="form-control" required></div>
+                <div class="form-group"><label>Data da movimentação *</label><input id="dataLancamento" type="date" class="form-control" required></div>
+                <div class="form-group"><label>Data de competência</label><input id="competenciaLancamento" type="date" class="form-control"></div>
+                <div class="form-group"><label>Forma de pagamento</label><select id="formaLancamento" class="form-control"></select></div>
+                <div class="form-group"><label>Documento</label><input id="documentoLancamento" class="form-control" placeholder="Referência opcional"></div>
+                <div class="form-group form-span-2"><label>Observações</label><textarea id="observacoesLancamento" class="form-control" rows="3"></textarea></div>
+            </div>
+        </div><div class="modal-footer"><button type="button" class="btn btn-light" onclick="fecharModalLancamento()">Cancelar</button><button type="submit" class="btn btn-primary" id="btnSalvarLancamento"><i class="fas fa-check"></i> Registrar lançamento</button></div></form>
+    </div></div>
+
+    <div class="modal-overlay" id="modalTransferencia"><div class="modal modal-lg">
+        <div class="modal-header"><div><span class="modal-eyebrow">Entre contas</span><h2 class="modal-title">Nova transferência</h2></div><button class="modal-close" onclick="fecharModalTransferencia()">&times;</button></div>
+        <form id="formTransferencia"><div class="modal-body">
+            <div class="transfer-flow"><div><span class="transfer-icon transfer-from"><i class="fas fa-building-columns"></i></span><label>Conta de origem *</label><select id="contaOrigem" class="form-control" required></select></div><i class="fas fa-arrow-right transfer-arrow"></i><div><span class="transfer-icon transfer-to"><i class="fas fa-building-columns"></i></span><label>Conta de destino *</label><select id="contaDestino" class="form-control" required></select></div></div>
+            <div class="form-grid form-grid-2">
+                <div class="form-group"><label>Valor *</label><input id="valorTransferencia" type="number" min="0.01" step="0.01" class="form-control" required></div>
+                <div class="form-group"><label>Data *</label><input id="dataTransferencia" type="date" class="form-control" required></div>
+                <div class="form-group"><label>Descrição</label><input id="descricaoTransferencia" class="form-control" placeholder="Gerada automaticamente se vazia"></div>
+                <div class="form-group"><label>Documento</label><input id="documentoTransferencia" class="form-control"></div>
+                <div class="form-group form-span-2"><label>Observações</label><textarea id="observacoesTransferencia" class="form-control" rows="3"></textarea></div>
+            </div>
+        </div><div class="modal-footer"><button type="button" class="btn btn-light" onclick="fecharModalTransferencia()">Cancelar</button><button type="submit" class="btn btn-primary" id="btnTransferir"><i class="fas fa-right-left"></i> Confirmar transferência</button></div></form>
+    </div></div>
+
+    <script src="../js/layout.js"></script><script src="../js/api.js"></script><script src="../js/utils.js"></script><script src="../js/app.js"></script><script src="../js/menu.js"></script><script src="../js/movimentacoes-financeiras.js"></script>
+</body></html>
