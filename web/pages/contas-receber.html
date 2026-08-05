@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contas a Receber | ERP Elizeu</title>
+    <link rel="stylesheet" href="../css/app.css">
+    <link rel="stylesheet" href="../css/financeiro.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+</head>
+
+<body>
+    <div class="wrapper">
+        <div id="sidebar"></div>
+
+        <main class="main">
+            <div id="topbar"></div>
+
+            <section class="content financial-page">
+                <div class="page-header">
+                    <div>
+                        <span class="financial-eyebrow">Financeiro</span>
+                        <h1 class="page-title">Contas a receber</h1>
+                        <p class="page-subtitle">Gerencie cobranças, vencimentos e recebimentos dos clientes.</p>
+                    </div>
+                    <div class="page-actions">
+                        <button class="btn btn-primary" onclick="abrirModalConta()">
+                            <i class="fas fa-plus"></i> Nova conta a receber
+                        </button>
+                    </div>
+                </div>
+
+                <div id="mensagemPagina" class="financial-message d-none"></div>
+
+                <section class="financial-summary-grid">
+                    <article class="summary-card summary-blue">
+                        <span class="summary-card-icon"><i class="fas fa-hourglass-half"></i></span>
+                        <div><small>Em aberto</small><strong id="resumoEmAberto">R$ 0,00</strong><span id="quantidadeEmAberto">0 títulos pendentes</span></div>
+                    </article>
+                    <article class="summary-card summary-green">
+                        <span class="summary-card-icon"><i class="fas fa-circle-check"></i></span>
+                        <div><small>Total recebido</small><strong id="resumoRecebido">R$ 0,00</strong><span id="quantidadePagos">0 títulos recebidos</span></div>
+                    </article>
+                    <article class="summary-card summary-red">
+                        <span class="summary-card-icon"><i class="fas fa-triangle-exclamation"></i></span>
+                        <div><small>Em atraso</small><strong id="resumoAtrasado">R$ 0,00</strong><span id="quantidadeAtrasados">0 títulos atrasados</span></div>
+                    </article>
+                    <article class="summary-card summary-orange">
+                        <span class="summary-card-icon"><i class="fas fa-calendar-day"></i></span>
+                        <div><small>Vencendo hoje</small><strong id="resumoVencendoHoje">R$ 0,00</strong><span>Atenção necessária</span></div>
+                    </article>
+                </section>
+
+                <div class="financial-panel">
+                    <div class="financial-filters">
+                        <div class="filter-search">
+                            <i class="fas fa-magnifying-glass"></i>
+                            <input id="filtroBusca" placeholder="Buscar cliente, descrição ou documento...">
+                        </div>
+                        <select id="filtroStatus" class="financial-select">
+                            <option value="">Todos os status</option>
+                            <option value="PENDENTE">Pendente</option>
+                            <option value="PARCIAL">Parcial</option>
+                            <option value="ATRASADO">Atrasado</option>
+                            <option value="PAGO">Recebido</option>
+                            <option value="CANCELADO">Cancelado</option>
+                        </select>
+                        <input id="filtroInicio" type="date" class="financial-date" title="Vencimento inicial">
+                        <input id="filtroFim" type="date" class="financial-date" title="Vencimento final">
+                        <button class="btn btn-light" onclick="limparFiltros()"><i class="fas fa-rotate-left"></i> Limpar</button>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table financial-table">
+                            <thead>
+                                <tr>
+                                    <th>Cliente / descrição</th>
+                                    <th>Documento</th>
+                                    <th>Vencimento</th>
+                                    <th>Valor</th>
+                                    <th>Recebido</th>
+                                    <th>Saldo</th>
+                                    <th>Status</th>
+                                    <th class="text-right">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabelaContasReceber"></tbody>
+                        </table>
+                    </div>
+
+                    <div class="financial-pagination">
+                        <span id="textoPaginacao">0 registros</span>
+                        <div id="botoesPaginacao"></div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div class="modal-overlay" id="modalConta">
+        <div class="modal modal-lg">
+            <div class="modal-header">
+                <div><span class="modal-eyebrow">Conta a receber</span><h2 class="modal-title" id="tituloModalConta">Nova cobrança</h2></div>
+                <button class="modal-close" onclick="fecharModalConta()">&times;</button>
+            </div>
+            <form id="formConta">
+                <div class="modal-body">
+                    <input type="hidden" id="contaId">
+                    <div class="form-grid form-grid-2">
+                        <div class="form-group form-span-2"><label>Cliente *</label><select id="clienteId" class="form-control" required></select></div>
+                        <div class="form-group form-span-2"><label>Descrição *</label><input id="descricao" class="form-control" required placeholder="Ex.: Parcela do orçamento 1024"></div>
+                        <div class="form-group"><label>Número do documento</label><input id="numeroDocumento" class="form-control" placeholder="Nota, contrato ou referência"></div>
+                        <div class="form-group"><label>Valor original *</label><input id="valorOriginal" type="number" min="0.01" step="0.01" class="form-control" required></div>
+                        <div class="form-group"><label>Data de competência</label><input id="dataCompetencia" type="date" class="form-control"></div>
+                        <div class="form-group"><label>Data de emissão</label><input id="dataEmissao" type="date" class="form-control"></div>
+                        <div class="form-group"><label>Data de vencimento *</label><input id="dataVencimento" type="date" class="form-control" required></div>
+                        <div class="form-group"><label>Forma de pagamento</label><select id="formaPagamento" class="form-control"></select></div>
+                        <div class="form-group"><label>Parcela</label><div class="inline-fields"><input id="parcelaNumero" type="number" min="1" value="1" class="form-control"><span>de</span><input id="totalParcelas" type="number" min="1" value="1" class="form-control"></div></div>
+                        <div class="form-group form-span-2"><label>Observações</label><textarea id="observacoes" class="form-control" rows="3"></textarea></div>
+                    </div>
+                </div>
+                <div class="modal-footer"><button type="button" class="btn btn-light" onclick="fecharModalConta()">Cancelar</button><button type="submit" class="btn btn-primary" id="btnSalvarConta"><i class="fas fa-check"></i> Salvar cobrança</button></div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modalReceber">
+        <div class="modal modal-sm">
+            <div class="modal-header">
+                <div><span class="modal-eyebrow">Baixa financeira</span><h2 class="modal-title">Registrar recebimento</h2></div>
+                <button class="modal-close" onclick="fecharModalReceber()">&times;</button>
+            </div>
+            <form id="formReceber">
+                <div class="modal-body">
+                    <input type="hidden" id="receberContaId">
+                    <div class="receive-highlight"><span>Saldo pendente</span><strong id="saldoPendenteModal">R$ 0,00</strong><small id="descricaoRecebimento"></small></div>
+                    <div class="form-group"><label>Conta de destino *</label><select id="contaFinanceiraId" class="form-control" required></select></div>
+                    <div class="form-group"><label>Valor recebido *</label><input id="valorRecebimento" type="number" min="0.01" step="0.01" class="form-control" required></div>
+                    <div class="form-grid form-grid-3">
+                        <div class="form-group"><label>Desconto</label><input id="valorDesconto" type="number" min="0" step="0.01" value="0" class="form-control"></div>
+                        <div class="form-group"><label>Juros</label><input id="valorJuros" type="number" min="0" step="0.01" value="0" class="form-control"></div>
+                        <div class="form-group"><label>Multa</label><input id="valorMulta" type="number" min="0" step="0.01" value="0" class="form-control"></div>
+                    </div>
+                    <div class="form-grid form-grid-2">
+                        <div class="form-group"><label>Data do recebimento</label><input id="dataRecebimento" type="date" class="form-control"></div>
+                        <div class="form-group"><label>Forma de pagamento</label><select id="formaRecebimento" class="form-control"></select></div>
+                    </div>
+                    <div class="form-group"><label>Observações</label><textarea id="observacoesRecebimento" class="form-control" rows="2"></textarea></div>
+                </div>
+                <div class="modal-footer"><button type="button" class="btn btn-light" onclick="fecharModalReceber()">Cancelar</button><button type="submit" class="btn btn-success" id="btnConfirmarRecebimento"><i class="fas fa-circle-check"></i> Confirmar recebimento</button></div>
+            </form>
+        </div>
+    </div>
+
+    <script src="../js/layout.js"></script>
+    <script src="../js/api.js"></script>
+    <script src="../js/utils.js"></script>
+    <script src="../js/app.js"></script>
+    <script src="../js/menu.js"></script>
+    <script src="../js/contas-receber.js"></script>
+</body>
+
+</html>

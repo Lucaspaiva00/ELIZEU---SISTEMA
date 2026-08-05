@@ -8,6 +8,13 @@ async function carregarLayout() {
 
         sidebar.innerHTML = await html.text();
 
+        const paginaAtual = window.location.pathname.split("/").pop();
+        const linkAtual = sidebar.querySelector(`a[href="${paginaAtual}"]`);
+
+        if (linkAtual) {
+            linkAtual.classList.add("active");
+        }
+
     }
 
     const topbar = document.getElementById("topbar");

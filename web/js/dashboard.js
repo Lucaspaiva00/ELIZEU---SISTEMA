@@ -25,6 +25,15 @@ function formatarDataCurta(valor) {
     });
 }
 
+function formatarDataPeriodo(valor) {
+    const texto = String(valor || "");
+    const correspondencia = texto.match(/^(\d{4})-(\d{2})-(\d{2})/);
+
+    if (!correspondencia) return data(valor);
+
+    return `${correspondencia[3]}/${correspondencia[2]}/${correspondencia[1]}`;
+}
+
 function formatarPeriodoGrafico(valor) {
     if (/^\d{4}-\d{2}$/.test(valor)) {
         const [ano, mes] = valor.split("-");
@@ -113,8 +122,8 @@ function preencherFinanceiro(dashboard) {
     document.getElementById("kpiOrcamentosAprovados").textContent = `${comercial.orcamentosAprovados} aprovados`;
     document.getElementById("kpiConversao").textContent = `${Number(comercial.taxaConversao).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%`;
 
-    const inicio = data(periodo.dataInicio);
-    const fim = data(periodo.dataFim);
+    const inicio = formatarDataPeriodo(periodo.dataInicio);
+    const fim = formatarDataPeriodo(periodo.dataFim);
     document.getElementById("periodoDescricao").textContent = `Resultados consolidados de ${inicio} até ${fim}.`;
 
     preencherContas(contas);
