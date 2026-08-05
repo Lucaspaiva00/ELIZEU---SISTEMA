@@ -9,6 +9,7 @@ router.use("/categorias", require("./categoria.routes"));
 router.use("/produtos", require("./produto.routes"));
 router.use("/clientes", require("./cliente.routes"));
 router.use("/orcamentos", require("./orcamento.routes"));
+router.use("/contas-receber", require("./contaReceber.routes"));
 router.use("/dashboard", require("./dashboard.routes"));
 
 module.exports = router;
