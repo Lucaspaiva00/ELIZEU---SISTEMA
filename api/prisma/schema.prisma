@@ -347,7 +347,7 @@ model Servico {
   nome          String
   descricao     String?
   unidadeMedida UnidadeMedida @default(UN)
-  ativo          Boolean @default(true)
+  ativo         Boolean       @default(true)
 
   variacoes VariacaoServico[]
 
@@ -364,11 +364,11 @@ model VariacaoServico {
   servicoId Int
   servico   Servico @relation(fields: [servicoId], references: [id], onDelete: Cascade)
 
-  codigo       String @unique
-  descricao    String?
-  precoCusto   Decimal @default(0) @db.Decimal(12, 2)
-  precoVenda   Decimal @db.Decimal(12, 2)
-  ativo        Boolean @default(true)
+  codigo     String  @unique
+  descricao  String?
+  precoCusto Decimal @default(0) @db.Decimal(12, 2)
+  precoVenda Decimal @db.Decimal(12, 2)
+  ativo      Boolean @default(true)
 
   itensOrcamento   ItemOrcamento[]
   itensVenda       ItemVenda[]
@@ -394,9 +394,9 @@ model TabelaPreco {
   padrao           Boolean   @default(false)
   ativa            Boolean   @default(true)
 
-  itens      ItemTabelaPreco[]
+  itens        ItemTabelaPreco[]
   itensServico ItemTabelaPrecoServico[]
-  orcamentos Orcamento[]
+  orcamentos   Orcamento[]
 
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
@@ -544,11 +544,11 @@ model ItemOrcamento {
   id Int @id @default(autoincrement())
 
   orcamentoId       Int
-  tipo               TipoItemComercial @default(PRODUTO)
-  variacaoProdutoId  Int?
-  variacaoServicoId  Int?
+  tipo              TipoItemComercial @default(PRODUTO)
+  variacaoProdutoId Int?
+  variacaoServicoId Int?
 
-  orcamento       Orcamento       @relation(fields: [orcamentoId], references: [id], onDelete: Cascade)
+  orcamento       Orcamento        @relation(fields: [orcamentoId], references: [id], onDelete: Cascade)
   variacaoProduto VariacaoProduto? @relation(fields: [variacaoProdutoId], references: [id])
   variacaoServico VariacaoServico? @relation(fields: [variacaoServicoId], references: [id])
 
@@ -619,11 +619,11 @@ model ItemVenda {
   id Int @id @default(autoincrement())
 
   vendaId           Int
-  tipo               TipoItemComercial @default(PRODUTO)
-  variacaoProdutoId  Int?
-  variacaoServicoId  Int?
+  tipo              TipoItemComercial @default(PRODUTO)
+  variacaoProdutoId Int?
+  variacaoServicoId Int?
 
-  venda           Venda           @relation(fields: [vendaId], references: [id], onDelete: Cascade)
+  venda           Venda            @relation(fields: [vendaId], references: [id], onDelete: Cascade)
   variacaoProduto VariacaoProduto? @relation(fields: [variacaoProdutoId], references: [id])
   variacaoServico VariacaoServico? @relation(fields: [variacaoServicoId], references: [id])
 
