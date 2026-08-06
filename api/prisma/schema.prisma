@@ -17,6 +17,7 @@ enum PerfilUsuario {
   VENDEDOR
   FINANCEIRO
   ESTOQUE
+  FISCAL
 }
 
 enum TipoPessoa {

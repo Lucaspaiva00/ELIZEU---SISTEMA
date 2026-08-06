@@ -1,18 +1,34 @@
 const prisma = require("../config/prisma");
 
+const selecaoPublica = {
+    id: true,
+    empresaId: true,
+    nome: true,
+    email: true,
+    telefone: true,
+    perfil: true,
+    ativo: true,
+    ultimoLogin: true,
+    criadoEm: true,
+    atualizadoEm: true
+};
+
 class UsuarioRepository {
 
     async criar(dados) {
         return prisma.usuario.create({
-            data: dados
+            data: dados,
+            select: selecaoPublica
         });
     }
 
-    async buscarPorId(id) {
-        return prisma.usuario.findUnique({
+    async buscarPorId(id, empresaId) {
+        return prisma.usuario.findFirst({
             where: {
-                id
-            }
+                id,
+                empresaId
+            },
+            select: selecaoPublica
         });
     }
 
@@ -29,6 +45,7 @@ class UsuarioRepository {
             where: {
                 empresaId
             },
+            select: selecaoPublica,
             orderBy: {
                 nome: "asc"
             }
@@ -40,7 +57,21 @@ class UsuarioRepository {
             where: {
                 id
             },
-            data: dados
+            data: dados,
+            select: selecaoPublica
+        });
+    }
+
+    async contarAdminsAtivos(empresaId) {
+        return prisma.usuario.count({
+            where: { empresaId, perfil: "ADMIN", ativo: true }
+        });
+    }
+
+    async registrarUltimoLogin(id) {
+        return prisma.usuario.update({
+            where: { id },
+            data: { ultimoLogin: new Date() }
         });
     }
 

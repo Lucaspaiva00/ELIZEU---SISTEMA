@@ -1,18 +1,17 @@
 const express = require("express");
+const auth = require("../middlewares/auth.middleware");
+const { autorizarPerfis } = require("../middlewares/perfil.middleware");
+const controller = require("../controllers/usuario.controller");
 
 const router = express.Router();
+const somenteAdmin = autorizarPerfis("ADMIN");
 
-const auth = require("../middlewares/auth.middleware");
-const usuarioController = require("../controllers/usuario.controller");
-
-router.post("/", auth, usuarioController.criar);
-
-router.get("/", auth, usuarioController.listar);
-
-router.get("/:id", auth, usuarioController.buscarPorId);
-
-router.put("/:id", auth, usuarioController.atualizar);
-
-router.delete("/:id", auth, usuarioController.excluir);
+router.use(auth, somenteAdmin);
+router.post("/", controller.criar);
+router.get("/", controller.listar);
+router.get("/:id", controller.buscarPorId);
+router.put("/:id", controller.atualizar);
+router.patch("/:id/status", controller.alterarStatus);
+router.patch("/:id/senha", controller.redefinirSenha);
 
 module.exports = router;

@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Usuários | ERP Elizeu</title>
+    <link rel="stylesheet" href="../css/app.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+</head>
+<body>
+<div class="wrapper">
+    <div id="sidebar"></div>
+    <main class="main">
+        <div id="topbar"></div>
+        <section class="content usuarios-page">
+            <div class="page-header usuarios-header">
+                <div>
+                    <span class="page-eyebrow">ADMINISTRAÇÃO</span>
+                    <h1 class="page-title">Gestão de usuários</h1>
+                    <p class="page-subtitle">Controle quem acessa o ERP e quais áreas cada pessoa pode utilizar.</p>
+                </div>
+                <button class="btn btn-primary" type="button" onclick="abrirModalUsuario()">
+                    <i class="fas fa-user-plus"></i> Novo usuário
+                </button>
+            </div>
+
+            <div class="usuarios-summary">
+                <article class="usuario-stat"><span class="stat-icon stat-blue"><i class="fas fa-users"></i></span><div><small>Total de usuários</small><strong id="totalUsuarios">0</strong></div></article>
+                <article class="usuario-stat"><span class="stat-icon stat-green"><i class="fas fa-user-check"></i></span><div><small>Usuários ativos</small><strong id="usuariosAtivos">0</strong></div></article>
+                <article class="usuario-stat"><span class="stat-icon stat-purple"><i class="fas fa-user-shield"></i></span><div><small>Administradores</small><strong id="totalAdmins">0</strong></div></article>
+                <article class="usuario-stat"><span class="stat-icon stat-red"><i class="fas fa-user-lock"></i></span><div><small>Acessos bloqueados</small><strong id="usuariosInativos">0</strong></div></article>
+            </div>
+
+            <div class="card usuarios-card">
+                <div class="usuarios-toolbar">
+                    <div class="usuario-search"><i class="fas fa-search"></i><input id="pesquisaUsuario" class="form-control" placeholder="Buscar por nome ou e-mail..." aria-label="Buscar usuários"></div>
+                    <select id="filtroPerfil" class="form-control" aria-label="Filtrar por perfil">
+                        <option value="">Todos os perfis</option><option value="ADMIN">Administrador</option><option value="GERENTE">Gerente</option><option value="VENDEDOR">Vendedor</option><option value="FINANCEIRO">Financeiro</option><option value="ESTOQUE">Estoque</option><option value="FISCAL">Fiscal</option>
+                    </select>
+                    <select id="filtroStatus" class="form-control" aria-label="Filtrar por status"><option value="">Todos os status</option><option value="ATIVO">Ativos</option><option value="INATIVO">Bloqueados</option></select>
+                </div>
+                <div class="table-responsive">
+                    <table class="table usuarios-table">
+                        <thead><tr><th>Usuário</th><th>Contato</th><th>Perfil</th><th>Último acesso</th><th>Status</th><th class="text-right">Ações</th></tr></thead>
+                        <tbody id="tabelaUsuarios"><tr><td colspan="6" class="usuarios-empty">Carregando usuários...</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+
+<div class="modal-overlay" id="modalUsuario">
+    <div class="modal modal-usuario">
+        <div class="modal-header"><div><h2 id="tituloModalUsuario">Novo usuário</h2><p>Defina os dados e o nível de acesso.</p></div><button class="modal-close" type="button" onclick="fecharModalUsuario()" aria-label="Fechar">&times;</button></div>
+        <form id="formUsuario">
+            <div class="modal-body">
+                <input type="hidden" id="usuarioId">
+                <div class="form-group"><label for="usuarioNome">Nome completo *</label><input id="usuarioNome" class="form-control" maxlength="120" required autocomplete="name"></div>
+                <div class="row">
+                    <div class="col"><div class="form-group"><label for="usuarioEmail">E-mail de acesso *</label><input id="usuarioEmail" class="form-control" type="email" maxlength="160" required autocomplete="email"></div></div>
+                    <div class="col"><div class="form-group"><label for="usuarioTelefone">Telefone</label><input id="usuarioTelefone" class="form-control" maxlength="30" placeholder="(00) 00000-0000"></div></div>
+                </div>
+                <div class="row">
+                    <div class="col"><div class="form-group"><label for="usuarioPerfil">Perfil de acesso *</label><select id="usuarioPerfil" class="form-control" required><option value="ADMIN">Administrador</option><option value="GERENTE">Gerente</option><option value="VENDEDOR">Vendedor</option><option value="FINANCEIRO">Financeiro</option><option value="ESTOQUE">Estoque</option><option value="FISCAL">Fiscal</option></select><small class="field-help" id="descricaoPerfil"></small></div></div>
+                    <div class="col" id="grupoSenhaInicial"><div class="form-group"><label for="usuarioSenha">Senha inicial *</label><div class="password-field"><input id="usuarioSenha" class="form-control" type="password" minlength="6" autocomplete="new-password"><button type="button" onclick="alternarVisibilidade('usuarioSenha', this)" aria-label="Mostrar senha"><i class="fas fa-eye"></i></button></div><small class="field-help">Mínimo de 6 caracteres.</small></div></div>
+                </div>
+                <label class="switch-row"><input id="usuarioAtivo" type="checkbox" checked><span class="switch-control"></span><span><strong>Usuário ativo</strong><small>Permite entrar e utilizar o sistema.</small></span></label>
+            </div>
+            <div class="modal-footer"><button type="button" class="btn btn-light" onclick="fecharModalUsuario()">Cancelar</button><button type="submit" class="btn btn-primary"><i class="fas fa-check"></i> Salvar usuário</button></div>
+        </form>
+    </div>
+</div>
+
+<div class="modal-overlay" id="modalSenhaUsuario">
+    <div class="modal modal-sm">
+        <div class="modal-header"><div><h2>Redefinir senha</h2><p id="senhaUsuarioNome"></p></div><button class="modal-close" type="button" onclick="fecharModalSenha()" aria-label="Fechar">&times;</button></div>
+        <form id="formSenhaUsuario">
+            <div class="modal-body"><input type="hidden" id="senhaUsuarioId"><div class="form-group"><label for="novaSenhaUsuario">Nova senha *</label><div class="password-field"><input id="novaSenhaUsuario" class="form-control" type="password" minlength="6" required autocomplete="new-password"><button type="button" onclick="alternarVisibilidade('novaSenhaUsuario', this)" aria-label="Mostrar senha"><i class="fas fa-eye"></i></button></div></div><div class="form-group"><label for="confirmarSenhaUsuario">Confirmar nova senha *</label><input id="confirmarSenhaUsuario" class="form-control" type="password" minlength="6" required autocomplete="new-password"></div></div>
+            <div class="modal-footer"><button type="button" class="btn btn-light" onclick="fecharModalSenha()">Cancelar</button><button type="submit" class="btn btn-primary"><i class="fas fa-key"></i> Redefinir senha</button></div>
+        </form>
+    </div>
+</div>
+
+<script src="../js/layout.js"></script><script src="../js/api.js"></script><script src="../js/utils.js"></script><script src="../js/app.js"></script><script src="../js/menu.js"></script><script src="../js/usuarios.js"></script>
+</body>
+</html>

@@ -1276,6 +1276,253 @@ select.form-control {
 }
 
 /* ===========================================
+   USUÁRIOS
+=========================================== */
+
+.page-eyebrow {
+    display: block;
+    margin-bottom: 5px;
+    color: var(--primary);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: .14em;
+}
+
+.usuarios-header {
+    align-items: flex-end;
+}
+
+.usuarios-summary {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.usuario-stat {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-height: 100px;
+    padding: 20px;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    background: white;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, .04);
+}
+
+.usuario-stat > div {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.usuario-stat small {
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.usuario-stat strong {
+    color: #0f172a;
+    font-size: 25px;
+}
+
+.stat-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 46px;
+    height: 46px;
+    flex: 0 0 auto;
+    border-radius: 12px;
+    font-size: 18px;
+}
+
+.stat-blue { background: #dbeafe; color: #2563eb; }
+.stat-green { background: #dcfce7; color: #16a34a; }
+.stat-purple { background: #ede9fe; color: #7c3aed; }
+.stat-red { background: #fee2e2; color: #dc2626; }
+
+.usuarios-card {
+    padding: 0;
+    overflow: hidden;
+}
+
+.usuarios-toolbar {
+    display: grid;
+    grid-template-columns: minmax(260px, 1fr) 210px 190px;
+    gap: 12px;
+    padding: 20px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.usuario-search {
+    position: relative;
+}
+
+.usuario-search i {
+    position: absolute;
+    top: 50%;
+    left: 15px;
+    z-index: 1;
+    color: #94a3b8;
+    transform: translateY(-50%);
+}
+
+.usuario-search input {
+    padding-left: 42px;
+}
+
+.usuarios-table {
+    min-width: 940px;
+}
+
+.usuarios-table th:last-child,
+.usuarios-table td:last-child {
+    text-align: right;
+}
+
+.usuario-identidade,
+.usuario-contato {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+}
+
+.usuario-identidade > div,
+.usuario-contato {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+}
+
+.usuario-identidade strong {
+    color: #0f172a;
+}
+
+.usuario-identidade small,
+.usuario-contato small,
+.ultimo-acesso {
+    color: #64748b;
+    font-size: 12px;
+}
+
+.usuario-avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    flex: 0 0 auto;
+    border-radius: 11px;
+    background: #eaf1ff;
+    color: var(--primary);
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.perfil-badge,
+.status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.perfil-admin { background: #ede9fe; color: #6d28d9; }
+.perfil-gerente { background: #dbeafe; color: #1d4ed8; }
+.perfil-vendedor { background: #dcfce7; color: #15803d; }
+.perfil-financeiro { background: #fef3c7; color: #b45309; }
+.perfil-estoque { background: #e0f2fe; color: #0369a1; }
+.perfil-fiscal { background: #fce7f3; color: #be185d; }
+
+.status-pill i {
+    font-size: 6px;
+}
+
+.status-active { background: #ecfdf5; color: #15803d; }
+.status-inactive { background: #fef2f2; color: #b91c1c; }
+
+.usuario-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 6px;
+}
+
+.action-btn {
+    width: 34px;
+    height: 34px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: white;
+    color: #475569;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.action-btn:hover { border-color: #bfdbfe; background: #eff6ff; color: var(--primary); }
+.action-danger:hover { border-color: #fecaca; background: #fef2f2; color: #dc2626; }
+.action-success:hover { border-color: #bbf7d0; background: #f0fdf4; color: #16a34a; }
+
+.usuarios-empty {
+    padding: 55px 20px !important;
+    color: #64748b;
+    text-align: center !important;
+}
+
+.usuarios-empty i,
+.usuarios-empty strong,
+.usuarios-empty span {
+    display: block;
+}
+
+.usuarios-empty i { margin-bottom: 12px; color: #94a3b8; font-size: 26px; }
+.usuarios-empty strong { margin-bottom: 4px; color: #334155; }
+.usuarios-error i { color: #dc2626; }
+
+.modal-usuario { max-width: 760px; }
+.modal-sm { max-width: 520px; }
+.modal-header p { margin-top: 4px; color: #64748b; font-size: 13px; }
+
+@media (max-width: 1100px) {
+    .usuarios-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 768px) {
+    .usuarios-header { align-items: flex-start; }
+    .usuarios-header .btn { width: 100%; }
+    .usuarios-summary { grid-template-columns: 1fr 1fr; gap: 10px; }
+    .usuario-stat { min-height: 88px; padding: 14px; }
+    .usuario-stat small { font-size: 11px; }
+    .usuario-stat strong { font-size: 21px; }
+    .stat-icon { width: 40px; height: 40px; }
+    .usuarios-toolbar { grid-template-columns: 1fr; padding: 15px; }
+    .usuarios-table { min-width: 0; }
+    .usuarios-table thead { display: none; }
+    .usuarios-table,
+    .usuarios-table tbody,
+    .usuarios-table tr,
+    .usuarios-table td { display: block; width: 100%; }
+    .usuarios-table tr { padding: 16px; border-bottom: 1px solid #e2e8f0; }
+    .usuarios-table td { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 8px 0; border: 0; text-align: right; }
+    .usuarios-table td::before { content: attr(data-label); color: #64748b; font-size: 11px; font-weight: 800; text-transform: uppercase; }
+    .usuarios-table td:first-child { align-items: flex-start; padding-top: 0; }
+    .usuarios-table td:first-child::before { display: none; }
+    .usuarios-table td:last-child { padding-bottom: 0; }
+    .usuario-actions { justify-content: flex-end; }
+    .usuarios-empty { display: table-cell !important; }
+}
+
+@media (max-width: 480px) {
+    .usuarios-summary { grid-template-columns: 1fr; }
+    .usuario-stat { min-height: 76px; }
+}
+
+/* ===========================================
    EMPRESA E CONFIGURAÇÃO FISCAL
 =========================================== */
 

@@ -95,6 +95,13 @@ async function put(url, body) {
     });
 }
 
+async function patch(url, body) {
+    return request(url, {
+        method: "PATCH",
+        body: JSON.stringify(body)
+    });
+}
+
 async function del(url) {
     return request(url, {
         method: "DELETE"

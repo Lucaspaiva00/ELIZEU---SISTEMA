@@ -28,6 +28,8 @@ class AuthService {
             throw new Error("E-mail ou senha inválidos.");
         }
 
+        await usuarioRepository.registrarUltimoLogin(usuario.id);
+
         return {
             usuario: {
                 id: usuario.id,
