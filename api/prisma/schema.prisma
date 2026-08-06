@@ -35,6 +35,15 @@ enum UnidadeMedida {
   CX
   PC
   PAR
+  H
+  DIA
+  M2
+  M3
+}
+
+enum TipoItemComercial {
+  PRODUTO
+  SERVICO
 }
 
 // =====================================================
@@ -170,6 +179,8 @@ model Empresa {
   usuarios                 Usuario[]
   categorias               CategoriaProduto[]
   produtos                 Produto[]
+  categoriasServico        CategoriaServico[]
+  servicos                 Servico[]
   clientes                 Cliente[]
   orcamentos               Orcamento[]
   tabelasPreco             TabelaPreco[]
@@ -304,6 +315,71 @@ model VariacaoProduto {
   @@index([codigoBarras])
 }
 
+model CategoriaServico {
+  id Int @id @default(autoincrement())
+
+  empresaId Int
+  empresa   Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  nome      String
+  descricao String?
+  ativo     Boolean @default(true)
+
+  servicos Servico[]
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  @@unique([empresaId, nome])
+  @@index([empresaId])
+}
+
+model Servico {
+  id Int @id @default(autoincrement())
+
+  empresaId Int
+  empresa   Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  categoriaId Int
+  categoria   CategoriaServico @relation(fields: [categoriaId], references: [id])
+
+  codigo        String
+  nome          String
+  descricao     String?
+  unidadeMedida UnidadeMedida @default(UN)
+  ativo          Boolean @default(true)
+
+  variacoes VariacaoServico[]
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  @@unique([empresaId, codigo])
+  @@index([empresaId, categoriaId])
+}
+
+model VariacaoServico {
+  id Int @id @default(autoincrement())
+
+  servicoId Int
+  servico   Servico @relation(fields: [servicoId], references: [id], onDelete: Cascade)
+
+  codigo       String @unique
+  descricao    String?
+  precoCusto   Decimal @default(0) @db.Decimal(12, 2)
+  precoVenda   Decimal @db.Decimal(12, 2)
+  ativo        Boolean @default(true)
+
+  itensOrcamento   ItemOrcamento[]
+  itensVenda       ItemVenda[]
+  itensTabelaPreco ItemTabelaPrecoServico[]
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  @@index([servicoId])
+}
+
 model TabelaPreco {
   id Int @id @default(autoincrement())
 
@@ -319,6 +395,7 @@ model TabelaPreco {
   ativa            Boolean   @default(true)
 
   itens      ItemTabelaPreco[]
+  itensServico ItemTabelaPrecoServico[]
   orcamentos Orcamento[]
 
   criadoEm     DateTime @default(now())
@@ -344,6 +421,24 @@ model ItemTabelaPreco {
 
   @@unique([tabelaPrecoId, variacaoProdutoId])
   @@index([variacaoProdutoId])
+}
+
+model ItemTabelaPrecoServico {
+  id Int @id @default(autoincrement())
+
+  tabelaPrecoId     Int
+  variacaoServicoId Int
+
+  tabelaPreco     TabelaPreco     @relation(fields: [tabelaPrecoId], references: [id], onDelete: Cascade)
+  variacaoServico VariacaoServico @relation(fields: [variacaoServicoId], references: [id], onDelete: Cascade)
+
+  preco Decimal @db.Decimal(12, 2)
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  @@unique([tabelaPrecoId, variacaoServicoId])
+  @@index([variacaoServicoId])
 }
 
 // =====================================================
@@ -449,10 +544,13 @@ model ItemOrcamento {
   id Int @id @default(autoincrement())
 
   orcamentoId       Int
-  variacaoProdutoId Int
+  tipo               TipoItemComercial @default(PRODUTO)
+  variacaoProdutoId  Int?
+  variacaoServicoId  Int?
 
   orcamento       Orcamento       @relation(fields: [orcamentoId], references: [id], onDelete: Cascade)
-  variacaoProduto VariacaoProduto @relation(fields: [variacaoProdutoId], references: [id])
+  variacaoProduto VariacaoProduto? @relation(fields: [variacaoProdutoId], references: [id])
+  variacaoServico VariacaoServico? @relation(fields: [variacaoServicoId], references: [id])
 
   quantidade    Decimal @db.Decimal(12, 3)
   valorUnitario Decimal @db.Decimal(12, 2)
@@ -463,6 +561,7 @@ model ItemOrcamento {
 
   @@index([orcamentoId])
   @@index([variacaoProdutoId])
+  @@index([variacaoServicoId])
 }
 
 // =====================================================
@@ -520,10 +619,13 @@ model ItemVenda {
   id Int @id @default(autoincrement())
 
   vendaId           Int
-  variacaoProdutoId Int
+  tipo               TipoItemComercial @default(PRODUTO)
+  variacaoProdutoId  Int?
+  variacaoServicoId  Int?
 
   venda           Venda           @relation(fields: [vendaId], references: [id], onDelete: Cascade)
-  variacaoProduto VariacaoProduto @relation(fields: [variacaoProdutoId], references: [id])
+  variacaoProduto VariacaoProduto? @relation(fields: [variacaoProdutoId], references: [id])
+  variacaoServico VariacaoServico? @relation(fields: [variacaoServicoId], references: [id])
 
   // Snapshot comercial para preservar o historico da venda.
   codigoProduto String?
@@ -541,6 +643,7 @@ model ItemVenda {
 
   @@index([vendaId])
   @@index([variacaoProdutoId])
+  @@index([variacaoServicoId])
 }
 
 // =====================================================
