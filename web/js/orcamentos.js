@@ -1,6 +1,7 @@
 let orcamentos = [];
 let clientes = [];
 let produtos = [];
+let servicos = [];
 let itensOrcamento = [];
 
 let orcamentoEditandoId = null;
@@ -17,6 +18,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     await Promise.all([
         carregarClientes(),
         carregarProdutos(),
+        carregarServicos(),
         carregarOrcamentos()
     ]);
 });
@@ -34,6 +36,53 @@ function configurarEventos() {
     variacaoSelect.addEventListener("change", () => {
         preencherValorVariacao();
     });
+
+    document.getElementById("tipoItem").addEventListener("change", alternarTipoItem);
+    document.getElementById("servicoId").addEventListener("change", carregarVariacoesServico);
+    document.getElementById("variacaoServicoId").addEventListener("change", preencherValorVariacaoServico);
+}
+
+async function carregarServicos() {
+    try {
+        const resposta = await get("/servicos");
+        if (!resposta?.sucesso) return;
+        servicos = resposta.servicos || [];
+        const select = document.getElementById("servicoId");
+        select.innerHTML = '<option value="">Selecione um serviço</option>';
+        servicos.filter((servico) => servico.ativo).forEach((servico) => {
+            const option = document.createElement("option");
+            option.value = servico.id;
+            option.textContent = `${servico.codigo} - ${servico.nome}`;
+            select.appendChild(option);
+        });
+    } catch (erro) {
+        console.error(erro);
+    }
+}
+
+function alternarTipoItem() {
+    const tipo = document.getElementById("tipoItem").value;
+    document.getElementById("camposProduto").style.display = tipo === "PRODUTO" ? "block" : "none";
+    document.getElementById("camposServico").style.display = tipo === "SERVICO" ? "block" : "none";
+    document.getElementById("valorUnitario").value = "";
+}
+
+function carregarVariacoesServico() {
+    const servico = servicos.find((item) => item.id === Number(document.getElementById("servicoId").value));
+    const select = document.getElementById("variacaoServicoId");
+    select.innerHTML = '<option value="">Selecione uma variação</option>';
+    (servico?.variacoes || []).filter((variacao) => variacao.ativo).forEach((variacao) => {
+        const option = document.createElement("option");
+        option.value = variacao.id;
+        option.textContent = `${variacao.codigo} - ${variacao.descricao || "Padrão"} | ${moeda(variacao.precoVenda)}`;
+        select.appendChild(option);
+    });
+}
+
+function preencherValorVariacaoServico() {
+    const servico = servicos.find((item) => item.id === Number(document.getElementById("servicoId").value));
+    const variacao = servico?.variacoes?.find((item) => item.id === Number(document.getElementById("variacaoServicoId").value));
+    document.getElementById("valorUnitario").value = variacao ? Number(variacao.precoVenda).toFixed(2) : "";
 }
 
 async function carregarClientes() {
@@ -266,15 +315,18 @@ function fecharModalOrcamento() {
 }
 
 function abrirModalProduto() {
-    if (!produtos.length) {
+    if (!produtos.length && !servicos.length) {
         mostrarMensagem(
-            "Cadastre ao menos um produto antes de criar o orçamento."
+            "Cadastre ao menos um produto ou serviço antes de criar o orçamento."
         );
 
         return;
     }
 
     document.getElementById("produtoId").value = "";
+    document.getElementById("servicoId").value = "";
+    document.getElementById("tipoItem").value = produtos.length ? "PRODUTO" : "SERVICO";
+    alternarTipoItem();
     document.getElementById("variacaoProdutoId").innerHTML = `
         <option value="">
             Selecione primeiro um produto
@@ -420,16 +472,62 @@ function filtrarOrcamentos() {
 
 function adicionarItemOrcamento() {
 
+    const tipo = document.getElementById("tipoItem").value;
+    const quantidade = Number(document.getElementById("quantidade").value);
+    const valorUnitario = Number(document.getElementById("valorUnitario").value);
+
+    if (quantidade <= 0) {
+        mostrarMensagem("Informe uma quantidade válida.");
+        return;
+    }
+
+    if (!Number.isFinite(valorUnitario) || valorUnitario < 0) {
+        mostrarMensagem("Informe um valor unitário válido.");
+        return;
+    }
+
+    if (tipo === "SERVICO") {
+        const servicoId = Number(document.getElementById("servicoId").value);
+        const variacaoId = Number(document.getElementById("variacaoServicoId").value);
+        const servico = servicos.find((item) => item.id === servicoId);
+        const variacao = servico?.variacoes?.find((item) => item.id === variacaoId);
+
+        if (!servico || !variacao) {
+            mostrarMensagem("Selecione o serviço e sua variação.");
+            return;
+        }
+
+        const existente = itensOrcamento.find((item) => item.tipo === "SERVICO" && item.variacaoServicoId === variacaoId);
+        if (existente) {
+            existente.quantidade += quantidade;
+            existente.valorUnitario = valorUnitario;
+            existente.total = existente.quantidade * valorUnitario;
+        } else {
+            itensOrcamento.push({
+                tipo: "SERVICO",
+                servicoId,
+                variacaoServicoId: variacao.id,
+                produto: servico.nome,
+                sku: variacao.codigo,
+                descricao: variacao.descricao || "Padrão",
+                quantidade,
+                valorUnitario,
+                total: quantidade * valorUnitario
+            });
+        }
+
+        fecharModalProduto();
+        renderizarItens();
+        calcularTotais();
+        return;
+    }
+
     const produtoId = Number(
         document.getElementById("produtoId").value
     );
 
     const variacaoId = Number(
         document.getElementById("variacaoProdutoId").value
-    );
-
-    const quantidade = Number(
-        document.getElementById("quantidade").value
     );
 
     if (!produtoId) {
@@ -448,14 +546,6 @@ function adicionarItemOrcamento() {
 
     }
 
-    if (quantidade <= 0) {
-
-        mostrarMensagem("Informe uma quantidade válida.");
-
-        return;
-
-    }
-
     const produto = produtos.find(
         p => p.id === produtoId
     );
@@ -465,7 +555,7 @@ function adicionarItemOrcamento() {
     );
 
     const existente = itensOrcamento.find(
-        item => item.variacaoProdutoId === variacaoId
+        item => item.tipo !== "SERVICO" && item.variacaoProdutoId === variacaoId
     );
 
     if (existente) {
@@ -479,6 +569,8 @@ function adicionarItemOrcamento() {
     } else {
 
         itensOrcamento.push({
+
+            tipo: "PRODUTO",
 
             produtoId,
 
@@ -504,15 +596,11 @@ function adicionarItemOrcamento() {
 
             quantidade,
 
-            valorUnitario: Number(
-                variacao.precoVenda
-            ),
+            valorUnitario,
 
             total:
                 quantidade *
-                Number(
-                    variacao.precoVenda
-                )
+                valorUnitario
 
         });
 
@@ -566,6 +654,8 @@ function renderizarItens() {
                         ${escaparHtml(item.produto)}
 
                     </strong>
+
+                    <small class="d-block text-muted">${item.tipo === "SERVICO" ? "Serviço" : "Material"}</small>
 
                 </td>
 
@@ -913,8 +1003,13 @@ function obterDadosFormulario() {
 
         itens: itensOrcamento.map(item => ({
 
+            tipo: item.tipo || "PRODUTO",
+
             variacaoProdutoId:
-                item.variacaoProdutoId,
+                item.tipo === "SERVICO" ? null : item.variacaoProdutoId,
+
+            variacaoServicoId:
+                item.tipo === "SERVICO" ? item.variacaoServicoId : null,
 
             quantidade:
                 item.quantidade,
@@ -946,7 +1041,7 @@ function validarOrcamento(orcamento) {
     if (!orcamento.itens.length) {
 
         throw new Error(
-            "Adicione pelo menos um produto."
+            "Adicione pelo menos um produto ou serviço."
         );
 
     }
@@ -991,7 +1086,24 @@ async function editarOrcamento(id) {
 
     orcamento.itens.forEach(item => {
 
+        if (item.tipo === "SERVICO") {
+            itensOrcamento.push({
+                tipo: "SERVICO",
+                servicoId: item.variacaoServico.servico.id,
+                variacaoServicoId: item.variacaoServico.id,
+                produto: item.variacaoServico.servico.nome,
+                sku: item.variacaoServico.codigo,
+                descricao: item.variacaoServico.descricao || "Padrão",
+                quantidade: Number(item.quantidade),
+                valorUnitario: Number(item.valorUnitario),
+                total: Number(item.total)
+            });
+            return;
+        }
+
         itensOrcamento.push({
+
+            tipo: "PRODUTO",
 
             produtoId:
                 item.variacaoProduto.produto.id,
@@ -1080,19 +1192,21 @@ async function visualizarOrcamento(id) {
 
     o.itens.forEach(item => {
 
+        const servico = item.tipo === "SERVICO";
+        const nome = servico ? item.variacaoServico.servico.nome : item.variacaoProduto.produto.nome;
+        const variacao = servico
+            ? (item.variacaoServico.descricao || item.variacaoServico.codigo)
+            : `${item.variacaoProduto.cor || "-"} / ${item.variacaoProduto.tamanho || "-"}`;
+
         tbody.innerHTML += `
 
             <tr>
 
-                <td>${item.variacaoProduto.produto.nome}</td>
+                <td>${escaparHtml(nome)}</td>
 
                 <td>
 
-                    ${item.variacaoProduto.cor || "-"}
-
-                    /
-
-                    ${item.variacaoProduto.tamanho || "-"}
+                    ${escaparHtml(variacao)}
 
                 </td>
 

@@ -33,10 +33,50 @@ function converterData(valor) {
 
 class OrcamentoService {
 
-    async criar(dados) {
-        if (!dados.itens || dados.itens.length === 0) {
+    validarItens(itens) {
+        if (!Array.isArray(itens) || itens.length === 0) {
             throw new Error("O orçamento deve possuir ao menos um item.");
         }
+
+        for (const item of itens) {
+            const tipo = item.tipo || (item.variacaoServicoId ? "SERVICO" : "PRODUTO");
+            item.tipo = tipo;
+
+            if (!['PRODUTO', 'SERVICO'].includes(tipo)) {
+                throw new Error("Tipo de item inválido no orçamento.");
+            }
+
+            if (tipo === "PRODUTO" && !Number.isInteger(Number(item.variacaoProdutoId))) {
+                throw new Error("Selecione uma variação de produto válida.");
+            }
+
+            if (tipo === "SERVICO" && !Number.isInteger(Number(item.variacaoServicoId))) {
+                throw new Error("Selecione uma variação de serviço válida.");
+            }
+
+            if (!Number.isFinite(Number(item.quantidade)) || Number(item.quantidade) <= 0) {
+                throw new Error("A quantidade dos itens deve ser maior que zero.");
+            }
+
+            if (!Number.isFinite(Number(item.valorUnitario)) || Number(item.valorUnitario) < 0) {
+                throw new Error("O valor unitário dos itens é inválido.");
+            }
+
+            item.variacaoProdutoId = tipo === "PRODUTO"
+                ? Number(item.variacaoProdutoId)
+                : null;
+            item.variacaoServicoId = tipo === "SERVICO"
+                ? Number(item.variacaoServicoId)
+                : null;
+            item.quantidade = Number(item.quantidade);
+            item.valorUnitario = Number(item.valorUnitario);
+            item.desconto = Number(item.desconto || 0);
+            item.total = Number(item.total);
+        }
+    }
+
+    async criar(dados) {
+        this.validarItens(dados.itens);
 
         return orcamentoRepository.criar(dados);
     }
@@ -66,9 +106,7 @@ class OrcamentoService {
             throw new Error("Um orçamento cancelado não pode ser alterado.");
         }
 
-        if (!dados.itens || dados.itens.length === 0) {
-            throw new Error("O orçamento deve possuir ao menos um item.");
-        }
+        this.validarItens(dados.itens);
 
         return orcamentoRepository.atualizar(id, dados);
     }

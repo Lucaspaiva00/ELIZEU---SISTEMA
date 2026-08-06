@@ -192,7 +192,7 @@
 
                                         <i class="fas fa-plus"></i>
 
-                                        Adicionar Produto
+                                        Adicionar item
 
                                     </button>
 
@@ -206,7 +206,7 @@
 
                                             <tr>
 
-                                                <th>Produto</th>
+                                                <th>Item</th>
 
                                                 <th>Variação</th>
 
@@ -400,7 +400,7 @@
 
                             <h2>
 
-                                Adicionar Produto
+                                Adicionar item ao orçamento
 
                             </h2>
 
@@ -413,6 +413,19 @@
                         </div>
 
                         <div class="modal-body">
+
+                            <div class="form-group">
+
+                                <label>Tipo do item</label>
+
+                                <select id="tipoItem" class="form-control">
+                                    <option value="PRODUTO">Material / produto</option>
+                                    <option value="SERVICO">Serviço</option>
+                                </select>
+
+                            </div>
+
+                            <div id="camposProduto">
 
                             <div class="form-group">
 
@@ -439,6 +452,22 @@
                                 <select id="variacaoProdutoId" class="form-control">
 
                                 </select>
+
+                            </div>
+
+                            </div>
+
+                            <div id="camposServico" style="display:none">
+
+                                <div class="form-group">
+                                    <label>Serviço</label>
+                                    <select id="servicoId" class="form-control"></select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Variação do serviço</label>
+                                    <select id="variacaoServicoId" class="form-control"></select>
+                                </div>
 
                             </div>
 
@@ -470,7 +499,7 @@
 
                                         </label>
 
-                                        <input id="valorUnitario" class="form-control" readonly>
+                                        <input id="valorUnitario" class="form-control" type="number" min="0" step="0.01">
 
                                     </div>
 

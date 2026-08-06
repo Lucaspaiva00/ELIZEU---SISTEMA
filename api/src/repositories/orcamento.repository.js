@@ -89,6 +89,11 @@ function includeOrcamentoCompleto() {
                     include: {
                         produto: true
                     }
+                },
+                variacaoServico: {
+                    include: {
+                        servico: true
+                    }
                 }
             }
         }
@@ -133,7 +138,9 @@ class OrcamentoRepository {
             await tx.itemOrcamento.createMany({
                 data: dados.itens.map((item) => ({
                     orcamentoId: orcamento.id,
-                    variacaoProdutoId: item.variacaoProdutoId,
+                    tipo: item.tipo,
+                    variacaoProdutoId: item.tipo === "PRODUTO" ? item.variacaoProdutoId : null,
+                    variacaoServicoId: item.tipo === "SERVICO" ? item.variacaoServicoId : null,
                     quantidade: item.quantidade,
                     valorUnitario: item.valorUnitario,
                     desconto: item.desconto ?? 0,
@@ -202,7 +209,9 @@ class OrcamentoRepository {
             await tx.itemOrcamento.createMany({
                 data: dados.itens.map((item) => ({
                     orcamentoId: id,
-                    variacaoProdutoId: item.variacaoProdutoId,
+                    tipo: item.tipo,
+                    variacaoProdutoId: item.tipo === "PRODUTO" ? item.variacaoProdutoId : null,
+                    variacaoServicoId: item.tipo === "SERVICO" ? item.variacaoServicoId : null,
                     quantidade: item.quantidade,
                     valorUnitario: item.valorUnitario,
                     desconto: item.desconto ?? 0,
@@ -236,6 +245,11 @@ class OrcamentoRepository {
                                     include: {
                                         produto: true
                                     }
+                                },
+                                variacaoServico: {
+                                    include: {
+                                        servico: true
+                                    }
                                 }
                             }
                         }
@@ -263,6 +277,10 @@ class OrcamentoRepository {
                 }
 
                 for (const item of orcamento.itens) {
+                    if (item.tipo === "SERVICO") {
+                        continue;
+                    }
+
                     const { produto } = item.variacaoProduto;
 
                     if (
@@ -325,12 +343,38 @@ class OrcamentoRepository {
                 });
 
                 for (const item of orcamento.itens) {
+                    if (item.tipo === "SERVICO") {
+                        const variacao = item.variacaoServico;
+                        const servico = variacao.servico;
+
+                        await tx.itemVenda.create({
+                            data: {
+                                vendaId: venda.id,
+                                tipo: "SERVICO",
+                                variacaoServicoId: variacao.id,
+                                codigoProduto: servico.codigo,
+                                sku: variacao.codigo,
+                                descricao: variacao.descricao
+                                    ? `${servico.nome} - ${variacao.descricao}`
+                                    : servico.nome,
+                                quantidade: item.quantidade,
+                                valorUnitario: item.valorUnitario,
+                                desconto: item.desconto,
+                                total: item.total,
+                                custoUnitario: variacao.precoCusto
+                            }
+                        });
+
+                        continue;
+                    }
+
                     const variacao = item.variacaoProduto;
                     const produto = variacao.produto;
 
                     const itemVenda = await tx.itemVenda.create({
                         data: {
                             vendaId: venda.id,
+                            tipo: "PRODUTO",
                             variacaoProdutoId: variacao.id,
                             codigoProduto: produto.codigo,
                             sku: variacao.sku,
