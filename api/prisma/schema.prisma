@@ -46,6 +46,18 @@ enum TipoItemComercial {
   SERVICO
 }
 
+enum RegimeTributario {
+  MEI
+  SIMPLES_NACIONAL
+  SIMPLES_NACIONAL_EXCESSO
+  REGIME_NORMAL
+}
+
+enum AmbienteFiscal {
+  HOMOLOGACAO
+  PRODUCAO
+}
+
 // =====================================================
 // ENUMS COMERCIAIS
 // =====================================================
@@ -192,9 +204,55 @@ model Empresa {
   contasPagar              ContaPagar[]
   movimentacoesFinanceiras MovimentacaoFinanceira[]
   movimentacoesEstoque     MovimentacaoEstoque[]
+  configuracaoFiscal       ConfiguracaoFiscal?
+  certificadoDigital       CertificadoDigital?
 
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
+}
+
+model ConfiguracaoFiscal {
+  id Int @id @default(autoincrement())
+
+  empresaId Int     @unique
+  empresa   Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  regimeTributario       RegimeTributario?
+  crt                     Int?
+  inscricaoMunicipal      String?
+  cnaePrincipal           String?
+  codigoMunicipio         String?
+  ambiente                AmbienteFiscal @default(HOMOLOGACAO)
+  serieNfe                Int            @default(1)
+  proximoNumeroNfe        Int            @default(1)
+  cfopPadrao              String?
+  naturezaOperacao        String?
+  emailFiscal             String?
+  informacoesComplementares String?      @db.Text
+  ativo                   Boolean        @default(false)
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  @@index([empresaId, ambiente])
+}
+
+model CertificadoDigital {
+  id Int @id @default(autoincrement())
+
+  empresaId Int     @unique
+  empresa   Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  nomeArquivo           String
+  conteudoCriptografado String   @db.Text
+  iv                    String
+  authTag               String
+  validade              DateTime?
+  ativo                 Boolean  @default(true)
+  enviadoEm             DateTime @default(now())
+  atualizadoEm          DateTime @updatedAt
+
+  @@index([empresaId, ativo])
 }
 
 model Usuario {
@@ -347,7 +405,7 @@ model Servico {
   nome          String
   descricao     String?
   unidadeMedida UnidadeMedida @default(UN)
-  ativo         Boolean       @default(true)
+  ativo          Boolean @default(true)
 
   variacoes VariacaoServico[]
 
@@ -364,11 +422,11 @@ model VariacaoServico {
   servicoId Int
   servico   Servico @relation(fields: [servicoId], references: [id], onDelete: Cascade)
 
-  codigo     String  @unique
-  descricao  String?
-  precoCusto Decimal @default(0) @db.Decimal(12, 2)
-  precoVenda Decimal @db.Decimal(12, 2)
-  ativo      Boolean @default(true)
+  codigo       String @unique
+  descricao    String?
+  precoCusto   Decimal @default(0) @db.Decimal(12, 2)
+  precoVenda   Decimal @db.Decimal(12, 2)
+  ativo        Boolean @default(true)
 
   itensOrcamento   ItemOrcamento[]
   itensVenda       ItemVenda[]
@@ -394,9 +452,9 @@ model TabelaPreco {
   padrao           Boolean   @default(false)
   ativa            Boolean   @default(true)
 
-  itens        ItemTabelaPreco[]
+  itens      ItemTabelaPreco[]
   itensServico ItemTabelaPrecoServico[]
-  orcamentos   Orcamento[]
+  orcamentos Orcamento[]
 
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
@@ -544,11 +602,11 @@ model ItemOrcamento {
   id Int @id @default(autoincrement())
 
   orcamentoId       Int
-  tipo              TipoItemComercial @default(PRODUTO)
-  variacaoProdutoId Int?
-  variacaoServicoId Int?
+  tipo               TipoItemComercial @default(PRODUTO)
+  variacaoProdutoId  Int?
+  variacaoServicoId  Int?
 
-  orcamento       Orcamento        @relation(fields: [orcamentoId], references: [id], onDelete: Cascade)
+  orcamento       Orcamento       @relation(fields: [orcamentoId], references: [id], onDelete: Cascade)
   variacaoProduto VariacaoProduto? @relation(fields: [variacaoProdutoId], references: [id])
   variacaoServico VariacaoServico? @relation(fields: [variacaoServicoId], references: [id])
 
@@ -619,11 +677,11 @@ model ItemVenda {
   id Int @id @default(autoincrement())
 
   vendaId           Int
-  tipo              TipoItemComercial @default(PRODUTO)
-  variacaoProdutoId Int?
-  variacaoServicoId Int?
+  tipo               TipoItemComercial @default(PRODUTO)
+  variacaoProdutoId  Int?
+  variacaoServicoId  Int?
 
-  venda           Venda            @relation(fields: [vendaId], references: [id], onDelete: Cascade)
+  venda           Venda           @relation(fields: [vendaId], references: [id], onDelete: Cascade)
   variacaoProduto VariacaoProduto? @relation(fields: [variacaoProdutoId], references: [id])
   variacaoServico VariacaoServico? @relation(fields: [variacaoServicoId], references: [id])
 

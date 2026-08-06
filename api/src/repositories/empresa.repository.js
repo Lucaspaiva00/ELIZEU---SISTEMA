@@ -2,6 +2,22 @@ const prisma = require("../config/prisma");
 
 class EmpresaRepository {
 
+    includeFiscal() {
+        return {
+            configuracaoFiscal: true,
+            certificadoDigital: {
+                select: {
+                    id: true,
+                    nomeArquivo: true,
+                    validade: true,
+                    ativo: true,
+                    enviadoEm: true,
+                    atualizadoEm: true
+                }
+            }
+        };
+    }
+
     async criar(dados) {
         return await prisma.empresa.create({
             data: dados
@@ -10,6 +26,7 @@ class EmpresaRepository {
 
     async listar() {
         return await prisma.empresa.findMany({
+            include: this.includeFiscal(),
             orderBy: {
                 razaoSocial: "asc"
             }
@@ -20,7 +37,8 @@ class EmpresaRepository {
         return await prisma.empresa.findUnique({
             where: {
                 id
-            }
+            },
+            include: this.includeFiscal()
         });
     }
 
@@ -39,6 +57,34 @@ class EmpresaRepository {
             },
             data: dados
         });
+    }
+
+    async salvarConfiguracaoFiscal(empresaId, dados) {
+        return prisma.configuracaoFiscal.upsert({
+            where: { empresaId },
+            update: dados,
+            create: { empresaId, ...dados }
+        });
+    }
+
+    async salvarCertificado(empresaId, dados) {
+        return prisma.certificadoDigital.upsert({
+            where: { empresaId },
+            update: dados,
+            create: { empresaId, ...dados },
+            select: {
+                id: true,
+                nomeArquivo: true,
+                validade: true,
+                ativo: true,
+                enviadoEm: true,
+                atualizadoEm: true
+            }
+        });
+    }
+
+    async removerCertificado(empresaId) {
+        return prisma.certificadoDigital.deleteMany({ where: { empresaId } });
     }
 
     async excluir(id) {

@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Empresa e configuração fiscal | ERP Elizeu</title>
+    <link rel="stylesheet" href="../css/app.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+</head>
+<body>
+<div class="wrapper">
+    <div id="sidebar"></div>
+    <main class="main">
+        <div id="topbar"></div>
+        <section class="content">
+            <div class="page-header empresa-page-header">
+                <div>
+                    <span class="page-eyebrow">ADMINISTRAÇÃO</span>
+                    <h1 class="page-title">Empresa e configuração fiscal</h1>
+                    <p class="page-subtitle">Dados utilizados nos documentos e nas futuras emissões fiscais.</p>
+                </div>
+                <div class="fiscal-status" id="statusFiscal"><span class="status-dot"></span><span>Carregando configuração</span></div>
+            </div>
+
+            <div class="empresa-tabs" role="tablist">
+                <button class="empresa-tab active" data-tab="dados"><i class="fas fa-building"></i><span>Dados gerais</span></button>
+                <button class="empresa-tab" data-tab="endereco"><i class="fas fa-location-dot"></i><span>Endereço</span></button>
+                <button class="empresa-tab" data-tab="fiscal"><i class="fas fa-receipt"></i><span>Configuração fiscal</span></button>
+                <button class="empresa-tab" data-tab="certificado"><i class="fas fa-shield-halved"></i><span>Certificado A1</span></button>
+            </div>
+
+            <form id="formEmpresa">
+                <div class="empresa-panel active" data-panel="dados">
+                    <div class="card"><div class="card-header"><div><h2 class="card-title">Identificação da empresa</h2><p class="text-muted">Informações cadastrais principais.</p></div></div><div class="card-body">
+                        <div class="row"><div class="col"><div class="form-group"><label>Razão social *</label><input id="razaoSocial" class="form-control" required></div></div><div class="col"><div class="form-group"><label>Nome fantasia</label><input id="nomeFantasia" class="form-control"></div></div></div>
+                        <div class="row"><div class="col"><div class="form-group"><label>CNPJ *</label><input id="cnpj" class="form-control" required></div></div><div class="col"><div class="form-group"><label>Inscrição estadual</label><input id="inscricaoEstadual" class="form-control"></div></div></div>
+                        <div class="row"><div class="col"><div class="form-group"><label>E-mail</label><input id="email" type="email" class="form-control"></div></div><div class="col"><div class="form-group"><label>Telefone</label><input id="telefone" class="form-control"></div></div><div class="col"><div class="form-group"><label>Celular</label><input id="celular" class="form-control"></div></div></div>
+                    </div></div>
+                    <div class="panel-actions"><button class="btn btn-primary" type="submit"><i class="fas fa-check"></i> Salvar dados gerais</button></div>
+                </div>
+
+                <div class="empresa-panel" data-panel="endereco">
+                    <div class="card"><div class="card-header"><div><h2 class="card-title">Endereço da empresa</h2><p class="text-muted">Será utilizado na identificação do emitente.</p></div></div><div class="card-body">
+                        <div class="row"><div class="col-3"><div class="form-group"><label>CEP</label><input id="cep" class="form-control"></div></div><div class="col"><div class="form-group"><label>Logradouro</label><input id="endereco" class="form-control"></div></div><div class="col-2"><div class="form-group"><label>Número</label><input id="numero" class="form-control"></div></div></div>
+                        <div class="row"><div class="col"><div class="form-group"><label>Complemento</label><input id="complemento" class="form-control"></div></div><div class="col"><div class="form-group"><label>Bairro</label><input id="bairro" class="form-control"></div></div></div>
+                        <div class="row"><div class="col"><div class="form-group"><label>Cidade</label><input id="cidade" class="form-control"></div></div><div class="col-2"><div class="form-group"><label>UF</label><input id="estado" class="form-control" maxlength="2" placeholder="GO"></div></div></div>
+                    </div></div>
+                    <div class="panel-actions"><button class="btn btn-primary" type="submit"><i class="fas fa-check"></i> Salvar endereço</button></div>
+                </div>
+            </form>
+
+            <form id="formFiscal" class="empresa-panel" data-panel="fiscal">
+                <div class="fiscal-alert"><i class="fas fa-flask"></i><div><strong>Comece em homologação</strong><span>Configure e valide os dados com o contador antes de alterar para produção.</span></div></div>
+                <div class="card"><div class="card-header"><div><h2 class="card-title">Tributação e identificação</h2><p class="text-muted">Parâmetros fiscais do emitente.</p></div></div><div class="card-body">
+                    <div class="row"><div class="col"><div class="form-group"><label>Regime tributário</label><select id="regimeTributario" class="form-control"><option value="">Selecione</option><option value="MEI">MEI</option><option value="SIMPLES_NACIONAL">Simples Nacional</option><option value="SIMPLES_NACIONAL_EXCESSO">Simples Nacional — excesso de sublimite</option><option value="REGIME_NORMAL">Regime normal</option></select></div></div><div class="col"><div class="form-group"><label>CRT</label><select id="crt" class="form-control"><option value="">Selecione</option><option value="1">1 — Simples Nacional</option><option value="2">2 — Excesso de sublimite</option><option value="3">3 — Regime normal</option><option value="4">4 — MEI</option></select></div></div></div>
+                    <div class="row"><div class="col"><div class="form-group"><label>Inscrição municipal</label><input id="inscricaoMunicipal" class="form-control"></div></div><div class="col"><div class="form-group"><label>CNAE principal</label><input id="cnaePrincipal" class="form-control" placeholder="0000-0/00"></div></div><div class="col"><div class="form-group"><label>Código IBGE do município</label><input id="codigoMunicipio" class="form-control" placeholder="5208707"></div></div></div>
+                </div></div>
+
+                <div class="card mt-3"><div class="card-header"><div><h2 class="card-title">Ambiente e numeração</h2><p class="text-muted">Controle da sequência das NF-e.</p></div></div><div class="card-body">
+                    <div class="row"><div class="col"><div class="form-group"><label>Ambiente</label><select id="ambiente" class="form-control"><option value="HOMOLOGACAO">Homologação</option><option value="PRODUCAO">Produção</option></select></div></div><div class="col"><div class="form-group"><label>Série NF-e</label><input id="serieNfe" type="number" min="1" max="999" class="form-control" value="1"></div></div><div class="col"><div class="form-group"><label>Próximo número NF-e</label><input id="proximoNumeroNfe" type="number" min="1" class="form-control" value="1"></div></div></div>
+                    <div class="row"><div class="col"><div class="form-group"><label>CFOP padrão</label><input id="cfopPadrao" class="form-control" maxlength="4" placeholder="5102"></div></div><div class="col"><div class="form-group"><label>Natureza da operação</label><input id="naturezaOperacao" class="form-control" placeholder="Venda de mercadoria"></div></div><div class="col"><div class="form-group"><label>E-mail fiscal</label><input id="emailFiscal" type="email" class="form-control"></div></div></div>
+                    <div class="form-group"><label>Informações complementares padrão</label><textarea id="informacoesComplementares" class="form-control" rows="3"></textarea></div>
+                    <label class="switch-row"><input id="fiscalAtivo" type="checkbox"><span class="switch-control"></span><span><strong>Configuração fiscal ativa</strong><small>Habilita o uso desses dados nas próximas etapas fiscais.</small></span></label>
+                </div></div>
+                <div class="panel-actions"><button class="btn btn-primary" type="submit"><i class="fas fa-check"></i> Salvar configuração fiscal</button></div>
+            </form>
+
+            <div class="empresa-panel" data-panel="certificado">
+                <div class="card certificate-card"><div class="card-header"><div><h2 class="card-title">Certificado digital A1</h2><p class="text-muted">Arquivo criptografado para autenticação fiscal.</p></div><div id="certificadoBadge" class="badge badge-warning">Não configurado</div></div><div class="card-body">
+                    <div id="certificadoAtual" class="certificate-current" style="display:none"><div class="certificate-icon"><i class="fas fa-file-shield"></i></div><div><strong id="certificadoNome">-</strong><span id="certificadoValidade">Validade não informada</span></div><button class="btn btn-danger" type="button" onclick="removerCertificado()"><i class="fas fa-trash"></i> Remover</button></div>
+                    <form id="formCertificado">
+                        <div class="certificate-upload"><i class="fas fa-cloud-arrow-up"></i><div><strong>Selecione o certificado A1</strong><span>Formatos aceitos: .pfx ou .p12, até 5 MB.</span></div><input id="arquivoCertificado" type="file" accept=".pfx,.p12" required></div>
+                        <div class="row mt-3"><div class="col"><div class="form-group"><label>Senha do certificado *</label><div class="password-field"><input id="senhaCertificado" type="password" class="form-control" required><button type="button" onclick="alternarSenhaCertificado()"><i class="fas fa-eye"></i></button></div><small class="field-help">A senha será criptografada e nunca será exibida novamente.</small></div></div><div class="col"><div class="form-group"><label>Validade</label><input id="validadeCertificado" type="date" class="form-control"><small class="field-help">Informe a data apresentada pelo emissor do certificado.</small></div></div></div>
+                        <div class="panel-actions certificate-actions"><button class="btn btn-primary" type="submit"><i class="fas fa-shield-halved"></i> Armazenar certificado</button></div>
+                    </form>
+                </div></div>
+            </div>
+        </section>
+    </main>
+</div>
+<script src="../js/layout.js"></script><script src="../js/api.js"></script><script src="../js/utils.js"></script><script src="../js/app.js"></script><script src="../js/menu.js"></script><script src="../js/empresas.js"></script>
+</body>
+</html>
