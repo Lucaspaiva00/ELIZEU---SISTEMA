@@ -27,6 +27,10 @@ async function carregarLayout() {
 
     }
 
+    if (typeof window.inicializarMenuResponsivo === "function") {
+        window.inicializarMenuResponsivo();
+    }
+
 }
 
 document.addEventListener("DOMContentLoaded", carregarLayout);

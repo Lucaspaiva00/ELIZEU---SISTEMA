@@ -1,8 +1,24 @@
 <header class="topbar">
 
-    <div class="topbar-title">
+    <div class="topbar-brand">
 
-        ERP Elizeu
+        <button
+            type="button"
+            class="menu-toggle"
+            id="menuToggle"
+            aria-label="Abrir menu de navegação"
+            aria-controls="menuLateral"
+            aria-expanded="false">
+
+            <i class="fas fa-bars"></i>
+
+        </button>
+
+        <div class="topbar-title">
+
+            ERP Elizeu
+
+        </div>
 
     </div>
 
@@ -24,10 +40,12 @@
 
             <i class="fas fa-sign-out-alt"></i>
 
-            Sair
+            <span class="logout-text">Sair</span>
 
         </button>
 
     </div>
 
 </header>
+
+<div class="sidebar-overlay" id="sidebarOverlay" aria-hidden="true"></div>
