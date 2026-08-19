@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vendas e Faturamento | ERP Elizeu</title>
+    <link rel="stylesheet" href="../css/app.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+</head>
+<body>
+<div class="wrapper">
+    <div id="sidebar"></div>
+    <main class="main">
+        <div id="topbar"></div>
+        <section class="content">
+            <div class="page-header">
+                <div>
+                    <h1 class="page-title">Vendas e Faturamento</h1>
+                    <p class="page-subtitle">Vendas geradas a partir dos orçamentos aprovados.</p>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-body">
+                    <div class="filters">
+                        <div class="form-group">
+                            <label>Pesquisar</label>
+                            <input id="pesquisaVenda" class="form-control" placeholder="Venda, orçamento ou cliente..." onkeyup="filtrarVendas()">
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead><tr>
+                                <th>Venda</th><th>Orçamento</th><th>Cliente</th><th>Data</th><th>Total</th><th>Status</th><th width="190">Ações</th>
+                            </tr></thead>
+                            <tbody id="tabelaVendas"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-overlay" id="modalVenda">
+                <div class="modal modal-xl">
+                    <div class="modal-header">
+                        <h2 id="tituloVenda">Venda</h2>
+                        <button class="modal-close" onclick="fecharVenda()">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="col-2"><div class="form-group"><label>Venda</label><input id="viewVendaNumero" class="form-control" readonly></div></div>
+                            <div class="col-2"><div class="form-group"><label>Orçamento</label><input id="viewVendaOrcamento" class="form-control" readonly></div></div>
+                            <div class="col"><div class="form-group"><label>Cliente</label><input id="viewVendaCliente" class="form-control" readonly></div></div>
+                            <div class="col-3"><div class="form-group"><label>Status</label><input id="viewVendaStatus" class="form-control" readonly></div></div>
+                        </div>
+                        <div class="row">
+                            <div class="col-3"><div class="form-group"><label>Forma de pagamento</label><input id="viewVendaPagamento" class="form-control" readonly></div></div>
+                            <div class="col-3"><div class="form-group"><label>Parcelas</label><input id="viewVendaParcelas" class="form-control" readonly></div></div>
+                            <div class="col-3"><div class="form-group"><label>Primeiro vencimento</label><input id="viewVendaVencimento" class="form-control" readonly></div></div>
+                            <div class="col-3"><div class="form-group"><label>Total</label><input id="viewVendaTotal" class="form-control" readonly></div></div>
+                        </div>
+                        <hr>
+                        <h3>Itens da venda</h3>
+                        <div class="table-responsive"><table class="table"><thead><tr><th>Item</th><th>Qtd.</th><th>Unitário</th><th>Total</th></tr></thead><tbody id="viewVendaItens"></tbody></table></div>
+                        <hr>
+                        <h3>Contas a receber</h3>
+                        <div class="table-responsive"><table class="table"><thead><tr><th>Parcela</th><th>Vencimento</th><th>Valor</th><th>Status</th></tr></thead><tbody id="viewVendaParcelasTabela"></tbody></table></div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-light" onclick="fecharVenda()">Fechar</button>
+                        <button id="btnCancelarVenda" class="btn btn-danger" onclick="cancelarVendaAtual()"><i class="fas fa-ban"></i> Cancelar venda</button>
+                        <button id="btnFaturarVenda" class="btn btn-success" onclick="faturarVendaAtual()"><i class="fas fa-file-invoice-dollar"></i> Faturar venda</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+<script src="../js/layout.js"></script>
+<script src="../js/api.js"></script>
+<script src="../js/utils.js"></script>
+<script src="../js/app.js"></script>
+<script src="../js/menu.js"></script>
+<script src="../js/vendas.js"></script>
+</body>
+</html>

@@ -5,6 +5,8 @@ let servicos = [];
 let itensOrcamento = [];
 
 let orcamentoEditandoId = null;
+let orcamentoVisualizadoId = null;
+let orcamentoAprovandoId = null;
 
 const modalOrcamento = document.getElementById("modalOrcamento");
 const modalSelecionarProduto = document.getElementById(
@@ -189,92 +191,45 @@ async function carregarOrcamentos() {
     }
 }
 
+function statusOrcamentoInfo(status) {
+    const mapa = {
+        RASCUNHO: { texto: "Rascunho", classe: "badge-warning" },
+        ENVIADO: { texto: "Enviado", classe: "badge-info" },
+        APROVADO: { texto: "Aprovado / venda gerada", classe: "badge-success" },
+        REJEITADO: { texto: "Rejeitado", classe: "badge-danger" },
+        CANCELADO: { texto: "Cancelado", classe: "badge-danger" },
+        VENCIDO: { texto: "Vencido", classe: "badge-secondary" }
+    };
+    return mapa[status] || { texto: status || "Rascunho", classe: "badge-secondary" };
+}
+
 function renderizarTabelaOrcamentos(lista) {
     const tbody = document.getElementById("tabelaOrcamentos");
-
     tbody.innerHTML = "";
 
     if (!lista.length) {
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="6" class="text-center">
-                    Nenhum orçamento cadastrado.
-                </td>
-            </tr>
-        `;
-
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center">Nenhum orçamento cadastrado.</td></tr>';
         return;
     }
 
     lista.forEach((orcamento) => {
+        const st = statusOrcamentoInfo(orcamento.status);
+        const podeEditar = !["APROVADO", "CANCELADO"].includes(orcamento.status);
+        const podeAprovar = !orcamento.venda && !["APROVADO", "CANCELADO", "REJEITADO", "VENCIDO"].includes(orcamento.status);
         const linha = document.createElement("tr");
-
         linha.innerHTML = `
-            <td>
-                <strong>
-                    #${String(orcamento.numero).padStart(5, "0")}
-                </strong>
-            </td>
-
-            <td>
-                ${escaparHtml(
-            orcamento.cliente?.nome || "-"
-        )}
-            </td>
-
-            <td>
-                ${data(orcamento.criadoEm)}
-            </td>
-
-            <td>
-                <strong>
-                    ${moeda(orcamento.total)}
-                </strong>
-            </td>
-
-            <td>
-                <span class="badge badge-warning">
-                    Em elaboração
-                </span>
-            </td>
-
-            <td>
-                <div class="table-actions">
-
-                    <button
-                        type="button"
-                        class="btn btn-light"
-                        onclick="visualizarOrcamento(${orcamento.id})"
-                        title="Visualizar orçamento">
-
-                        <i class="fas fa-eye"></i>
-
-                    </button>
-
-                    <button
-                        type="button"
-                        class="btn btn-warning"
-                        onclick="editarOrcamento(${orcamento.id})"
-                        title="Editar orçamento">
-
-                        <i class="fas fa-edit"></i>
-
-                    </button>
-
-                    <button
-                        type="button"
-                        class="btn btn-danger"
-                        onclick="excluirOrcamento(${orcamento.id})"
-                        title="Excluir orçamento">
-
-                        <i class="fas fa-trash"></i>
-
-                    </button>
-
-                </div>
-            </td>
-        `;
-
+            <td><strong>#${String(orcamento.numero).padStart(5, "0")}</strong></td>
+            <td>${escaparHtml(orcamento.cliente?.nome || "-")}</td>
+            <td>${data(orcamento.criadoEm)}</td>
+            <td><strong>${moeda(orcamento.total)}</strong></td>
+            <td><span class="badge ${st.classe}">${st.texto}</span></td>
+            <td><div class="table-actions">
+                <button type="button" class="btn btn-light" onclick="visualizarOrcamento(${orcamento.id})" title="Visualizar"><i class="fas fa-eye"></i></button>
+                <button type="button" class="btn btn-light" onclick="gerarPdfOrcamento(${orcamento.id})" title="Gerar PDF"><i class="fas fa-file-pdf"></i></button>
+                ${podeAprovar ? `<button type="button" class="btn btn-success" onclick="abrirModalAprovacao(${orcamento.id})" title="Aprovar e gerar venda"><i class="fas fa-check"></i></button>` : ""}
+                ${podeEditar ? `<button type="button" class="btn btn-warning" onclick="editarOrcamento(${orcamento.id})" title="Editar"><i class="fas fa-edit"></i></button>` : ""}
+                ${podeEditar ? `<button type="button" class="btn btn-danger" onclick="excluirOrcamento(${orcamento.id})" title="Excluir"><i class="fas fa-trash"></i></button>` : ""}
+            </div></td>`;
         tbody.appendChild(linha);
     });
 }
@@ -1176,8 +1131,7 @@ async function visualizarOrcamento(id) {
     document.getElementById("viewCliente").value =
         o.cliente.nome;
 
-    document.getElementById("viewStatus").value =
-        "Em elaboração";
+    document.getElementById("viewStatus").value = statusOrcamentoInfo(o.status).texto;
 
     document.getElementById("viewObservacoes").value =
         o.observacoes || "";
@@ -1222,10 +1176,13 @@ async function visualizarOrcamento(id) {
 
     });
 
-    document
-        .getElementById("modalVisualizarOrcamento")
-        .classList
-        .add("active");
+    orcamentoVisualizadoId = o.id;
+    const podeEditar = !["APROVADO", "CANCELADO"].includes(o.status);
+    const podeAprovar = !o.venda && !["APROVADO", "CANCELADO", "REJEITADO", "VENCIDO"].includes(o.status);
+    document.getElementById("btnEditarOrcamentoView").style.display = podeEditar ? "inline-flex" : "none";
+    document.getElementById("btnAprovarOrcamentoView").style.display = podeAprovar ? "inline-flex" : "none";
+
+    document.getElementById("modalVisualizarOrcamento").classList.add("active");
 
 }
 
@@ -1281,6 +1238,97 @@ async function excluirOrcamento(id) {
     }
 
 }
+
+function editarOrcamentoVisualizado() {
+    if (!orcamentoVisualizadoId) return;
+    const id = orcamentoVisualizadoId;
+    fecharVisualizacaoOrcamento();
+    editarOrcamento(id);
+}
+
+function abrirAprovacaoOrcamentoVisualizado() {
+    if (!orcamentoVisualizadoId) return;
+    fecharVisualizacaoOrcamento();
+    abrirModalAprovacao(orcamentoVisualizadoId);
+}
+
+function gerarPdfOrcamentoVisualizado() {
+    if (orcamentoVisualizadoId) gerarPdfOrcamento(orcamentoVisualizadoId);
+}
+
+function abrirModalAprovacao(id) {
+    orcamentoAprovandoId = id;
+    const hoje = new Date();
+    const yyyy = hoje.getFullYear();
+    const mm = String(hoje.getMonth() + 1).padStart(2, "0");
+    const dd = String(hoje.getDate()).padStart(2, "0");
+    document.getElementById("aprovarFormaPagamento").value = "PIX";
+    document.getElementById("aprovarParcelas").value = 1;
+    document.getElementById("aprovarPeriodicidade").value = "MENSAL";
+    document.getElementById("aprovarPrimeiroVencimento").value = `${yyyy}-${mm}-${dd}`;
+    document.getElementById("modalAprovarOrcamento").classList.add("active");
+}
+
+function fecharModalAprovacao() {
+    document.getElementById("modalAprovarOrcamento").classList.remove("active");
+    orcamentoAprovandoId = null;
+}
+
+async function confirmarAprovacaoOrcamento() {
+    if (!orcamentoAprovandoId) return;
+    const botao = document.getElementById("btnConfirmarAprovacao");
+    const dados = {
+        formaPagamento: document.getElementById("aprovarFormaPagamento").value,
+        quantidadeParcelas: Number(document.getElementById("aprovarParcelas").value),
+        periodicidadeParcelas: document.getElementById("aprovarPeriodicidade").value,
+        primeiroVencimento: document.getElementById("aprovarPrimeiroVencimento").value
+    };
+    if (!dados.primeiroVencimento) return mostrarMensagem("Informe o primeiro vencimento.");
+    try {
+        botao.disabled = true;
+        botao.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Aprovando...';
+        const r = await put(`/orcamentos/${orcamentoAprovandoId}/aprovar`, dados);
+        if (!r?.sucesso) return mostrarMensagem(r?.mensagem || "Erro ao aprovar orçamento.");
+        fecharModalAprovacao();
+        await carregarOrcamentos();
+        mostrarMensagem(`Orçamento aprovado. Venda #${String(r.venda?.numero || "").padStart(5, "0")} criada e aguardando faturamento.`);
+    } catch (e) {
+        console.error(e);
+        mostrarMensagem(e.message || "Erro ao aprovar orçamento.");
+    } finally {
+        botao.disabled = false;
+        botao.innerHTML = '<i class="fas fa-check"></i> Aprovar e gerar venda';
+    }
+}
+
+async function gerarPdfOrcamento(id) {
+    const r = await get(`/orcamentos/${id}`);
+    if (!r?.sucesso) return mostrarMensagem(r?.mensagem || "Erro ao carregar orçamento.");
+    const o = r.orcamento;
+    const itens = (o.itens || []).map(item => {
+        const servico = item.tipo === "SERVICO";
+        const nome = servico ? item.variacaoServico?.servico?.nome : item.variacaoProduto?.produto?.nome;
+        const variacao = servico
+            ? (item.variacaoServico?.descricao || item.variacaoServico?.codigo || "")
+            : [item.variacaoProduto?.cor, item.variacaoProduto?.tamanho].filter(Boolean).join(" / ");
+        return `<tr><td>${escaparHtml(nome || "Item")}${variacao ? `<br><small>${escaparHtml(variacao)}</small>` : ""}</td><td>${Number(item.quantidade)}</td><td>${moeda(item.valorUnitario)}</td><td>${moeda(item.total)}</td></tr>`;
+    }).join("");
+    const janela = window.open("", "_blank", "width=1000,height=800");
+    if (!janela) return mostrarMensagem("Permita pop-ups para gerar o PDF.");
+    janela.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Orçamento ${o.numero}</title><style>
+        body{font-family:Arial,sans-serif;color:#222;margin:40px} .top{display:flex;justify-content:space-between;border-bottom:3px solid #222;padding-bottom:18px;margin-bottom:24px}
+        h1{margin:0;font-size:28px}.muted{color:#666}.box{border:1px solid #ddd;border-radius:8px;padding:16px;margin:16px 0}table{width:100%;border-collapse:collapse;margin-top:18px}th,td{padding:10px;border-bottom:1px solid #ddd;text-align:left}th{background:#f3f4f6}.total{font-size:24px;font-weight:bold;text-align:right;margin-top:24px}.footer{margin-top:50px;font-size:12px;color:#777;text-align:center}@media print{button{display:none}body{margin:15mm}}</style></head><body>
+        <div class="top"><div><h1>ERP Elizeu</h1><div class="muted">Proposta Comercial</div></div><div style="text-align:right"><strong>ORÇAMENTO #${String(o.numero).padStart(5,"0")}</strong><br><span class="muted">${new Date(o.criadoEm).toLocaleDateString("pt-BR")}</span></div></div>
+        <div class="box"><strong>Cliente:</strong> ${escaparHtml(o.cliente?.nome || "-")}<br><strong>CPF/CNPJ:</strong> ${escaparHtml(o.cliente?.cpfCnpj || "-")}<br><strong>Telefone:</strong> ${escaparHtml(o.cliente?.telefone || o.cliente?.celular || "-")} ${o.cliente?.email ? `<br><strong>E-mail:</strong> ${escaparHtml(o.cliente.email)}` : ""}</div>
+        <table><thead><tr><th>Item</th><th>Qtd.</th><th>Unitário</th><th>Total</th></tr></thead><tbody>${itens}</tbody></table>
+        <div style="margin-top:20px;text-align:right">Subtotal: <strong>${moeda(o.subtotal)}</strong><br>Desconto: ${moeda(o.desconto)}<br>Frete: ${moeda(o.frete)}<br>Outras despesas: ${moeda(o.outrasDespesas)}</div>
+        <div class="total">Total: ${moeda(o.total)}</div>
+        ${o.observacoes ? `<div class="box"><strong>Observações</strong><br>${escaparHtml(o.observacoes).replaceAll("\n","<br>")}</div>` : ""}
+        <div class="footer">Documento gerado pelo ERP Elizeu.</div>
+        <script>window.onload=()=>setTimeout(()=>window.print(),300);<\/script></body></html>`);
+    janela.document.close();
+}
+
 
 modalOrcamento.addEventListener(
     "click",

@@ -94,7 +94,7 @@
 
                                         <th>Status</th>
 
-                                        <th width="170">
+                                        <th width="260">
 
                                             Ações
 
@@ -679,18 +679,75 @@
 
                             </button>
 
-                            <button class="btn btn-warning" onclick="editarOrcamentoVisualizado()">
+                            <button class="btn btn-light" onclick="gerarPdfOrcamentoVisualizado()">
+                                <i class="fas fa-file-pdf"></i>
+                                Gerar PDF
+                            </button>
 
+                            <button id="btnAprovarOrcamentoView" class="btn btn-success" onclick="abrirAprovacaoOrcamentoVisualizado()">
+                                <i class="fas fa-check"></i>
+                                Aprovar e gerar venda
+                            </button>
+
+                            <button id="btnEditarOrcamentoView" class="btn btn-warning" onclick="editarOrcamentoVisualizado()">
                                 <i class="fas fa-edit"></i>
-
                                 Editar Orçamento
-
                             </button>
 
                         </div>
 
                     </div>
 
+                </div>
+
+                <div class="modal-overlay" id="modalAprovarOrcamento">
+                    <div class="modal">
+                        <div class="modal-header">
+                            <h2 class="modal-title">Aprovar orçamento e gerar venda</h2>
+                            <button class="modal-close" onclick="fecharModalAprovacao()">&times;</button>
+                        </div>
+                        <div class="modal-body">
+                            <p class="mb-3">A aprovação cria uma venda em <strong>Aguardando faturamento</strong>. O financeiro e a baixa de estoque serão gerados somente ao faturar a venda.</p>
+                            <div class="form-group">
+                                <label>Forma de pagamento</label>
+                                <select id="aprovarFormaPagamento" class="form-control">
+                                    <option value="PIX">PIX</option>
+                                    <option value="DINHEIRO">Dinheiro</option>
+                                    <option value="CARTAO_CREDITO">Cartão de crédito</option>
+                                    <option value="CARTAO_DEBITO">Cartão de débito</option>
+                                    <option value="BOLETO">Boleto</option>
+                                    <option value="TRANSFERENCIA">Transferência</option>
+                                    <option value="CHEQUE">Cheque</option>
+                                    <option value="CREDITO_LOJA">Crédito loja</option>
+                                    <option value="OUTRO">Outro</option>
+                                </select>
+                            </div>
+                            <div class="row">
+                                <div class="col">
+                                    <div class="form-group"><label>Quantidade de parcelas</label><input id="aprovarParcelas" type="number" min="1" max="120" value="1" class="form-control"></div>
+                                </div>
+                                <div class="col">
+                                    <div class="form-group">
+                                        <label>Periodicidade</label>
+                                        <select id="aprovarPeriodicidade" class="form-control">
+                                            <option value="MENSAL">Mensal</option>
+                                            <option value="SEMANAL">Semanal</option>
+                                            <option value="QUINZENAL">Quinzenal</option>
+                                            <option value="BIMESTRAL">Bimestral</option>
+                                            <option value="TRIMESTRAL">Trimestral</option>
+                                            <option value="SEMESTRAL">Semestral</option>
+                                            <option value="ANUAL">Anual</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group"><label>Primeiro vencimento</label><input id="aprovarPrimeiroVencimento" type="date" class="form-control"></div>
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-light" onclick="fecharModalAprovacao()">Cancelar</button>
+                            <button id="btnConfirmarAprovacao" class="btn btn-success" onclick="confirmarAprovacaoOrcamento()"><i class="fas fa-check"></i> Aprovar e gerar venda</button>
+                        </div>
+                    </div>
                 </div>
 
             </section>

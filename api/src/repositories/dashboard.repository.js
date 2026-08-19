@@ -123,7 +123,7 @@ class DashboardRepository {
                 take: 10
             }),
             prisma.venda.findMany({
-                where: { empresaId, status: "CONFIRMADA", dataVenda: filtroPeriodo },
+                where: { empresaId, status: { in: ["CONFIRMADA", "FATURADA"] }, dataVenda: filtroPeriodo },
                 select: { id: true, total: true }
             }),
             prisma.orcamento.findMany({

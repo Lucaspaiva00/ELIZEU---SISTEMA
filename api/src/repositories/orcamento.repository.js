@@ -261,14 +261,14 @@ class OrcamentoRepository {
                 }
 
                 if (orcamento.status === "APROVADO" || orcamento.venda) {
-                    throw new Error("Este orçamento já foi aprovado.");
+                    throw new Error("Este orçamento já gerou uma venda.");
                 }
 
                 if (["CANCELADO", "REJEITADO", "VENCIDO"].includes(orcamento.status)) {
                     throw new Error(`Não é possível aprovar um orçamento com status ${orcamento.status}.`);
                 }
 
-                if (orcamento.itens.length === 0) {
+                if (!orcamento.itens.length) {
                     throw new Error("O orçamento não possui itens.");
                 }
 
@@ -276,50 +276,12 @@ class OrcamentoRepository {
                     throw new Error("O total do orçamento deve ser maior que zero.");
                 }
 
-                for (const item of orcamento.itens) {
-                    if (item.tipo === "SERVICO") {
-                        continue;
-                    }
-
-                    const { produto } = item.variacaoProduto;
-
-                    if (
-                        produto.controlaEstoque &&
-                        !produto.permiteVendaSemEstoque &&
-                        item.variacaoProduto.estoqueAtual.lessThan(item.quantidade)
-                    ) {
-                        throw new Error(
-                            `Estoque insuficiente para ${produto.nome} - ${item.variacaoProduto.sku}.`
-                        );
-                    }
-                }
-
                 const ultimaVenda = await tx.venda.findFirst({
-                    where: {
-                        empresaId: dados.empresaId
-                    },
-                    orderBy: {
-                        numero: "desc"
-                    }
+                    where: { empresaId: dados.empresaId },
+                    orderBy: { numero: "desc" }
                 });
 
                 const numeroVenda = ultimaVenda ? ultimaVenda.numero + 1 : 1;
-
-                const categoriaReceita = await tx.categoriaFinanceira.findFirst({
-                    where: {
-                        empresaId: dados.empresaId,
-                        nome: "Vendas de Produtos e Serviços",
-                        ativa: true
-                    }
-                });
-
-                const centroCusto = await tx.centroCusto.findFirst({
-                    where: {
-                        empresaId: dados.empresaId,
-                        codigo: "GERAL",
-                        ativo: true
-                    }
-                });
 
                 const venda = await tx.venda.create({
                     data: {
@@ -345,7 +307,11 @@ class OrcamentoRepository {
                 for (const item of orcamento.itens) {
                     if (item.tipo === "SERVICO") {
                         const variacao = item.variacaoServico;
-                        const servico = variacao.servico;
+                        const servico = variacao?.servico;
+
+                        if (!variacao || !servico) {
+                            throw new Error("Serviço do orçamento não encontrado.");
+                        }
 
                         await tx.itemVenda.create({
                             data: {
@@ -364,14 +330,17 @@ class OrcamentoRepository {
                                 custoUnitario: variacao.precoCusto
                             }
                         });
-
                         continue;
                     }
 
                     const variacao = item.variacaoProduto;
-                    const produto = variacao.produto;
+                    const produto = variacao?.produto;
 
-                    const itemVenda = await tx.itemVenda.create({
+                    if (!variacao || !produto) {
+                        throw new Error("Produto do orçamento não encontrado.");
+                    }
+
+                    await tx.itemVenda.create({
                         data: {
                             vendaId: venda.id,
                             tipo: "PRODUTO",
@@ -388,104 +357,10 @@ class OrcamentoRepository {
                             custoUnitario: variacao.precoCusto
                         }
                     });
-
-                    if (produto.controlaEstoque) {
-                        const saldoAnterior = variacao.estoqueAtual;
-                        const saldoPosterior = saldoAnterior.minus(item.quantidade);
-
-                        if (!produto.permiteVendaSemEstoque) {
-                            const atualizacao = await tx.variacaoProduto.updateMany({
-                                where: {
-                                    id: variacao.id,
-                                    estoqueAtual: {
-                                        gte: item.quantidade
-                                    }
-                                },
-                                data: {
-                                    estoqueAtual: {
-                                        decrement: item.quantidade
-                                    }
-                                }
-                            });
-
-                            if (atualizacao.count !== 1) {
-                                throw new Error(
-                                    `O estoque de ${produto.nome} foi alterado. Revise o orçamento e tente novamente.`
-                                );
-                            }
-                        } else {
-                            await tx.variacaoProduto.update({
-                                where: {
-                                    id: variacao.id
-                                },
-                                data: {
-                                    estoqueAtual: {
-                                        decrement: item.quantidade
-                                    }
-                                }
-                            });
-                        }
-
-                        await tx.movimentacaoEstoque.create({
-                            data: {
-                                empresaId: dados.empresaId,
-                                variacaoProdutoId: variacao.id,
-                                vendaId: venda.id,
-                                itemVendaId: itemVenda.id,
-                                responsavelId: dados.usuarioId,
-                                tipo: "SAIDA",
-                                origem: "VENDA",
-                                quantidade: item.quantidade,
-                                saldoAnterior,
-                                saldoPosterior,
-                                observacoes: `Baixa gerada pela aprovação do orçamento nº ${orcamento.numero}.`
-                            }
-                        });
-                    }
-                }
-
-                const valoresParcelas = dividirValorEmParcelas(
-                    orcamento.total,
-                    dados.quantidadeParcelas
-                );
-
-                const parcelas = [];
-
-                for (let indice = 0; indice < dados.quantidadeParcelas; indice += 1) {
-                    const numeroParcela = indice + 1;
-                    const vencimento = calcularVencimento(
-                        dados.primeiroVencimento,
-                        indice,
-                        dados.periodicidadeParcelas,
-                        dados.intervaloPersonalizadoDias
-                    );
-
-                    const parcela = await tx.contaReceber.create({
-                        data: {
-                            empresaId: dados.empresaId,
-                            vendaId: venda.id,
-                            clienteId: orcamento.clienteId,
-                            categoriaFinanceiraId: categoriaReceita?.id || null,
-                            centroCustoId: centroCusto?.id || null,
-                            descricao: `Venda nº ${numeroVenda} - Parcela ${numeroParcela}/${dados.quantidadeParcelas}`,
-                            numeroDocumento: `VENDA-${numeroVenda}`,
-                            parcelaNumero: numeroParcela,
-                            totalParcelas: dados.quantidadeParcelas,
-                            valorOriginal: valoresParcelas[indice],
-                            dataCompetencia: new Date(),
-                            dataVencimento: vencimento,
-                            formaPagamento: dados.formaPagamento,
-                            status: "PENDENTE"
-                        }
-                    });
-
-                    parcelas.push(parcela);
                 }
 
                 const orcamentoAprovado = await tx.orcamento.update({
-                    where: {
-                        id: orcamento.id
-                    },
+                    where: { id: orcamento.id },
                     data: {
                         status: "APROVADO",
                         aprovadoEm: new Date(),
@@ -502,10 +377,7 @@ class OrcamentoRepository {
 
                 return {
                     orcamento: orcamentoAprovado,
-                    venda: {
-                        ...venda,
-                        contasReceber: parcelas
-                    }
+                    venda
                 };
             },
             {

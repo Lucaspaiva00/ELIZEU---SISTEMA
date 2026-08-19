@@ -74,6 +74,7 @@ enum StatusOrcamento {
 
 enum StatusVenda {
   CONFIRMADA
+  FATURADA
   CANCELADA
 }
 
