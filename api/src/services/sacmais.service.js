@@ -200,8 +200,30 @@ async function salvarContato(empresaId, payload) {
 }
 
 async function receberWebhook(empresaId, payload) {
-    if (payload?.event && payload.event !== "contacts") {
-        return { ignorado: true, motivo: `Evento ${payload.event} ignorado.` };
+    // Ao cadastrar uma URL em POST /webhooks, o SacMais faz uma chamada de
+    // validação/handshake para conferir se o endpoint está acessível. Essa
+    // chamada não necessariamente contém um contato. Ela deve receber HTTP 200
+    // e NÃO deve ser tratada como cadastro de cliente.
+    if (!payload || typeof payload !== "object") {
+        return {
+            validacao: true,
+            processado: false,
+            motivo: "Handshake do webhook recebido sem payload de contato."
+        };
+    }
+
+    const evento = texto(payload.event);
+    const contato = payload?.data?.contact || payload?.contact || null;
+
+    // Sem evento de contacts ou sem objeto contact = validação/health-check.
+    // Respondemos sucesso para permitir que o SacMais aceite a URL.
+    if (!evento || evento !== "contacts" || !contato || typeof contato !== "object") {
+        return {
+            validacao: true,
+            processado: false,
+            evento: evento || null,
+            motivo: "Webhook validado; nenhum contato para processar."
+        };
     }
 
     const action = String(payload?.action || "update").toLowerCase();
@@ -211,7 +233,7 @@ async function receberWebhook(empresaId, payload) {
         const existente = await localizarCliente(empresaId, dados);
 
         if (!existente) {
-            return { ignorado: true, motivo: "Contato excluído não existe no ERP." };
+            return { ignorado: true, processado: false, motivo: "Contato excluído não existe no ERP." };
         }
 
         const cliente = await prisma.cliente.update({
@@ -223,10 +245,11 @@ async function receberWebhook(empresaId, payload) {
             }
         });
 
-        return { acao: "inativado", cliente };
+        return { acao: "inativado", processado: true, cliente };
     }
 
-    return salvarContato(empresaId, payload);
+    const resultado = await salvarContato(empresaId, payload);
+    return { ...resultado, processado: true };
 }
 
 async function buscarContatoPorNumero(contactNumber) {
