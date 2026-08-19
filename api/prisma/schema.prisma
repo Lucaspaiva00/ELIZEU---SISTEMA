@@ -533,6 +533,11 @@ model Cliente {
   observacoes          String?
   ativo                Boolean  @default(true)
 
+  // Integração SacMais
+  sacmaisId             String?
+  origemCadastro        String?  @default("ERP")
+  sincronizadoSacMaisEm DateTime?
+
   orcamentos    Orcamento[]
   vendas        Venda[]
   contasReceber ContaReceber[]
@@ -541,7 +546,9 @@ model Cliente {
   atualizadoEm DateTime @updatedAt
 
   @@unique([empresaId, cpfCnpj])
+  @@unique([empresaId, sacmaisId])
   @@index([empresaId, nome])
+  @@index([empresaId, sacmaisId])
 }
 
 // =====================================================
