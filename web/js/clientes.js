@@ -9,6 +9,49 @@ document.addEventListener("DOMContentLoaded", () => {
     configurarEventosFormulario();
 });
 
+
+async function sincronizarSacMais() {
+    const botao = document.querySelector('[onclick="sincronizarSacMais()"]');
+    const htmlOriginal = botao?.innerHTML;
+
+    try {
+        if (botao) {
+            botao.disabled = true;
+            botao.innerHTML = `
+                <i class="fas fa-spinner fa-spin"></i>
+                Sincronizando...
+            `;
+        }
+
+        const resposta = await post("/integracoes/sacmais/clientes/importar", {});
+
+        if (!resposta || !resposta.sucesso) {
+            throw new Error(
+                resposta?.mensagem ||
+                "Não foi possível sincronizar os clientes do SacMais."
+            );
+        }
+
+        await carregarClientes();
+
+        mostrarMensagem(
+            `SacMais sincronizado. Recebidos: ${resposta.totalRecebidos ?? 0}, ` +
+            `importados: ${resposta.importados ?? 0}, atualizados: ${resposta.atualizados ?? 0}.`
+        );
+    } catch (erro) {
+        console.error("[SacMais]", erro);
+        mostrarMensagem(
+            erro.message ||
+            "Erro ao sincronizar clientes do SacMais."
+        );
+    } finally {
+        if (botao) {
+            botao.disabled = false;
+            botao.innerHTML = htmlOriginal;
+        }
+    }
+}
+
 async function carregarClientes() {
     try {
         const resposta = await get("/clientes");
