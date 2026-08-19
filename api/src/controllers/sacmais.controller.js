@@ -55,6 +55,28 @@ class SacMaisController {
         }
     }
 
+
+    async importarHistorico(req, res) {
+        try {
+            const resultado = await sacmaisService.importarHistoricoPagina(
+                req.usuario.empresaId,
+                req.body?.pagina,
+                req.body?.limite
+            );
+
+            return res.json({
+                sucesso: true,
+                ...resultado
+            });
+        } catch (error) {
+            console.error("[SacMais histórico]", error);
+            return res.status(502).json({
+                sucesso: false,
+                mensagem: error.message
+            });
+        }
+    }
+
     async configuracao(req, res) {
         const protocolo = req.headers["x-forwarded-proto"] || req.protocol;
         const host = req.get("host");

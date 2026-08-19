@@ -267,6 +267,191 @@ async function importarContatoPorNumero(empresaId, contactNumber) {
     return salvarContato(empresaId, payload);
 }
 
+
+function extrairArrayTickets(payload) {
+    if (Array.isArray(payload)) return payload;
+
+    const candidatos = [
+        payload?.tickets,
+        payload?.items,
+        payload?.results,
+        payload?.rows,
+        payload?.data?.tickets,
+        payload?.data?.items,
+        payload?.data?.results,
+        payload?.data?.rows,
+        Array.isArray(payload?.data) ? payload.data : null
+    ];
+
+    return candidatos.find(Array.isArray) || [];
+}
+
+function limparNumeroContato(valor) {
+    const bruto = texto(valor);
+    if (!bruto) return null;
+
+    // Alguns sistemas retornam JID do WhatsApp (5511999999999@s.whatsapp.net).
+    const semJid = bruto.split("@")[0];
+    const digitos = semJid.replace(/\D/g, "");
+    return digitos.length >= 8 ? digitos : null;
+}
+
+function numeroContatoDoTicket(ticket) {
+    const candidatos = [
+        ticket?.contactNumber,
+        ticket?.contact_number,
+        ticket?.contact?.number,
+        ticket?.contact?.contactNumber,
+        ticket?.contact?.phone,
+        ticket?.contact?.telefone,
+        ticket?.customer?.number,
+        ticket?.customer?.phone,
+        ticket?.client?.number,
+        ticket?.client?.phone,
+        ticket?.number,
+        ticket?.phone,
+        ticket?.telefone,
+        ticket?.whatsapp,
+        ticket?.remoteJid,
+        ticket?.remote_jid
+    ];
+
+    for (const candidato of candidatos) {
+        const numero = limparNumeroContato(candidato);
+        if (numero) return numero;
+    }
+
+    return null;
+}
+
+function infoPaginacao(payload) {
+    const p = payload?.pagination || payload?.meta || payload?.data?.pagination || payload?.data?.meta || {};
+
+    const paginaAtual = Number(
+        primeiro(p.page, p.currentPage, p.current_page, payload?.page, payload?.currentPage)
+    ) || null;
+
+    const totalPaginas = Number(
+        primeiro(p.totalPages, p.total_pages, p.lastPage, p.last_page, payload?.totalPages)
+    ) || null;
+
+    const temProximaExplicita = primeiro(
+        p.hasNext,
+        p.has_next,
+        p.hasNextPage,
+        p.has_next_page,
+        payload?.hasNext
+    );
+
+    return {
+        paginaAtual,
+        totalPaginas,
+        temProximaExplicita: typeof temProximaExplicita === "boolean" ? temProximaExplicita : null
+    };
+}
+
+function caminhosTickets(pagina, limite) {
+    const offset = (pagina - 1) * limite;
+
+    // O Swagger documenta GET /tickets com paginação e filtros. As variações
+    // abaixo tornam a integração tolerante ao nome exato usado pelos parâmetros.
+    return [
+        `/tickets?page=${pagina}&limit=${limite}`,
+        `/tickets?page=${pagina}&perPage=${limite}`,
+        `/tickets?page=${pagina}&pageSize=${limite}`,
+        `/tickets?pagina=${pagina}&limite=${limite}`,
+        `/tickets?offset=${offset}&limit=${limite}`
+    ];
+}
+
+async function buscarPaginaTickets(pagina = 1, limite = 50) {
+    let ultimoErro = null;
+
+    for (const path of caminhosTickets(pagina, limite)) {
+        try {
+            const payload = await requisicaoSacMais(path, { method: "GET" });
+            const tickets = extrairArrayTickets(payload);
+
+            // Uma resposta HTTP 200 é suficiente para fixarmos a estratégia.
+            return { payload, tickets, path };
+        } catch (erro) {
+            ultimoErro = erro;
+        }
+    }
+
+    throw ultimoErro || new Error("Não foi possível listar tickets no SacMais.");
+}
+
+async function processarEmLotes(itens, tamanho, fn) {
+    const resultados = [];
+    for (let i = 0; i < itens.length; i += tamanho) {
+        const lote = itens.slice(i, i + tamanho);
+        const parciais = await Promise.all(lote.map(fn));
+        resultados.push(...parciais);
+    }
+    return resultados;
+}
+
+async function importarHistoricoPagina(empresaId, pagina = 1, limite = 50) {
+    const paginaNum = Math.max(1, Number(pagina) || 1);
+    const limiteNum = Math.min(100, Math.max(1, Number(limite) || 50));
+
+    const { payload, tickets, path } = await buscarPaginaTickets(paginaNum, limiteNum);
+
+    const numeros = [...new Set(
+        tickets.map(numeroContatoDoTicket).filter(Boolean)
+    )];
+
+    let criados = 0;
+    let atualizados = 0;
+    let ignorados = 0;
+    const erros = [];
+
+    await processarEmLotes(numeros, 6, async (numero) => {
+        try {
+            const contato = await buscarContatoPorNumero(numero);
+            const resultado = await salvarContato(empresaId, contato);
+
+            if (resultado.acao === "criado") criados++;
+            else if (resultado.acao === "atualizado") atualizados++;
+        } catch (erro) {
+            ignorados++;
+            erros.push({ numero, erro: erro.message });
+        }
+    });
+
+    const paginacao = infoPaginacao(payload);
+    let temProximaPagina;
+
+    if (paginacao.temProximaExplicita !== null) {
+        temProximaPagina = paginacao.temProximaExplicita;
+    } else if (paginacao.totalPaginas) {
+        temProximaPagina = paginaNum < paginacao.totalPaginas;
+    } else {
+        temProximaPagina = tickets.length >= limiteNum;
+    }
+
+    const assinatura = tickets
+        .slice(0, 10)
+        .map((ticket) => primeiro(ticket?.id, ticket?.uuid, ticket?.ticketId, numeroContatoDoTicket(ticket)))
+        .filter(Boolean)
+        .join("|");
+
+    return {
+        pagina: paginaNum,
+        limite: limiteNum,
+        endpointUsado: path,
+        ticketsRecebidos: tickets.length,
+        contatosEncontrados: numeros.length,
+        criados,
+        atualizados,
+        ignorados,
+        erros: erros.slice(0, 10),
+        temProximaPagina,
+        assinatura
+    };
+}
+
 function tokenWebhookRecebido(req) {
     const authorization = texto(req.headers.authorization);
     const bearer = authorization?.toLowerCase().startsWith("bearer ")
@@ -294,6 +479,7 @@ module.exports = {
     receberWebhook,
     buscarContatoPorNumero,
     importarContatoPorNumero,
+    importarHistoricoPagina,
     validarWebhook,
     mapearContato
 };

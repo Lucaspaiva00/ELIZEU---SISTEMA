@@ -10,47 +10,67 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 
-async function verificarSacMais() {
+async function importarHistoricoSacMais() {
     const botao = document.getElementById("btnSacMais");
     const htmlOriginal = botao?.innerHTML;
 
+    let pagina = 1;
+    const limite = 50;
+    let totalCriados = 0;
+    let totalAtualizados = 0;
+    let totalIgnorados = 0;
+    let ultimaAssinatura = null;
+
     try {
-        if (botao) {
-            botao.disabled = true;
-            botao.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verificando...';
-        }
+        if (botao) botao.disabled = true;
 
-        console.log("[SacMais] Verificando configuração da integração...");
+        console.log("[SacMais] Iniciando importação dos contatos históricos via tickets...");
 
-        const resposta = await get("/integracoes/sacmais/configuracao");
-
-        console.log("[SacMais] Resposta da API:", resposta);
-
-        if (!resposta || !resposta.sucesso) {
-            throw new Error(resposta?.mensagem || "Não foi possível verificar o SacMais.");
-        }
-
-        if (!resposta.tokenApiConfigurado) {
-            throw new Error("SACMAIS_API_TOKEN não está configurado no backend da Render.");
-        }
-
-        const mensagem = resposta.webhookUrl
-            ? `SacMais conectado. Webhook do ERP: ${resposta.webhookUrl}`
-            : "SacMais conectado e token configurado.";
-
-        mostrarMensagem(mensagem);
-
-        if (resposta.webhookUrl && navigator.clipboard?.writeText) {
-            try {
-                await navigator.clipboard.writeText(resposta.webhookUrl);
-                console.log("[SacMais] URL do webhook copiada:", resposta.webhookUrl);
-            } catch (erroClipboard) {
-                console.warn("[SacMais] Não foi possível copiar a URL automaticamente.", erroClipboard);
+        while (pagina <= 200) {
+            if (botao) {
+                botao.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Importando ${pagina}...`;
             }
+
+            const resposta = await post("/integracoes/sacmais/contatos/importar-historico", {
+                pagina,
+                limite
+            });
+
+            console.log(`[SacMais] Página ${pagina}:`, resposta);
+
+            if (!resposta || !resposta.sucesso) {
+                throw new Error(resposta?.mensagem || `Erro ao importar página ${pagina}.`);
+            }
+
+            // Proteção caso a API ignore o parâmetro de página e devolva sempre o mesmo lote.
+            if (resposta.assinatura && resposta.assinatura === ultimaAssinatura) {
+                console.warn("[SacMais] A API repetiu a mesma página. Importação encerrada para evitar loop.");
+                break;
+            }
+            ultimaAssinatura = resposta.assinatura || null;
+
+            totalCriados += Number(resposta.criados || 0);
+            totalAtualizados += Number(resposta.atualizados || 0);
+            totalIgnorados += Number(resposta.ignorados || 0);
+
+            await carregarClientes();
+
+            if (!resposta.temProximaPagina || Number(resposta.ticketsRecebidos || 0) === 0) {
+                break;
+            }
+
+            pagina++;
         }
+
+        const mensagem =
+            `Importação SacMais concluída. Novos: ${totalCriados}, ` +
+            `atualizados: ${totalAtualizados}, ignorados: ${totalIgnorados}.`;
+
+        console.log("[SacMais]", mensagem);
+        mostrarMensagem(mensagem);
     } catch (erro) {
-        console.error("[SacMais] Falha na verificação:", erro);
-        mostrarMensagem(erro.message || "Erro ao verificar integração SacMais.");
+        console.error("[SacMais] Falha na importação histórica:", erro);
+        mostrarMensagem(erro.message || "Erro ao importar contatos existentes do SacMais.");
     } finally {
         if (botao) {
             botao.disabled = false;
