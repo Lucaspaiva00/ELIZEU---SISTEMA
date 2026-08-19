@@ -88,7 +88,7 @@ async function carregarClientes() {
             return;
         }
 
-        clientes = resposta.clientes || [];
+        clientes = ordenarClientesParaTabela(resposta.clientes || []);
         renderizarTabela(clientes);
     } catch (erro) {
         console.error(erro);
@@ -272,6 +272,117 @@ async function buscarCnpj() {
 
 }
 
+function textoLimpo(valor) {
+    return String(valor ?? "").trim();
+}
+
+function somenteDigitos(valor) {
+    return textoLimpo(valor).replace(/\D/g, "");
+}
+
+function nomeEhValido(nome) {
+    const valor = textoLimpo(nome);
+
+    if (!valor || valor === "-" || valor === ".") {
+        return false;
+    }
+
+    // Nome composto apenas por números/telefone não é nome de cadastro.
+    if (/^\+?[\d\s().-]+$/.test(valor)) {
+        return false;
+    }
+
+    return /[A-Za-zÀ-ÿ]/.test(valor);
+}
+
+function nomeParaTabela(cliente) {
+    if (nomeEhValido(cliente.nome)) {
+        return textoLimpo(cliente.nome);
+    }
+
+    return "Contato SacMais";
+}
+
+function documentoEhTecnicoSacMais(valor) {
+    return /^SACMAIS-/i.test(textoLimpo(valor));
+}
+
+function formatarDocumento(valor) {
+    const original = textoLimpo(valor);
+
+    if (!original || documentoEhTecnicoSacMais(original)) {
+        return "—";
+    }
+
+    const digitos = somenteDigitos(original);
+
+    if (digitos.length === 11) {
+        return digitos.replace(
+            /(\d{3})(\d{3})(\d{3})(\d{2})/,
+            "$1.$2.$3-$4"
+        );
+    }
+
+    if (digitos.length === 14) {
+        return digitos.replace(
+            /(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/,
+            "$1.$2.$3/$4-$5"
+        );
+    }
+
+    return original;
+}
+
+function formatarTelefone(valor) {
+    let digitos = somenteDigitos(valor);
+
+    if (!digitos) {
+        return "—";
+    }
+
+    // Remove o DDI 55 somente para aplicar a máscara brasileira.
+    if ((digitos.length === 12 || digitos.length === 13) && digitos.startsWith("55")) {
+        digitos = digitos.slice(2);
+    }
+
+    if (digitos.length === 11) {
+        return `(${digitos.slice(0, 2)}) ${digitos.slice(2, 7)}-${digitos.slice(7)}`;
+    }
+
+    if (digitos.length === 10) {
+        return `(${digitos.slice(0, 2)}) ${digitos.slice(2, 6)}-${digitos.slice(6)}`;
+    }
+
+    return textoLimpo(valor);
+}
+
+function origemParaTabela(cliente) {
+    const origem = textoLimpo(cliente.origemCadastro).toUpperCase();
+
+    if (origem === "SACMAIS" || documentoEhTecnicoSacMais(cliente.cpfCnpj) || cliente.sacmaisId) {
+        return "SACMAIS";
+    }
+
+    return "ERP";
+}
+
+function ordenarClientesParaTabela(lista) {
+    return [...lista].sort((a, b) => {
+        const aTemNome = nomeEhValido(a.nome) ? 1 : 0;
+        const bTemNome = nomeEhValido(b.nome) ? 1 : 0;
+
+        if (aTemNome !== bTemNome) {
+            return bTemNome - aTemNome;
+        }
+
+        return nomeParaTabela(a).localeCompare(
+            nomeParaTabela(b),
+            "pt-BR",
+            { sensitivity: "base" }
+        );
+    });
+}
+
 function renderizarTabela(lista) {
     const tbody = document.getElementById("tabelaClientes");
 
@@ -284,26 +395,44 @@ function renderizarTabela(lista) {
     if (!lista.length) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="6" class="text-center">
+                <td colspan="7" class="text-center">
                     Nenhum cliente cadastrado.
                 </td>
             </tr>
         `;
-
         return;
     }
 
-    lista.forEach((cliente) => {
+    const listaOrdenada = ordenarClientesParaTabela(lista);
+
+    listaOrdenada.forEach((cliente) => {
         const linha = document.createElement("tr");
 
+        const nome = nomeParaTabela(cliente);
+        const telefone = formatarTelefone(cliente.telefone || cliente.celular);
+        const documento = formatarDocumento(cliente.cpfCnpj);
+        const email = textoLimpo(cliente.email) || "—";
+        const origem = origemParaTabela(cliente);
+
         linha.innerHTML = `
-            <td>${escaparHtml(cliente.nome)}</td>
-            <td>${escaparHtml(cliente.cpfCnpj)}</td>
-            <td>${escaparHtml(cliente.telefone || cliente.celular || "-")}</td>
-            <td>${escaparHtml(cliente.email || "-")}</td>
             <td>
-                <span class="badge ${cliente.ativo ? "badge-success" : "badge-danger"
-            }">
+                <strong>${escaparHtml(nome)}</strong>
+                ${
+                    nome === "Contato SacMais" && telefone !== "—"
+                        ? `<div style="font-size:12px; opacity:.65; margin-top:2px;">Cadastro sem nome informado</div>`
+                        : ""
+                }
+            </td>
+            <td>${escaparHtml(telefone)}</td>
+            <td>${escaparHtml(documento)}</td>
+            <td>${escaparHtml(email)}</td>
+            <td>
+                <span class="badge ${origem === "SACMAIS" ? "badge-info" : "badge-secondary"}">
+                    ${origem === "SACMAIS" ? "SacMais" : "ERP"}
+                </span>
+            </td>
+            <td>
+                <span class="badge ${cliente.ativo ? "badge-success" : "badge-danger"}">
                     ${cliente.ativo ? "Ativo" : "Inativo"}
                 </span>
             </td>
@@ -489,18 +618,20 @@ function filtrarClientes() {
     }
 
     const filtrados = clientes.filter((cliente) => {
-        const nome = String(cliente.nome || "").toLowerCase();
-        const cpfCnpj = String(cliente.cpfCnpj || "").toLowerCase();
-        const email = String(cliente.email || "").toLowerCase();
-        const telefone = String(
+        const nome = nomeParaTabela(cliente).toLowerCase();
+        const cpfCnpj = formatarDocumento(cliente.cpfCnpj).toLowerCase();
+        const email = textoLimpo(cliente.email).toLowerCase();
+        const telefone = formatarTelefone(
             cliente.telefone || cliente.celular || ""
         ).toLowerCase();
+        const origem = origemParaTabela(cliente).toLowerCase();
 
         return (
             nome.includes(pesquisa) ||
             cpfCnpj.includes(pesquisa) ||
             email.includes(pesquisa) ||
-            telefone.includes(pesquisa)
+            telefone.includes(pesquisa) ||
+            origem.includes(pesquisa)
         );
     });
 
