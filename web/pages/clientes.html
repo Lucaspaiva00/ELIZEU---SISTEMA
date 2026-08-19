@@ -47,13 +47,16 @@
 
                     <div class="page-actions">
 
-                        <span class="btn btn-light" title="Novos contatos do SacMais entram automaticamente pelo webhook" style="cursor: default;">
-
+                        <button
+                            type="button"
+                            id="btnSacMais"
+                            class="btn btn-light"
+                            onclick="verificarSacMais()"
+                            title="Verificar conexão automática com o SacMais"
+                        >
                             <i class="fas fa-link"></i>
-
-                            SacMais automático
-
-                        </span>
+                            Verificar SacMais
+                        </button>
 
                         <button class="btn btn-primary" onclick="abrirModal()">
 

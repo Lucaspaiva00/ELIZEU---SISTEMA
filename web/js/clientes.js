@@ -10,40 +10,47 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 
-async function sincronizarSacMais() {
-    const botao = document.querySelector('[onclick="sincronizarSacMais()"]');
+async function verificarSacMais() {
+    const botao = document.getElementById("btnSacMais");
     const htmlOriginal = botao?.innerHTML;
 
     try {
         if (botao) {
             botao.disabled = true;
-            botao.innerHTML = `
-                <i class="fas fa-spinner fa-spin"></i>
-                Sincronizando...
-            `;
+            botao.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verificando...';
         }
 
-        const resposta = await post("/integracoes/sacmais/clientes/importar", {});
+        console.log("[SacMais] Verificando configuração da integração...");
+
+        const resposta = await get("/integracoes/sacmais/configuracao");
+
+        console.log("[SacMais] Resposta da API:", resposta);
 
         if (!resposta || !resposta.sucesso) {
-            throw new Error(
-                resposta?.mensagem ||
-                "Não foi possível sincronizar os clientes do SacMais."
-            );
+            throw new Error(resposta?.mensagem || "Não foi possível verificar o SacMais.");
         }
 
-        await carregarClientes();
+        if (!resposta.tokenApiConfigurado) {
+            throw new Error("SACMAIS_API_TOKEN não está configurado no backend da Render.");
+        }
 
-        mostrarMensagem(
-            `SacMais sincronizado. Recebidos: ${resposta.totalRecebidos ?? 0}, ` +
-            `importados: ${resposta.importados ?? 0}, atualizados: ${resposta.atualizados ?? 0}.`
-        );
+        const mensagem = resposta.webhookUrl
+            ? `SacMais conectado. Webhook do ERP: ${resposta.webhookUrl}`
+            : "SacMais conectado e token configurado.";
+
+        mostrarMensagem(mensagem);
+
+        if (resposta.webhookUrl && navigator.clipboard?.writeText) {
+            try {
+                await navigator.clipboard.writeText(resposta.webhookUrl);
+                console.log("[SacMais] URL do webhook copiada:", resposta.webhookUrl);
+            } catch (erroClipboard) {
+                console.warn("[SacMais] Não foi possível copiar a URL automaticamente.", erroClipboard);
+            }
+        }
     } catch (erro) {
-        console.error("[SacMais]", erro);
-        mostrarMensagem(
-            erro.message ||
-            "Erro ao sincronizar clientes do SacMais."
-        );
+        console.error("[SacMais] Falha na verificação:", erro);
+        mostrarMensagem(erro.message || "Erro ao verificar integração SacMais.");
     } finally {
         if (botao) {
             botao.disabled = false;
