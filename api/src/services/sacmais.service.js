@@ -1,141 +1,276 @@
 const prisma = require("../config/prisma");
 
-const BASE_URL = (process.env.SACMAIS_API_URL || "https://api1.sacmais.com.br").replace(/\/$/, "");
-const CLIENTES_PATH = process.env.SACMAIS_CLIENTES_PATH || "/api/contacts";
+const BASE_URL = (process.env.SACMAIS_API_URL || "https://api1.sacmais.com.br/api").replace(/\/$/, "");
 
-function normalizar(valor) {
+function texto(valor) {
     if (valor === undefined || valor === null) return null;
-    return String(valor).trim();
+    const normalizado = String(valor).trim();
+    return normalizado || null;
+}
+
+function somenteDigitos(valor) {
+    const normalizado = texto(valor);
+    return normalizado ? normalizado.replace(/\D/g, "") : null;
+}
+
+function chaveCampo(valor) {
+    return String(valor || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .trim()
+        .toLowerCase();
+}
+
+function mapearCamposExtras(lista = []) {
+    const mapa = {};
+    for (const item of Array.isArray(lista) ? lista : []) {
+        const chave = chaveCampo(item?.name);
+        if (chave) mapa[chave] = texto(item?.value);
+    }
+    return mapa;
 }
 
 function primeiro(...valores) {
-    return valores.find(v => v !== undefined && v !== null && String(v).trim() !== "");
+    return valores.find((valor) => texto(valor));
 }
 
-function mapearContato(contato) {
-    const dados = contato?.data || contato?.contact || contato?.usuario || contato || {};
+function contatoDoPayload(payload) {
+    if (payload?.data?.contact) return payload.data.contact;
+    if (payload?.contact) return payload.contact;
+    if (payload?.data && !payload?.data?.contact) return payload.data;
+    return payload || {};
+}
 
-    const id = primeiro(dados.id, dados._id, dados.contactId, dados.contact_id, dados.uuid);
-    const nome = primeiro(dados.nome, dados.name, dados.full_name, dados.fullName, dados.nomeCompleto);
-    const telefone = primeiro(dados.celular, dados.mobile, dados.phone, dados.telefone, dados.whatsapp);
-    const email = primeiro(dados.email, dados.mail);
-    const cpfCnpjBruto = primeiro(dados.cpfCnpj, dados.cpf_cnpj, dados.cpf, dados.cnpj, dados.documento);
-    const cpfCnpj = cpfCnpjBruto ? String(cpfCnpjBruto).replace(/\D/g, "") : null;
+function mapearContato(payload) {
+    const contato = contatoDoPayload(payload);
+    const adicionais = mapearCamposExtras(contato.additionalFields);
+    const extras = mapearCamposExtras(contato.extraInfo);
 
-    if (!nome) return null;
+    const nome = primeiro(
+        contato.name,
+        adicionais.nome_,
+        adicionais.nome,
+        extras.nome
+    );
+
+    const telefoneBruto = primeiro(
+        contato.number,
+        adicionais.telefone,
+        contato.phone,
+        contato.telefone
+    );
+    const telefone = texto(telefoneBruto);
+    const telefoneId = somenteDigitos(telefoneBruto);
+
+    const documentoBruto = primeiro(
+        contato.document,
+        adicionais.cpf_cnpj,
+        adicionais.cpfcnpj,
+        adicionais.cpf,
+        adicionais.cnpj,
+        contato.documento,
+        contato.cpfCnpj
+    );
+    const documento = somenteDigitos(documentoBruto);
+
+    if (!nome) {
+        throw new Error("Contato SacMais sem nome.");
+    }
+
+    if (!documento && !telefoneId) {
+        throw new Error("Contato SacMais sem CPF/CNPJ e sem telefone.");
+    }
+
+    const tags = Array.isArray(contato.tags)
+        ? contato.tags.map((tag) => texto(tag?.name)).filter(Boolean)
+        : [];
+
+    const observacoes = [];
+    if (tags.length) observacoes.push(`Tags SacMais: ${tags.join(", ")}`);
+    if (adicionais.valor_r) observacoes.push(`Valor R$: ${adicionais.valor_r}`);
+    if (adicionais.duracao_da_conexao) {
+        observacoes.push(`Duração da conexão: ${adicionais.duracao_da_conexao}`);
+    }
 
     return {
-        sacmaisId: id ? String(id) : null,
-        nome: String(nome),
-        cpfCnpj: normalizar(cpfCnpj) || (id ? `SACMAIS-${id}` : null),
-        telefone: normalizar(telefone),
-        celular: normalizar(telefone),
-        email: normalizar(email),
-        tipoPessoa: cpfCnpj?.length === 14 ? "JURIDICA" : "FISICA",
-        nomeFantasia: normalizar(primeiro(dados.nomeFantasia, dados.nome_fantasia)),
-        cep: normalizar(primeiro(dados.cep, dados.zipcode)),
-        endereco: normalizar(primeiro(dados.endereco, dados.address, dados.logradouro)),
-        numero: normalizar(dados.numero),
-        complemento: normalizar(dados.complemento),
-        bairro: normalizar(dados.bairro),
-        cidade: normalizar(primeiro(dados.cidade, dados.city)),
-        estado: normalizar(primeiro(dados.estado, dados.uf, dados.state))?.toUpperCase(),
-        observacoes: normalizar(primeiro(dados.observacoes, dados.notes)),
-        ativo: dados.ativo !== false && dados.active !== false
+        // A própria API identifica o contato pelo contactNumber. Usamos o telefone
+        // normalizado como identificador externo estável quando não existe ID explícito.
+        sacmaisId: texto(primeiro(contato.id, contato.uuid, telefoneId)),
+        nome: texto(nome),
+        cpfCnpj: documento || `SACMAIS-${telefoneId}`,
+        telefone,
+        celular: telefone,
+        email: texto(contato.email),
+        tipoPessoa: documento?.length === 14 ? "JURIDICA" : "FISICA",
+        cep: texto(primeiro(adicionais.cep, contato.cep)),
+        endereco: texto(primeiro(adicionais.endereco, contato.endereco, contato.address)),
+        cidade: texto(primeiro(adicionais.cidade, contato.cidade, contato.city)),
+        estado: texto(primeiro(adicionais.estado, adicionais.uf, contato.estado, contato.uf))?.toUpperCase(),
+        observacoes: observacoes.length ? observacoes.join(" | ") : null,
+        ativo: true
     };
 }
 
-async function requisicao(path, options = {}) {
+async function requisicaoSacMais(path, options = {}) {
     const token = process.env.SACMAIS_API_TOKEN;
-    if (!token) throw new Error("SACMAIS_API_TOKEN não configurado.");
+    if (!token) {
+        throw new Error("SACMAIS_API_TOKEN não configurado na API do ERP.");
+    }
 
     const resposta = await fetch(`${BASE_URL}${path}`, {
         ...options,
         headers: {
             Accept: "application/json",
-            Authorization: `Bearer ${token}`,
-            "X-API-Key": token,
+            "Content-Type": "application/json",
+            x_token: token,
             ...(options.headers || {})
         }
     });
 
-    const texto = await resposta.text();
+    const textoResposta = await resposta.text();
     let body = null;
-    try { body = texto ? JSON.parse(texto) : null; } catch { body = texto; }
+
+    try {
+        body = textoResposta ? JSON.parse(textoResposta) : null;
+    } catch {
+        body = textoResposta;
+    }
 
     if (!resposta.ok) {
-        throw new Error(`SacMais ${resposta.status}: ${typeof body === "string" ? body : JSON.stringify(body)}`);
+        const detalhe = typeof body === "string" ? body : JSON.stringify(body);
+        throw new Error(`SacMais ${resposta.status}: ${detalhe || "erro sem corpo"}`);
     }
 
     return body;
 }
 
-function extrairLista(payload) {
-    if (Array.isArray(payload)) return payload;
-    return payload?.data || payload?.contacts || payload?.contatos || payload?.results || payload?.items || [];
-}
+async function localizarCliente(empresaId, dados) {
+    const ors = [];
 
-async function importarClientes(empresaId) {
-    const payload = await requisicao(CLIENTES_PATH);
-    const contatos = extrairLista(payload);
-    let importados = 0;
-    let atualizados = 0;
+    if (dados.sacmaisId) ors.push({ sacmaisId: dados.sacmaisId });
+    if (dados.cpfCnpj) ors.push({ cpfCnpj: dados.cpfCnpj });
 
-    for (const contato of contatos) {
-        const dados = mapearContato(contato);
-        if (!dados?.cpfCnpj) continue;
-
-        const existente = await prisma.cliente.findFirst({
-            where: {
-                empresaId,
-                OR: [
-                    ...(dados.sacmaisId ? [{ sacmaisId: dados.sacmaisId }] : []),
-                    { cpfCnpj: dados.cpfCnpj }
-                ]
-            }
-        });
-
-        if (existente) {
-            await prisma.cliente.update({
-                where: { id: existente.id },
-                data: { ...dados, sincronizadoSacMaisEm: new Date(), origemCadastro: "SACMAIS" }
-            });
-            atualizados++;
-        } else {
-            await prisma.cliente.create({
-                data: { ...dados, empresaId, sincronizadoSacMaisEm: new Date(), origemCadastro: "SACMAIS" }
-            });
-            importados++;
-        }
+    const telefoneDigitos = somenteDigitos(dados.telefone);
+    if (telefoneDigitos) {
+        // Telefones antigos podem estar formatados. A busca por igualdade cobre a maioria
+        // dos registros já sincronizados e o sacmaisId cobre os novos.
+        ors.push({ telefone: dados.telefone });
+        ors.push({ celular: dados.celular });
     }
 
-    return { totalRecebidos: contatos.length, importados, atualizados };
+    if (!ors.length) return null;
+
+    return prisma.cliente.findFirst({
+        where: {
+            empresaId,
+            OR: ors
+        }
+    });
+}
+
+async function salvarContato(empresaId, payload) {
+    const dados = mapearContato(payload);
+    const existente = await localizarCliente(empresaId, dados);
+
+    const data = {
+        ...dados,
+        origemCadastro: "SACMAIS",
+        sincronizadoSacMaisEm: new Date()
+    };
+
+    if (existente) {
+        return {
+            acao: "atualizado",
+            cliente: await prisma.cliente.update({
+                where: { id: existente.id },
+                data
+            })
+        };
+    }
+
+    return {
+        acao: "criado",
+        cliente: await prisma.cliente.create({
+            data: {
+                ...data,
+                empresaId
+            }
+        })
+    };
 }
 
 async function receberWebhook(empresaId, payload) {
-    const dados = mapearContato(payload);
-    if (!dados?.cpfCnpj) throw new Error("Payload SacMais sem nome e identificador (CPF/CNPJ ou ID).");
-
-    const existente = await prisma.cliente.findFirst({
-        where: {
-            empresaId,
-            OR: [
-                ...(dados.sacmaisId ? [{ sacmaisId: dados.sacmaisId }] : []),
-                { cpfCnpj: dados.cpfCnpj }
-            ]
-        }
-    });
-
-    if (existente) {
-        return prisma.cliente.update({
-            where: { id: existente.id },
-            data: { ...dados, sincronizadoSacMaisEm: new Date(), origemCadastro: "SACMAIS" }
-        });
+    if (payload?.event && payload.event !== "contacts") {
+        return { ignorado: true, motivo: `Evento ${payload.event} ignorado.` };
     }
 
-    return prisma.cliente.create({
-        data: { ...dados, empresaId, sincronizadoSacMaisEm: new Date(), origemCadastro: "SACMAIS" }
+    const action = String(payload?.action || "update").toLowerCase();
+
+    if (action === "delete" || action === "remove") {
+        const dados = mapearContato(payload);
+        const existente = await localizarCliente(empresaId, dados);
+
+        if (!existente) {
+            return { ignorado: true, motivo: "Contato excluído não existe no ERP." };
+        }
+
+        const cliente = await prisma.cliente.update({
+            where: { id: existente.id },
+            data: {
+                ativo: false,
+                origemCadastro: "SACMAIS",
+                sincronizadoSacMaisEm: new Date()
+            }
+        });
+
+        return { acao: "inativado", cliente };
+    }
+
+    return salvarContato(empresaId, payload);
+}
+
+async function buscarContatoPorNumero(contactNumber) {
+    if (!texto(contactNumber)) {
+        throw new Error("Número do contato não informado.");
+    }
+
+    return requisicaoSacMais(`/contacts/${encodeURIComponent(contactNumber)}`, {
+        method: "GET"
     });
 }
 
-module.exports = { importarClientes, receberWebhook };
+async function importarContatoPorNumero(empresaId, contactNumber) {
+    const payload = await buscarContatoPorNumero(contactNumber);
+    return salvarContato(empresaId, payload);
+}
+
+function tokenWebhookRecebido(req) {
+    const authorization = texto(req.headers.authorization);
+    const bearer = authorization?.toLowerCase().startsWith("bearer ")
+        ? authorization.slice(7).trim()
+        : null;
+
+    return primeiro(
+        req.headers["x-sacmais-token"],
+        req.headers["x-webhook-token"],
+        req.headers["x-token"],
+        req.headers["token"],
+        bearer,
+        req.query?.token,
+        req.body?.token
+    );
+}
+
+function validarWebhook(req) {
+    const secret = texto(process.env.SACMAIS_WEBHOOK_SECRET);
+    if (!secret) return true;
+    return tokenWebhookRecebido(req) === secret;
+}
+
+module.exports = {
+    receberWebhook,
+    buscarContatoPorNumero,
+    importarContatoPorNumero,
+    validarWebhook,
+    mapearContato
+};
