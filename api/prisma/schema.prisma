@@ -378,7 +378,6 @@ model VariacaoProduto {
   itensVenda           ItemVenda[]
   itensTabelaPreco     ItemTabelaPreco[]
   movimentacoesEstoque MovimentacaoEstoque[]
-  notaFiscal            NotaFiscal?
 
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
@@ -685,6 +684,7 @@ model Venda {
   itens                ItemVenda[]
   contasReceber        ContaReceber[]
   movimentacoesEstoque MovimentacaoEstoque[]
+  notaFiscal           NotaFiscal?
 
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
