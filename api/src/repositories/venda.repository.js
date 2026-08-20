@@ -83,28 +83,58 @@ class VendaRepository {
 
             for (const item of venda.itens) {
                 if (item.tipo !== "PRODUTO" || !item.variacaoProduto) continue;
+
                 const produto = item.variacaoProduto.produto;
+
+                // Serviço não movimenta estoque e produto sem controle de estoque
+                // também não deve bloquear o faturamento.
                 if (!produto.controlaEstoque) continue;
 
                 const movimentoExistente = await tx.movimentacaoEstoque.findFirst({
-                    where: { vendaId: venda.id, itemVendaId: item.id, origem: "VENDA" }
+                    where: {
+                        vendaId: venda.id,
+                        itemVendaId: item.id,
+                        origem: "VENDA"
+                    }
                 });
+
                 if (movimentoExistente) continue;
 
-                const variacaoAtual = await tx.variacaoProduto.findUnique({ where: { id: item.variacaoProdutoId } });
-                if (!variacaoAtual) throw new Error(`Variação do item ${item.descricao} não encontrada.`);
+                const variacaoAtual = await tx.variacaoProduto.findUnique({
+                    where: { id: item.variacaoProdutoId }
+                });
 
-                if (!produto.permiteVendaSemEstoque && variacaoAtual.estoqueAtual.lessThan(item.quantidade)) {
-                    throw new Error(`Estoque insuficiente para ${item.descricao}.`);
+                if (!variacaoAtual) {
+                    throw new Error(`Variação do item ${item.descricao} não encontrada.`);
                 }
 
-                const saldoAnterior = variacaoAtual.estoqueAtual;
-                const saldoPosterior = saldoAnterior.minus(item.quantidade);
+                const saldoAnterior = new Prisma.Decimal(variacaoAtual.estoqueAtual || 0);
+                const quantidade = new Prisma.Decimal(item.quantidade || 0);
+                const saldoPosterior = saldoAnterior.minus(quantidade);
 
+                /*
+                 * IMPORTANTE:
+                 * O faturamento não é mais bloqueado por estoque insuficiente.
+                 *
+                 * Isso é necessário porque o ERP pode possuir produtos legados,
+                 * recém-importados ou ainda sem saldo inicial lançado.
+                 *
+                 * O estoque pode ficar negativo. Isso mantém:
+                 * - a venda faturada;
+                 * - o contas a receber gerado;
+                 * - a movimentação de saída registrada;
+                 * - a divergência visível para posterior ajuste de inventário.
+                 */
                 await tx.variacaoProduto.update({
                     where: { id: item.variacaoProdutoId },
-                    data: { estoqueAtual: { decrement: item.quantidade } }
+                    data: {
+                        estoqueAtual: {
+                            decrement: quantidade
+                        }
+                    }
                 });
+
+                const semSaldoSuficiente = saldoAnterior.lessThan(quantidade);
 
                 await tx.movimentacaoEstoque.create({
                     data: {
@@ -115,26 +145,42 @@ class VendaRepository {
                         responsavelId: dados.usuarioId,
                         tipo: "SAIDA",
                         origem: "VENDA",
-                        quantidade: item.quantidade,
+                        quantidade,
                         saldoAnterior,
                         saldoPosterior,
-                        observacoes: `Baixa de estoque no faturamento da venda nº ${venda.numero}.`
+                        observacoes: semSaldoSuficiente
+                            ? `Baixa de estoque no faturamento da venda nº ${venda.numero}. Saldo ficou negativo por insuficiência de estoque no momento do faturamento.`
+                            : `Baixa de estoque no faturamento da venda nº ${venda.numero}.`
                     }
                 });
             }
 
-            const contasExistentes = await tx.contaReceber.count({ where: { vendaId: venda.id } });
+            const contasExistentes = await tx.contaReceber.count({
+                where: { vendaId: venda.id }
+            });
+
             if (!contasExistentes) {
                 const categoria = await tx.categoriaFinanceira.findFirst({
-                    where: { empresaId: dados.empresaId, nome: "Vendas de Produtos e Serviços", ativa: true }
+                    where: {
+                        empresaId: dados.empresaId,
+                        nome: "Vendas de Produtos e Serviços",
+                        ativa: true
+                    }
                 });
+
                 const centro = await tx.centroCusto.findFirst({
-                    where: { empresaId: dados.empresaId, codigo: "GERAL", ativo: true }
+                    where: {
+                        empresaId: dados.empresaId,
+                        codigo: "GERAL",
+                        ativo: true
+                    }
                 });
+
                 const parcelas = dividirValor(venda.total, venda.quantidadeParcelas);
 
                 for (let i = 0; i < venda.quantidadeParcelas; i += 1) {
                     const numero = i + 1;
+
                     await tx.contaReceber.create({
                         data: {
                             empresaId: dados.empresaId,
@@ -161,9 +207,15 @@ class VendaRepository {
                 }
             }
 
-            await tx.venda.update({ where: { id: venda.id }, data: { status: "FATURADA" } });
+            await tx.venda.update({
+                where: { id: venda.id },
+                data: { status: "FATURADA" }
+            });
 
-            return tx.venda.findUnique({ where: { id: venda.id }, include: includeVenda() });
+            return tx.venda.findUnique({
+                where: { id: venda.id },
+                include: includeVenda()
+            });
         }, {
             isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
             maxWait: 5000,
@@ -173,12 +225,22 @@ class VendaRepository {
 
     async cancelar(id, empresaId, motivo) {
         const venda = await this.buscarPorId(id, empresaId);
+
         if (!venda) throw new Error("Venda não encontrada.");
-        if (venda.status === "FATURADA") throw new Error("Venda faturada deve ser estornada pelo financeiro antes do cancelamento.");
-        if (venda.status === "CANCELADA") throw new Error("Venda já está cancelada.");
+        if (venda.status === "FATURADA") {
+            throw new Error("Venda faturada deve ser estornada pelo financeiro antes do cancelamento.");
+        }
+        if (venda.status === "CANCELADA") {
+            throw new Error("Venda já está cancelada.");
+        }
+
         return prisma.venda.update({
             where: { id },
-            data: { status: "CANCELADA", canceladaEm: new Date(), motivoCancelamento: motivo || null },
+            data: {
+                status: "CANCELADA",
+                canceladaEm: new Date(),
+                motivoCancelamento: motivo || null
+            },
             include: includeVenda()
         });
     }
