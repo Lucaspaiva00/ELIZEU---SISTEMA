@@ -80,10 +80,24 @@ textarea {
 
     display: flex;
 
+    align-items: stretch;
+
     width: 100%;
 
     min-height: 100vh;
 
+}
+
+/*
+ * O elemento #sidebar é o filho direto do .wrapper.
+ * Ele precisa acompanhar toda a altura do conteúdo da página,
+ * inclusive quando tabelas e relatórios ultrapassam 100vh.
+ */
+#sidebar {
+    flex: 0 0 260px;
+    width: 260px;
+    background: var(--sidebar);
+    align-self: stretch;
 }
 
 .main {
@@ -115,6 +129,8 @@ textarea {
     color: white;
 
     min-height: 100vh;
+
+    height: 100%;
 
     transition: var(--transition);
 
@@ -1172,6 +1188,12 @@ select.form-control {
 }
 
 @media (max-width: 768px) {
+    #sidebar {
+        flex: 0 0 0;
+        width: 0;
+        background: transparent;
+    }
+
     .sidebar {
         position: fixed;
         left: -280px;
