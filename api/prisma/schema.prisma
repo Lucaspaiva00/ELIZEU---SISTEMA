@@ -59,6 +59,16 @@ enum AmbienteFiscal {
   PRODUCAO
 }
 
+enum StatusNotaFiscal {
+  PENDENTE_CONFIGURACAO
+  PRONTA_TRANSMISSAO
+  TRANSMITINDO
+  AUTORIZADA
+  REJEITADA
+  ERRO
+  CANCELADA
+}
+
 // =====================================================
 // ENUMS COMERCIAIS
 // =====================================================
@@ -208,6 +218,7 @@ model Empresa {
   movimentacoesEstoque     MovimentacaoEstoque[]
   configuracaoFiscal       ConfiguracaoFiscal?
   certificadoDigital       CertificadoDigital?
+  notasFiscais              NotaFiscal[]
 
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
@@ -367,6 +378,7 @@ model VariacaoProduto {
   itensVenda           ItemVenda[]
   itensTabelaPreco     ItemTabelaPreco[]
   movimentacoesEstoque MovimentacaoEstoque[]
+  notaFiscal            NotaFiscal?
 
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
@@ -711,6 +723,50 @@ model ItemVenda {
   @@index([vendaId])
   @@index([variacaoProdutoId])
   @@index([variacaoServicoId])
+}
+
+
+// =====================================================
+// NOTAS FISCAIS - NF-e
+// =====================================================
+
+model NotaFiscal {
+  id Int @id @default(autoincrement())
+
+  empresaId Int
+  empresa   Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  vendaId Int   @unique
+  venda   Venda @relation(fields: [vendaId], references: [id], onDelete: Cascade)
+
+  status   StatusNotaFiscal @default(PENDENTE_CONFIGURACAO)
+  ambiente AmbienteFiscal
+
+  modelo Int @default(55)
+  serie  Int
+  numero Int
+
+  chaveAcesso String?
+  protocolo   String?
+
+  naturezaOperacao String?
+  dadosEmissao      Json?
+
+  xmlEnvio   String? @db.Text
+  xmlRetorno String? @db.Text
+  motivoStatus String? @db.Text
+
+  preparadaEm  DateTime @default(now())
+  transmitidaEm DateTime?
+  autorizadaEm DateTime?
+  canceladaEm  DateTime?
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  @@unique([empresaId, serie, numero])
+  @@index([empresaId, status])
+  @@index([vendaId])
 }
 
 // =====================================================

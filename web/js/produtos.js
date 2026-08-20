@@ -480,7 +480,8 @@ function obterDadosFormulario() {
             valorCampoProduto("ncm") || null,
         cfopPadrao:
             valorCampoProduto("cfopPadrao") || null,
-        origemMercadoria: null,
+        origemMercadoria:
+            valorCampoProduto("origemMercadoria") || null,
         ativo: true,
         variacoes: variacoes.map((variacao) => ({
             sku: String(variacao.sku || "").trim(),
@@ -612,6 +613,10 @@ function editarProduto(id) {
     preencherCampoProduto(
         "cfopPadrao",
         produto.cfopPadrao
+    );
+    preencherCampoProduto(
+        "origemMercadoria",
+        produto.origemMercadoria
     );
 
     document.getElementById(

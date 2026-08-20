@@ -30,7 +30,7 @@
                     <div class="table-responsive">
                         <table class="table">
                             <thead><tr>
-                                <th>Venda</th><th>Orçamento</th><th>Cliente</th><th>Data</th><th>Total</th><th>Status</th><th width="190">Ações</th>
+                                <th>Venda</th><th>Orçamento</th><th>Cliente</th><th>Data</th><th>Total</th><th>Status</th><th>Fiscal</th><th width="220">Ações</th>
                             </tr></thead>
                             <tbody id="tabelaVendas"></tbody>
                         </table>
@@ -63,10 +63,20 @@
                         <hr>
                         <h3>Contas a receber</h3>
                         <div class="table-responsive"><table class="table"><thead><tr><th>Parcela</th><th>Vencimento</th><th>Valor</th><th>Status</th></tr></thead><tbody id="viewVendaParcelasTabela"></tbody></table></div>
+
+                        <hr>
+                        <h3>Situação fiscal</h3>
+                        <div id="viewVendaFiscal" class="card" style="margin-top:12px;">
+                            <div class="card-body">
+                                <div id="viewVendaFiscalStatus">Nenhuma NF-e preparada.</div>
+                                <div id="viewVendaFiscalPendencias" style="display:none; margin-top:12px;"></div>
+                            </div>
+                        </div>
                     </div>
                     <div class="modal-footer">
                         <button class="btn btn-light" onclick="fecharVenda()">Fechar</button>
                         <button id="btnCancelarVenda" class="btn btn-danger" onclick="cancelarVendaAtual()"><i class="fas fa-ban"></i> Cancelar venda</button>
+                        <button id="btnEmitirNfe" class="btn btn-primary" style="display:none" onclick="emitirNfeAtual()"><i class="fas fa-file-invoice"></i> Emitir NF-e</button>
                         <button id="btnFaturarVenda" class="btn btn-success" onclick="faturarVendaAtual()"><i class="fas fa-file-invoice-dollar"></i> Faturar venda</button>
                     </div>
                 </div>

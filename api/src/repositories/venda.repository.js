@@ -50,7 +50,8 @@ function includeVenda() {
             orderBy: { id: "asc" }
         },
         contasReceber: { orderBy: { parcelaNumero: "asc" } },
-        movimentacoesEstoque: true
+        movimentacoesEstoque: true,
+        notaFiscal: true
     };
 }
 
