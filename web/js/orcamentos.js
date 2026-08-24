@@ -758,7 +758,9 @@ function renderizarItens() {
 
                         class="form-control"
 
-                        min="1"
+                        min="0.5"
+
+                        step="0.5"
 
                         value="${item.quantidade}"
 
@@ -939,7 +941,7 @@ function renderizarCustosInternos() {
                 <input class="form-control" value="${escaparHtml(custo.descricao || "")}" placeholder="Ex.: Areia" oninput="alterarCustoInterno(${index}, 'descricao', this.value)">
             </td>
             <td>
-                <input type="number" class="form-control" min="0.001" step="0.001" value="${Number(custo.quantidade || 1)}" onchange="alterarCustoInterno(${index}, 'quantidade', this.value)">
+                <input type="number" class="form-control" min="0.5" step="0.5" value="${Number(custo.quantidade || 1)}" onchange="alterarCustoInterno(${index}, 'quantidade', this.value)">
             </td>
             <td>
                 <input type="number" class="form-control" min="0" step="0.01" value="${Number(custo.valorUnitario || 0)}" onchange="alterarCustoInterno(${index}, 'valorUnitario', this.value)">
@@ -1611,7 +1613,28 @@ async function gerarPdfOrcamento(id) {
     }
 
     const o = r.orcamento;
-    const empresa = o.empresa || {};
+
+    // Dados oficiais que devem sair no orçamento da Potência Padrões.
+    // Mantemos os demais campos vindos do cadastro (como a logo), mas
+    // sobrescrevemos os dados de identificação para impedir que um CNPJ
+    // de outro cadastro/empresa seja impresso no PDF.
+    const empresaBanco = o.empresa || {};
+    const empresa = {
+        ...empresaBanco,
+        razaoSocial: "ELIAN ELETRIC EMPREENDIMENTOS E SERVICOS LTDA",
+        nomeFantasia: "POTÊNCIA PADRÕES",
+        cnpj: "65.718.887/0001-01",
+        inscricaoEstadual: "20.392.851-2",
+        endereco: "AV GOIAS",
+        numero: "13295",
+        complemento: "QUADRA03 LOTE 03",
+        bairro: "RES RECANTO DO BOSQUE",
+        cidade: "Goiânia",
+        estado: "GO",
+        cep: "74474-310",
+        telefone: "(62) 3298-4736"
+    };
+
     const cliente = o.cliente || {};
 
     const textoSeguro = (valor, padrao = "-") => {
