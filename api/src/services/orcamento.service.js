@@ -32,7 +32,6 @@ function converterData(valor) {
 }
 
 class OrcamentoService {
-
     validarItens(itens) {
         if (!Array.isArray(itens) || itens.length === 0) {
             throw new Error("O orçamento deve possuir ao menos um item.");
@@ -42,7 +41,7 @@ class OrcamentoService {
             const tipo = item.tipo || (item.variacaoServicoId ? "SERVICO" : "PRODUTO");
             item.tipo = tipo;
 
-            if (!['PRODUTO', 'SERVICO'].includes(tipo)) {
+            if (!["PRODUTO", "SERVICO"].includes(tipo)) {
                 throw new Error("Tipo de item inválido no orçamento.");
             }
 
@@ -62,23 +61,65 @@ class OrcamentoService {
                 throw new Error("O valor unitário dos itens é inválido.");
             }
 
-            item.variacaoProdutoId = tipo === "PRODUTO"
-                ? Number(item.variacaoProdutoId)
-                : null;
-            item.variacaoServicoId = tipo === "SERVICO"
-                ? Number(item.variacaoServicoId)
-                : null;
+            const desconto = Number(item.desconto || 0);
+            if (!Number.isFinite(desconto) || desconto < 0) {
+                throw new Error("O desconto do item é inválido.");
+            }
+
+            item.variacaoProdutoId = tipo === "PRODUTO" ? Number(item.variacaoProdutoId) : null;
+            item.variacaoServicoId = tipo === "SERVICO" ? Number(item.variacaoServicoId) : null;
             item.quantidade = Number(item.quantidade);
             item.valorUnitario = Number(item.valorUnitario);
-            item.desconto = Number(item.desconto || 0);
-            item.total = Number(item.total);
+            item.desconto = desconto;
+            item.total = Math.max((item.quantidade * item.valorUnitario) - item.desconto, 0);
         }
     }
 
-    async criar(dados) {
+    normalizarCustosInternos(custosInternos) {
+        if (!Array.isArray(custosInternos)) return [];
+
+        return custosInternos
+            .map((custo, indice) => {
+                const descricao = String(custo?.descricao || "").trim();
+                const quantidade = Number(custo?.quantidade ?? 1);
+                const valorUnitario = Number(custo?.valorUnitario ?? 0);
+
+                if (!descricao) {
+                    throw new Error(`Informe a descrição do custo interno ${indice + 1}.`);
+                }
+
+                if (!Number.isFinite(quantidade) || quantidade <= 0) {
+                    throw new Error(`A quantidade do custo interno ${indice + 1} é inválida.`);
+                }
+
+                if (!Number.isFinite(valorUnitario) || valorUnitario < 0) {
+                    throw new Error(`O valor do custo interno ${indice + 1} é inválido.`);
+                }
+
+                return {
+                    descricao,
+                    categoria: String(custo?.categoria || "OUTRO").trim().toUpperCase(),
+                    quantidade,
+                    valorUnitario,
+                    total: quantidade * valorUnitario
+                };
+            });
+    }
+
+    prepararDados(dados) {
         this.validarItens(dados.itens);
 
-        return orcamentoRepository.criar(dados);
+        return {
+            ...dados,
+            desconto: Math.max(Number(dados.desconto || 0), 0),
+            frete: Math.max(Number(dados.frete || 0), 0),
+            outrasDespesas: Math.max(Number(dados.outrasDespesas || 0), 0),
+            custosInternos: this.normalizarCustosInternos(dados.custosInternos)
+        };
+    }
+
+    async criar(dados) {
+        return orcamentoRepository.criar(this.prepararDados(dados));
     }
 
     async listar(empresaId) {
@@ -87,11 +128,7 @@ class OrcamentoService {
 
     async buscarPorId(id, empresaId) {
         const orcamento = await orcamentoRepository.buscarPorId(id, empresaId);
-
-        if (!orcamento) {
-            throw new Error("Orçamento não encontrado.");
-        }
-
+        if (!orcamento) throw new Error("Orçamento não encontrado.");
         return orcamento;
     }
 
@@ -106,9 +143,7 @@ class OrcamentoService {
             throw new Error("Um orçamento cancelado não pode ser alterado.");
         }
 
-        this.validarItens(dados.itens);
-
-        return orcamentoRepository.atualizar(id, dados);
+        return orcamentoRepository.atualizar(id, this.prepararDados(dados));
     }
 
     async aprovar(id, dados) {
@@ -120,11 +155,7 @@ class OrcamentoService {
 
         const quantidadeParcelas = Number(dados.quantidadeParcelas ?? 1);
 
-        if (
-            !Number.isInteger(quantidadeParcelas) ||
-            quantidadeParcelas < 1 ||
-            quantidadeParcelas > 120
-        ) {
+        if (!Number.isInteger(quantidadeParcelas) || quantidadeParcelas < 1 || quantidadeParcelas > 120) {
             throw new Error("A quantidade de parcelas deve estar entre 1 e 120.");
         }
 

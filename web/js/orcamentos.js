@@ -3,6 +3,7 @@ let clientes = [];
 let produtos = [];
 let servicos = [];
 let itensOrcamento = [];
+let custosInternos = [];
 
 let orcamentoEditandoId = null;
 let orcamentoVisualizadoId = null;
@@ -237,6 +238,7 @@ function renderizarTabelaOrcamentos(lista) {
 function abrirModalOrcamento() {
     orcamentoEditandoId = null;
     itensOrcamento = [];
+    custosInternos = [];
 
     formOrcamento.reset();
 
@@ -252,6 +254,7 @@ function abrirModalOrcamento() {
     ).textContent = "Novo Orçamento";
 
     renderizarItens();
+    renderizarCustosInternos();
     calcularTotais();
 
     modalOrcamento.classList.add("active");
@@ -264,8 +267,10 @@ function fecharModalOrcamento() {
 
     orcamentoEditandoId = null;
     itensOrcamento = [];
+    custosInternos = [];
 
     renderizarItens();
+    renderizarCustosInternos();
     calcularTotais();
 }
 
@@ -360,7 +365,7 @@ function carregarVariacoesProduto() {
         option.value = v.id;
 
         option.textContent =
-            `${v.sku} | ${v.cor || "-"} | ${v.tamanho || "-"} | ${moeda(v.precoVenda)}`;
+            `${v.sku} | ${v.saida || "-"} | ${v.tamanho || "-"} | ${moeda(v.precoVenda)}`;
 
         select.appendChild(option);
 
@@ -456,6 +461,7 @@ function adicionarItemOrcamento() {
         if (existente) {
             existente.quantidade += quantidade;
             existente.valorUnitario = valorUnitario;
+            existente.custoUnitario = Number(variacao.precoCusto || 0);
             existente.total = existente.quantidade * valorUnitario;
         } else {
             itensOrcamento.push({
@@ -467,6 +473,7 @@ function adicionarItemOrcamento() {
                 descricao: variacao.descricao || "Padrão",
                 quantidade,
                 valorUnitario,
+                custoUnitario: Number(variacao.precoCusto || 0),
                 total: quantidade * valorUnitario
             });
         }
@@ -517,6 +524,8 @@ function adicionarItemOrcamento() {
 
         existente.quantidade += quantidade;
 
+        existente.custoUnitario = Number(variacao.precoCusto || 0);
+
         existente.total =
             existente.quantidade *
             existente.valorUnitario;
@@ -539,7 +548,7 @@ function adicionarItemOrcamento() {
 
                 [
 
-                    variacao.cor,
+                    variacao.saida,
 
                     variacao.tamanho
 
@@ -552,6 +561,8 @@ function adicionarItemOrcamento() {
             quantidade,
 
             valorUnitario,
+
+            custoUnitario: Number(variacao.precoCusto || 0),
 
             total:
                 quantidade *
@@ -766,6 +777,111 @@ function removerItem(index) {
 
 }
 
+function adicionarCustoInterno() {
+    custosInternos.push({
+        categoria: "MATERIAL",
+        descricao: "",
+        quantidade: 1,
+        valorUnitario: 0,
+        total: 0
+    });
+
+    renderizarCustosInternos();
+    calcularTotais();
+}
+
+function renderizarCustosInternos() {
+    const tbody = document.getElementById("tabelaCustosInternos");
+    if (!tbody) return;
+
+    tbody.innerHTML = "";
+
+    if (!custosInternos.length) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" class="text-center">
+                    Nenhum custo interno. Ex.: areia, cimento, combustível, pedágio.
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    custosInternos.forEach((custo, index) => {
+        const total = Number(custo.quantidade || 0) * Number(custo.valorUnitario || 0);
+        custo.total = total;
+
+        const linha = document.createElement("tr");
+        linha.innerHTML = `
+            <td>
+                <select class="form-control" onchange="alterarCustoInterno(${index}, 'categoria', this.value)">
+                    <option value="MATERIAL" ${custo.categoria === "MATERIAL" ? "selected" : ""}>Material</option>
+                    <option value="COMBUSTIVEL" ${custo.categoria === "COMBUSTIVEL" ? "selected" : ""}>Combustível</option>
+                    <option value="FRETE" ${custo.categoria === "FRETE" ? "selected" : ""}>Frete / deslocamento</option>
+                    <option value="MAO_DE_OBRA" ${custo.categoria === "MAO_DE_OBRA" ? "selected" : ""}>Mão de obra</option>
+                    <option value="OUTRO" ${custo.categoria === "OUTRO" ? "selected" : ""}>Outro</option>
+                </select>
+            </td>
+            <td>
+                <input class="form-control" value="${escaparHtml(custo.descricao || "")}" placeholder="Ex.: Areia" oninput="alterarCustoInterno(${index}, 'descricao', this.value)">
+            </td>
+            <td>
+                <input type="number" class="form-control" min="0.001" step="0.001" value="${Number(custo.quantidade || 1)}" onchange="alterarCustoInterno(${index}, 'quantidade', this.value)">
+            </td>
+            <td>
+                <input type="number" class="form-control" min="0" step="0.01" value="${Number(custo.valorUnitario || 0)}" onchange="alterarCustoInterno(${index}, 'valorUnitario', this.value)">
+            </td>
+            <td><strong>${moeda(total)}</strong></td>
+            <td>
+                <button type="button" class="btn btn-danger" onclick="removerCustoInterno(${index})" title="Remover custo">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </td>
+        `;
+        tbody.appendChild(linha);
+    });
+}
+
+function alterarCustoInterno(index, campo, valor) {
+    if (!custosInternos[index]) return;
+
+    if (["quantidade", "valorUnitario"].includes(campo)) {
+        custosInternos[index][campo] = Number(valor) || 0;
+    } else {
+        custosInternos[index][campo] = valor;
+    }
+
+    custosInternos[index].total =
+        Number(custosInternos[index].quantidade || 0) *
+        Number(custosInternos[index].valorUnitario || 0);
+
+    if (["quantidade", "valorUnitario"].includes(campo)) {
+        renderizarCustosInternos();
+    }
+
+    calcularTotais();
+}
+
+function removerCustoInterno(index) {
+    custosInternos.splice(index, 1);
+    renderizarCustosInternos();
+    calcularTotais();
+}
+
+function obterCustoInternoTotal() {
+    return custosInternos.reduce(
+        (total, custo) => total + Number(custo.quantidade || 0) * Number(custo.valorUnitario || 0),
+        0
+    );
+}
+
+function obterCustoItensTotal() {
+    return itensOrcamento.reduce(
+        (total, item) => total + Number(item.quantidade || 0) * Number(item.custoUnitario || 0),
+        0
+    );
+}
+
 function calcularTotais() {
 
     const subtotal = itensOrcamento.reduce(
@@ -817,6 +933,18 @@ function calcularTotais() {
     document.getElementById("valorTotal").innerHTML =
 
         moeda(total);
+
+    const custoItensTotal = obterCustoItensTotal();
+    const custoInternoTotal = obterCustoInternoTotal();
+    const lucroEstimado = total - custoItensTotal - custoInternoTotal;
+
+    const campoCustoItens = document.getElementById("custoItensResumo");
+    const campoCustoInterno = document.getElementById("custoInternoResumo");
+    const campoLucro = document.getElementById("lucroEstimadoResumo");
+
+    if (campoCustoItens) campoCustoItens.textContent = moeda(custoItensTotal);
+    if (campoCustoInterno) campoCustoInterno.textContent = moeda(custoInternoTotal);
+    if (campoLucro) campoLucro.textContent = moeda(lucroEstimado);
 
 }
 
@@ -956,6 +1084,14 @@ function obterDadosFormulario() {
                 .value
                 .trim(),
 
+        custosInternos: custosInternos.map((custo) => ({
+            categoria: custo.categoria || "OUTRO",
+            descricao: String(custo.descricao || "").trim(),
+            quantidade: Number(custo.quantidade || 0),
+            valorUnitario: Number(custo.valorUnitario || 0),
+            total: Number(custo.quantidade || 0) * Number(custo.valorUnitario || 0)
+        })),
+
         itens: itensOrcamento.map(item => ({
 
             tipo: item.tipo || "PRODUTO",
@@ -1000,6 +1136,18 @@ function validarOrcamento(orcamento) {
         );
 
     }
+
+    orcamento.custosInternos.forEach((custo, index) => {
+        if (!custo.descricao) {
+            throw new Error(`Informe a descrição do custo interno ${index + 1}.`);
+        }
+        if (custo.quantidade <= 0) {
+            throw new Error(`Informe uma quantidade válida no custo interno ${index + 1}.`);
+        }
+        if (custo.valorUnitario < 0) {
+            throw new Error(`Informe um valor válido no custo interno ${index + 1}.`);
+        }
+    });
 
 }
 
@@ -1051,6 +1199,7 @@ async function editarOrcamento(id) {
                 descricao: item.variacaoServico.descricao || "Padrão",
                 quantidade: Number(item.quantidade),
                 valorUnitario: Number(item.valorUnitario),
+                custoUnitario: Number(item.custoUnitario || 0),
                 total: Number(item.total)
             });
             return;
@@ -1076,7 +1225,7 @@ async function editarOrcamento(id) {
 
                 [
 
-                    item.variacaoProduto.cor,
+                    item.variacaoProduto.saida,
 
                     item.variacaoProduto.tamanho
 
@@ -1092,6 +1241,9 @@ async function editarOrcamento(id) {
             valorUnitario:
                 Number(item.valorUnitario),
 
+            custoUnitario:
+                Number(item.custoUnitario || 0),
+
             total:
                 Number(item.total)
 
@@ -1099,7 +1251,18 @@ async function editarOrcamento(id) {
 
     });
 
+    custosInternos = Array.isArray(orcamento.custosInternos)
+        ? orcamento.custosInternos.map((custo) => ({
+            categoria: custo.categoria || "OUTRO",
+            descricao: custo.descricao || "",
+            quantidade: Number(custo.quantidade || 1),
+            valorUnitario: Number(custo.valorUnitario || 0),
+            total: Number(custo.total || 0)
+        }))
+        : [];
+
     renderizarItens();
+    renderizarCustosInternos();
 
     calcularTotais();
 
@@ -1150,7 +1313,7 @@ async function visualizarOrcamento(id) {
         const nome = servico ? item.variacaoServico.servico.nome : item.variacaoProduto.produto.nome;
         const variacao = servico
             ? (item.variacaoServico.descricao || item.variacaoServico.codigo)
-            : `${item.variacaoProduto.cor || "-"} / ${item.variacaoProduto.tamanho || "-"}`;
+            : `${item.variacaoProduto.saida || "-"} / ${item.variacaoProduto.tamanho || "-"}`;
 
         tbody.innerHTML += `
 
@@ -1175,6 +1338,29 @@ async function visualizarOrcamento(id) {
         `;
 
     });
+
+    const custos = Array.isArray(o.custosInternos) ? o.custosInternos : [];
+    const tbodyCustos = document.getElementById("viewCustosInternos");
+    if (tbodyCustos) {
+        tbodyCustos.innerHTML = custos.length
+            ? custos.map((custo) => `
+                <tr>
+                    <td>${escaparHtml(custo.categoria || "OUTRO")}</td>
+                    <td>${escaparHtml(custo.descricao || "-")}</td>
+                    <td>${Number(custo.quantidade || 0)}</td>
+                    <td>${moeda(custo.valorUnitario || 0)}</td>
+                    <td>${moeda(custo.total || 0)}</td>
+                </tr>
+            `).join("")
+            : '<tr><td colspan="5" class="text-center">Nenhum custo interno lançado.</td></tr>';
+    }
+
+    const viewCustoItens = document.getElementById("viewCustoItens");
+    const viewCustoInterno = document.getElementById("viewCustoInterno");
+    const viewLucro = document.getElementById("viewLucroEstimado");
+    if (viewCustoItens) viewCustoItens.value = moeda(o.custoItensTotal || 0);
+    if (viewCustoInterno) viewCustoInterno.value = moeda(o.custoInternoTotal || 0);
+    if (viewLucro) viewLucro.value = moeda(o.lucroEstimado || 0);
 
     orcamentoVisualizadoId = o.id;
     const podeEditar = !["APROVADO", "CANCELADO"].includes(o.status);
@@ -1310,7 +1496,7 @@ async function gerarPdfOrcamento(id) {
         const nome = servico ? item.variacaoServico?.servico?.nome : item.variacaoProduto?.produto?.nome;
         const variacao = servico
             ? (item.variacaoServico?.descricao || item.variacaoServico?.codigo || "")
-            : [item.variacaoProduto?.cor, item.variacaoProduto?.tamanho].filter(Boolean).join(" / ");
+            : [item.variacaoProduto?.saida, item.variacaoProduto?.tamanho].filter(Boolean).join(" / ");
         return `<tr><td>${escaparHtml(nome || "Item")}${variacao ? `<br><small>${escaparHtml(variacao)}</small>` : ""}</td><td>${Number(item.quantidade)}</td><td>${moeda(item.valorUnitario)}</td><td>${moeda(item.total)}</td></tr>`;
     }).join("");
     const janela = window.open("", "_blank", "width=1000,height=800");
@@ -1318,13 +1504,13 @@ async function gerarPdfOrcamento(id) {
     janela.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Orçamento ${o.numero}</title><style>
         body{font-family:Arial,sans-serif;color:#222;margin:40px} .top{display:flex;justify-content:space-between;border-bottom:3px solid #222;padding-bottom:18px;margin-bottom:24px}
         h1{margin:0;font-size:28px}.muted{color:#666}.box{border:1px solid #ddd;border-radius:8px;padding:16px;margin:16px 0}table{width:100%;border-collapse:collapse;margin-top:18px}th,td{padding:10px;border-bottom:1px solid #ddd;text-align:left}th{background:#f3f4f6}.total{font-size:24px;font-weight:bold;text-align:right;margin-top:24px}.footer{margin-top:50px;font-size:12px;color:#777;text-align:center}@media print{button{display:none}body{margin:15mm}}</style></head><body>
-        <div class="top"><div><h1>ERP Elizeu</h1><div class="muted">Proposta Comercial</div></div><div style="text-align:right"><strong>ORÇAMENTO #${String(o.numero).padStart(5,"0")}</strong><br><span class="muted">${new Date(o.criadoEm).toLocaleDateString("pt-BR")}</span></div></div>
+        <div class="top"><div><h1>Elian Sigs</h1><div class="muted">Proposta Comercial</div></div><div style="text-align:right"><strong>ORÇAMENTO #${String(o.numero).padStart(5,"0")}</strong><br><span class="muted">${new Date(o.criadoEm).toLocaleDateString("pt-BR")}</span></div></div>
         <div class="box"><strong>Cliente:</strong> ${escaparHtml(o.cliente?.nome || "-")}<br><strong>CPF/CNPJ:</strong> ${escaparHtml(o.cliente?.cpfCnpj || "-")}<br><strong>Telefone:</strong> ${escaparHtml(o.cliente?.telefone || o.cliente?.celular || "-")} ${o.cliente?.email ? `<br><strong>E-mail:</strong> ${escaparHtml(o.cliente.email)}` : ""}</div>
         <table><thead><tr><th>Item</th><th>Qtd.</th><th>Unitário</th><th>Total</th></tr></thead><tbody>${itens}</tbody></table>
-        <div style="margin-top:20px;text-align:right">Subtotal: <strong>${moeda(o.subtotal)}</strong><br>Desconto: ${moeda(o.desconto)}<br>Frete: ${moeda(o.frete)}<br>Outras despesas: ${moeda(o.outrasDespesas)}</div>
+        <div style="margin-top:20px;text-align:right">Subtotal: <strong>${moeda(o.subtotal)}</strong><br>Desconto: ${moeda(o.desconto)}<br>Frete: ${moeda(o.frete)}<br>Acréscimos: ${moeda(o.outrasDespesas)}</div>
         <div class="total">Total: ${moeda(o.total)}</div>
         ${o.observacoes ? `<div class="box"><strong>Observações</strong><br>${escaparHtml(o.observacoes).replaceAll("\n","<br>")}</div>` : ""}
-        <div class="footer">Documento gerado pelo ERP Elizeu.</div>
+        <div class="footer">Documento gerado pelo Elian Sigs.</div>
         <script>window.onload=()=>setTimeout(()=>window.print(),300);<\/script></body></html>`);
     janela.document.close();
 }

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vendas e Faturamento | ERP Elizeu</title>
+    <title>Vendas e Faturamento | Elian Sigs</title>
     <link rel="stylesheet" href="../css/app.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
 </head>
@@ -60,6 +60,16 @@
                         <hr>
                         <h3>Itens da venda</h3>
                         <div class="table-responsive"><table class="table"><thead><tr><th>Item</th><th>Qtd.</th><th>Unitário</th><th>Total</th></tr></thead><tbody id="viewVendaItens"></tbody></table></div>
+                        <hr>
+                        <h3>Custos e lucro da venda</h3>
+                        <p class="page-subtitle">Informação interna. Não faz parte da nota ou do documento do cliente.</p>
+                        <div class="row">
+                            <div class="col"><div class="form-group"><label>Custo dos itens</label><input id="viewVendaCustoItens" class="form-control" readonly></div></div>
+                            <div class="col"><div class="form-group"><label>Despesas internas</label><input id="viewVendaCustoInterno" class="form-control" readonly></div></div>
+                            <div class="col"><div class="form-group"><label>Lucro estimado</label><input id="viewVendaLucro" class="form-control" readonly></div></div>
+                        </div>
+                        <div class="table-responsive"><table class="table"><thead><tr><th>Categoria</th><th>Descrição</th><th>Qtd.</th><th>Unitário</th><th>Total</th></tr></thead><tbody id="viewVendaCustosInternos"></tbody></table></div>
+
                         <hr>
                         <h3>Contas a receber</h3>
                         <div class="table-responsive"><table class="table"><thead><tr><th>Parcela</th><th>Vencimento</th><th>Valor</th><th>Status</th></tr></thead><tbody id="viewVendaParcelasTabela"></tbody></table></div>

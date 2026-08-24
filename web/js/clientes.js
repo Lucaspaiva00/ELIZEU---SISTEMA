@@ -548,7 +548,7 @@ function editarCliente(id) {
     preencherCampo("tipoPessoa", cliente.tipoPessoa);
     preencherCampo("nome", cliente.nome);
     preencherCampo("nomeFantasia", cliente.nomeFantasia);
-    preencherCampo("cpfCnpj", cliente.cpfCnpj);
+    preencherCampo("cpfCnpj", documentoEhTecnicoSacMais(cliente.cpfCnpj) ? "" : cliente.cpfCnpj);
     preencherCampo("inscricaoEstadual", cliente.inscricaoEstadual);
     preencherCampo("telefone", cliente.telefone);
     preencherCampo("celular", cliente.celular);

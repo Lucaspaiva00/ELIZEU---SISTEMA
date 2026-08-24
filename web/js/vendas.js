@@ -138,6 +138,14 @@ async function visualizarVenda(id) {
     document.getElementById("viewVendaVencimento").value = fmtData(v.primeiroVencimento);
     document.getElementById("viewVendaTotal").value = fmtMoeda(v.total);
     document.getElementById("viewVendaItens").innerHTML = (v.itens || []).map(i => `<tr><td>${esc(i.descricao)}</td><td>${Number(i.quantidade)}</td><td>${fmtMoeda(i.valorUnitario)}</td><td>${fmtMoeda(i.total)}</td></tr>`).join("") || '<tr><td colspan="4">Sem itens.</td></tr>';
+
+    document.getElementById("viewVendaCustoItens").value = fmtMoeda(v.custoItensTotal || 0);
+    document.getElementById("viewVendaCustoInterno").value = fmtMoeda(v.custoInternoTotal || 0);
+    document.getElementById("viewVendaLucro").value = fmtMoeda(v.lucroEstimado || 0);
+    document.getElementById("viewVendaCustosInternos").innerHTML = Array.isArray(v.custosInternos) && v.custosInternos.length
+        ? v.custosInternos.map(c => `<tr><td>${esc(c.categoria || "OUTRO")}</td><td>${esc(c.descricao || "-")}</td><td>${Number(c.quantidade || 0)}</td><td>${fmtMoeda(c.valorUnitario || 0)}</td><td>${fmtMoeda(c.total || 0)}</td></tr>`).join("")
+        : '<tr><td colspan="5" class="text-center">Nenhuma despesa interna lançada.</td></tr>';
+
     document.getElementById("viewVendaParcelasTabela").innerHTML = (v.contasReceber || []).map(c => `<tr><td>${c.parcelaNumero}/${c.totalParcelas}</td><td>${fmtData(c.dataVencimento)}</td><td>${fmtMoeda(c.valorOriginal)}</td><td>${esc(c.status)}</td></tr>`).join("") || '<tr><td colspan="4">As contas a receber serão geradas no faturamento.</td></tr>';
     const fiscal = fiscalVenda(v);
     const fiscalStatus = document.getElementById("viewVendaFiscalStatus");

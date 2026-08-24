@@ -21,29 +21,20 @@ function adicionarMeses(data, meses) {
     ).getDate();
 
     resultado.setDate(Math.min(diaOriginal, ultimoDiaDoMes));
-
     return resultado;
 }
 
 function calcularVencimento(primeiroVencimento, indice, periodicidade, intervaloPersonalizadoDias) {
     switch (periodicidade) {
-        case "SEMANAL":
-            return adicionarDias(primeiroVencimento, indice * 7);
-        case "QUINZENAL":
-            return adicionarDias(primeiroVencimento, indice * 15);
-        case "BIMESTRAL":
-            return adicionarMeses(primeiroVencimento, indice * 2);
-        case "TRIMESTRAL":
-            return adicionarMeses(primeiroVencimento, indice * 3);
-        case "SEMESTRAL":
-            return adicionarMeses(primeiroVencimento, indice * 6);
-        case "ANUAL":
-            return adicionarMeses(primeiroVencimento, indice * 12);
-        case "PERSONALIZADA":
-            return adicionarDias(primeiroVencimento, indice * intervaloPersonalizadoDias);
+        case "SEMANAL": return adicionarDias(primeiroVencimento, indice * 7);
+        case "QUINZENAL": return adicionarDias(primeiroVencimento, indice * 15);
+        case "BIMESTRAL": return adicionarMeses(primeiroVencimento, indice * 2);
+        case "TRIMESTRAL": return adicionarMeses(primeiroVencimento, indice * 3);
+        case "SEMESTRAL": return adicionarMeses(primeiroVencimento, indice * 6);
+        case "ANUAL": return adicionarMeses(primeiroVencimento, indice * 12);
+        case "PERSONALIZADA": return adicionarDias(primeiroVencimento, indice * intervaloPersonalizadoDias);
         case "MENSAL":
-        default:
-            return adicionarMeses(primeiroVencimento, indice);
+        default: return adicionarMeses(primeiroVencimento, indice);
     }
 }
 
@@ -58,62 +49,107 @@ function dividirValorEmParcelas(valorTotal, quantidadeParcelas) {
     });
 }
 
+function arredondar(valor) {
+    return Math.round((Number(valor) + Number.EPSILON) * 100) / 100;
+}
+
+async function prepararItensComCusto(tx, itens) {
+    const preparados = [];
+    let custoItensTotal = 0;
+
+    for (const item of itens) {
+        let custoUnitario = 0;
+
+        if (item.tipo === "SERVICO") {
+            const variacao = await tx.variacaoServico.findUnique({
+                where: { id: item.variacaoServicoId },
+                select: { id: true, precoCusto: true }
+            });
+
+            if (!variacao) throw new Error("Uma das variações de serviço não existe mais.");
+            custoUnitario = Number(variacao.precoCusto || 0);
+        } else {
+            const variacao = await tx.variacaoProduto.findUnique({
+                where: { id: item.variacaoProdutoId },
+                select: { id: true, precoCusto: true }
+            });
+
+            if (!variacao) throw new Error("Uma das variações de produto não existe mais.");
+            custoUnitario = Number(variacao.precoCusto || 0);
+        }
+
+        const quantidade = Number(item.quantidade);
+        custoItensTotal += quantidade * custoUnitario;
+
+        preparados.push({
+            ...item,
+            custoUnitario: arredondar(custoUnitario)
+        });
+    }
+
+    return {
+        itens: preparados,
+        custoItensTotal: arredondar(custoItensTotal)
+    };
+}
+
+function calcularResumo(dados, custoItensTotal) {
+    const subtotal = arredondar(
+        dados.itens.reduce((total, item) => total + Number(item.total || 0), 0)
+    );
+    const desconto = arredondar(dados.desconto || 0);
+    const frete = arredondar(dados.frete || 0);
+    const outrasDespesas = arredondar(dados.outrasDespesas || 0);
+    const total = arredondar(Math.max(subtotal - desconto + frete + outrasDespesas, 0));
+    const custoInternoTotal = arredondar(
+        (dados.custosInternos || []).reduce((soma, custo) => soma + Number(custo.total || 0), 0)
+    );
+    const lucroEstimado = arredondar(total - custoItensTotal - custoInternoTotal);
+
+    return {
+        subtotal,
+        desconto,
+        frete,
+        outrasDespesas,
+        total,
+        custoItensTotal,
+        custoInternoTotal,
+        lucroEstimado,
+        custosInternos: dados.custosInternos || []
+    };
+}
+
 function includeOrcamentoCompleto() {
     return {
         cliente: true,
         tabelaPreco: true,
-        criadoPor: {
-            select: {
-                id: true,
-                nome: true
-            }
-        },
-        aprovadoPor: {
-            select: {
-                id: true,
-                nome: true
-            }
-        },
+        criadoPor: { select: { id: true, nome: true } },
+        aprovadoPor: { select: { id: true, nome: true } },
         venda: {
             include: {
-                contasReceber: {
-                    orderBy: {
-                        parcelaNumero: "asc"
-                    }
-                }
+                contasReceber: { orderBy: { parcelaNumero: "asc" } }
             }
         },
         itens: {
             include: {
-                variacaoProduto: {
-                    include: {
-                        produto: true
-                    }
-                },
-                variacaoServico: {
-                    include: {
-                        servico: true
-                    }
-                }
+                variacaoProduto: { include: { produto: true } },
+                variacaoServico: { include: { servico: true } }
             }
         }
     };
 }
 
 class OrcamentoRepository {
-
     async criar(dados) {
         return prisma.$transaction(async (tx) => {
             const ultimo = await tx.orcamento.findFirst({
-                where: {
-                    empresaId: dados.empresaId
-                },
-                orderBy: {
-                    numero: "desc"
-                }
+                where: { empresaId: dados.empresaId },
+                orderBy: { numero: "desc" }
             });
 
             const numero = ultimo ? ultimo.numero + 1 : 1;
+            const custos = await prepararItensComCusto(tx, dados.itens);
+            const resumo = calcularResumo(dados, custos.custoItensTotal);
 
             const orcamento = await tx.orcamento.create({
                 data: {
@@ -123,20 +159,14 @@ class OrcamentoRepository {
                     tabelaPrecoId: dados.tabelaPrecoId || null,
                     numero,
                     status: dados.status || "RASCUNHO",
-                    dataValidade: dados.dataValidade
-                        ? new Date(dados.dataValidade)
-                        : null,
-                    subtotal: dados.subtotal,
-                    desconto: dados.desconto,
-                    frete: dados.frete,
-                    outrasDespesas: dados.outrasDespesas,
-                    total: dados.total,
+                    dataValidade: dados.dataValidade ? new Date(dados.dataValidade) : null,
+                    ...resumo,
                     observacoes: dados.observacoes
                 }
             });
 
             await tx.itemOrcamento.createMany({
-                data: dados.itens.map((item) => ({
+                data: custos.itens.map((item) => ({
                     orcamentoId: orcamento.id,
                     tipo: item.tipo,
                     variacaoProdutoId: item.tipo === "PRODUTO" ? item.variacaoProdutoId : null,
@@ -144,14 +174,13 @@ class OrcamentoRepository {
                     quantidade: item.quantidade,
                     valorUnitario: item.valorUnitario,
                     desconto: item.desconto ?? 0,
-                    total: item.total
+                    total: item.total,
+                    custoUnitario: item.custoUnitario
                 }))
             });
 
             return tx.orcamento.findUnique({
-                where: {
-                    id: orcamento.id
-                },
+                where: { id: orcamento.id },
                 include: includeOrcamentoCompleto()
             });
         });
@@ -159,55 +188,39 @@ class OrcamentoRepository {
 
     async listar(empresaId) {
         return prisma.orcamento.findMany({
-            where: {
-                empresaId
-            },
+            where: { empresaId },
             include: includeOrcamentoCompleto(),
-            orderBy: {
-                numero: "desc"
-            }
+            orderBy: { numero: "desc" }
         });
     }
 
     async buscarPorId(id, empresaId) {
         return prisma.orcamento.findFirst({
-            where: {
-                id,
-                empresaId
-            },
+            where: { id, empresaId },
             include: includeOrcamentoCompleto()
         });
     }
 
     async atualizar(id, dados) {
         return prisma.$transaction(async (tx) => {
+            const custos = await prepararItensComCusto(tx, dados.itens);
+            const resumo = calcularResumo(dados, custos.custoItensTotal);
+
             await tx.orcamento.update({
-                where: {
-                    id
-                },
+                where: { id },
                 data: {
                     clienteId: dados.clienteId,
                     tabelaPrecoId: dados.tabelaPrecoId || null,
-                    dataValidade: dados.dataValidade
-                        ? new Date(dados.dataValidade)
-                        : null,
-                    subtotal: dados.subtotal,
-                    desconto: dados.desconto,
-                    frete: dados.frete,
-                    outrasDespesas: dados.outrasDespesas,
-                    total: dados.total,
+                    dataValidade: dados.dataValidade ? new Date(dados.dataValidade) : null,
+                    ...resumo,
                     observacoes: dados.observacoes
                 }
             });
 
-            await tx.itemOrcamento.deleteMany({
-                where: {
-                    orcamentoId: id
-                }
-            });
+            await tx.itemOrcamento.deleteMany({ where: { orcamentoId: id } });
 
             await tx.itemOrcamento.createMany({
-                data: dados.itens.map((item) => ({
+                data: custos.itens.map((item) => ({
                     orcamentoId: id,
                     tipo: item.tipo,
                     variacaoProdutoId: item.tipo === "PRODUTO" ? item.variacaoProdutoId : null,
@@ -215,14 +228,13 @@ class OrcamentoRepository {
                     quantidade: item.quantidade,
                     valorUnitario: item.valorUnitario,
                     desconto: item.desconto ?? 0,
-                    total: item.total
+                    total: item.total,
+                    custoUnitario: item.custoUnitario
                 }))
             });
 
             return tx.orcamento.findUnique({
-                where: {
-                    id
-                },
+                where: { id },
                 include: includeOrcamentoCompleto()
             });
         });
@@ -232,49 +244,28 @@ class OrcamentoRepository {
         return prisma.$transaction(
             async (tx) => {
                 const orcamento = await tx.orcamento.findFirst({
-                    where: {
-                        id,
-                        empresaId: dados.empresaId
-                    },
+                    where: { id, empresaId: dados.empresaId },
                     include: {
                         venda: true,
                         cliente: true,
                         itens: {
                             include: {
-                                variacaoProduto: {
-                                    include: {
-                                        produto: true
-                                    }
-                                },
-                                variacaoServico: {
-                                    include: {
-                                        servico: true
-                                    }
-                                }
+                                variacaoProduto: { include: { produto: true } },
+                                variacaoServico: { include: { servico: true } }
                             }
                         }
                     }
                 });
 
-                if (!orcamento) {
-                    throw new Error("Orçamento não encontrado.");
-                }
-
+                if (!orcamento) throw new Error("Orçamento não encontrado.");
                 if (orcamento.status === "APROVADO" || orcamento.venda) {
                     throw new Error("Este orçamento já gerou uma venda.");
                 }
-
                 if (["CANCELADO", "REJEITADO", "VENCIDO"].includes(orcamento.status)) {
                     throw new Error(`Não é possível aprovar um orçamento com status ${orcamento.status}.`);
                 }
-
-                if (!orcamento.itens.length) {
-                    throw new Error("O orçamento não possui itens.");
-                }
-
-                if (Number(orcamento.total) <= 0) {
-                    throw new Error("O total do orçamento deve ser maior que zero.");
-                }
+                if (!orcamento.itens.length) throw new Error("O orçamento não possui itens.");
+                if (Number(orcamento.total) <= 0) throw new Error("O total do orçamento deve ser maior que zero.");
 
                 const ultimaVenda = await tx.venda.findFirst({
                     where: { empresaId: dados.empresaId },
@@ -296,6 +287,10 @@ class OrcamentoRepository {
                         frete: orcamento.frete,
                         outrasDespesas: orcamento.outrasDespesas,
                         total: orcamento.total,
+                        custosInternos: orcamento.custosInternos || [],
+                        custoItensTotal: orcamento.custoItensTotal,
+                        custoInternoTotal: orcamento.custoInternoTotal,
+                        lucroEstimado: orcamento.lucroEstimado,
                         formaPagamento: dados.formaPagamento,
                         quantidadeParcelas: dados.quantidadeParcelas,
                         periodicidadeParcelas: dados.periodicidadeParcelas,
@@ -309,9 +304,7 @@ class OrcamentoRepository {
                         const variacao = item.variacaoServico;
                         const servico = variacao?.servico;
 
-                        if (!variacao || !servico) {
-                            throw new Error("Serviço do orçamento não encontrado.");
-                        }
+                        if (!variacao || !servico) throw new Error("Serviço do orçamento não encontrado.");
 
                         await tx.itemVenda.create({
                             data: {
@@ -320,14 +313,12 @@ class OrcamentoRepository {
                                 variacaoServicoId: variacao.id,
                                 codigoProduto: servico.codigo,
                                 sku: variacao.codigo,
-                                descricao: variacao.descricao
-                                    ? `${servico.nome} - ${variacao.descricao}`
-                                    : servico.nome,
+                                descricao: variacao.descricao ? `${servico.nome} - ${variacao.descricao}` : servico.nome,
                                 quantidade: item.quantidade,
                                 valorUnitario: item.valorUnitario,
                                 desconto: item.desconto,
                                 total: item.total,
-                                custoUnitario: variacao.precoCusto
+                                custoUnitario: item.custoUnitario
                             }
                         });
                         continue;
@@ -336,9 +327,7 @@ class OrcamentoRepository {
                     const variacao = item.variacaoProduto;
                     const produto = variacao?.produto;
 
-                    if (!variacao || !produto) {
-                        throw new Error("Produto do orçamento não encontrado.");
-                    }
+                    if (!variacao || !produto) throw new Error("Produto do orçamento não encontrado.");
 
                     await tx.itemVenda.create({
                         data: {
@@ -347,14 +336,12 @@ class OrcamentoRepository {
                             variacaoProdutoId: variacao.id,
                             codigoProduto: produto.codigo,
                             sku: variacao.sku,
-                            descricao: variacao.descricao
-                                ? `${produto.nome} - ${variacao.descricao}`
-                                : produto.nome,
+                            descricao: variacao.descricao ? `${produto.nome} - ${variacao.descricao}` : produto.nome,
                             quantidade: item.quantidade,
                             valorUnitario: item.valorUnitario,
                             desconto: item.desconto,
                             total: item.total,
-                            custoUnitario: variacao.precoCusto
+                            custoUnitario: item.custoUnitario
                         }
                     });
                 }
@@ -375,10 +362,7 @@ class OrcamentoRepository {
                     include: includeOrcamentoCompleto()
                 });
 
-                return {
-                    orcamento: orcamentoAprovado,
-                    venda
-                };
+                return { orcamento: orcamentoAprovado, venda };
             },
             {
                 isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
@@ -390,16 +374,10 @@ class OrcamentoRepository {
 
     async excluir(id, empresaId) {
         const resultado = await prisma.orcamento.deleteMany({
-            where: {
-                id,
-                empresaId
-            }
+            where: { id, empresaId }
         });
 
-        if (resultado.count !== 1) {
-            throw new Error("Orçamento não encontrado.");
-        }
-
+        if (resultado.count !== 1) throw new Error("Orçamento não encontrado.");
         return resultado;
     }
 }

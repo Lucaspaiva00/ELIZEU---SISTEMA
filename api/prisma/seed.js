@@ -5,7 +5,7 @@ const prisma = new PrismaClient();
 
 const EMPRESA_PADRAO = {
     razaoSocial: "Empresa Teste",
-    nomeFantasia: "ERP Elizeu",
+    nomeFantasia: "Elian Sigs",
     cnpj: "00.000.000/0001-00",
     email: "contato@empresa.com",
     telefone: "(19)99999-9999",
@@ -196,7 +196,7 @@ async function criarTabelaPrecoPadrao(empresaId) {
 }
 
 async function main() {
-    console.log("Iniciando seed do ERP Elizeu...");
+    console.log("Iniciando seed do Elian Sigs...");
 
     const empresa = await criarOuAtualizarEmpresa();
     console.log(`Empresa preparada: ${empresa.nomeFantasia || empresa.razaoSocial}`);

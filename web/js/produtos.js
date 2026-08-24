@@ -184,6 +184,9 @@ function abrirModalProduto() {
 
     formProduto.reset();
 
+    document.getElementById("codigoAutomatico").checked = true;
+    alternarCodigoAutomatico();
+
     document.getElementById("controlaEstoque").checked = true;
     document.getElementById(
         "permiteVendaSemEstoque"
@@ -215,7 +218,7 @@ function adicionarVariacao() {
         sku: "",
         codigoBarras: "",
         descricao: "",
-        cor: "",
+        saida: "",
         tamanho: "",
         imagemPrincipal: "",
         gtin: "",
@@ -269,13 +272,13 @@ function renderizarVariacoes() {
                 <input
                     type="text"
                     class="form-control"
-                    value="${escaparAtributo(variacao.cor)}"
+                    value="${escaparAtributo(variacao.saida)}"
                     oninput="atualizarVariacao(
                         ${index},
-                        'cor',
+                        'saida',
                         this.value
                     )"
-                    placeholder="Cor">
+                    placeholder="Ex.: Venda / Instalação">
             </td>
 
             <td>
@@ -391,6 +394,22 @@ function removerVariacao(index) {
     renderizarVariacoes();
 }
 
+function alternarCodigoAutomatico() {
+    const checkbox = document.getElementById("codigoAutomatico");
+    const campo = document.getElementById("codigo");
+
+    if (!checkbox || !campo) return;
+
+    campo.readOnly = checkbox.checked;
+    campo.placeholder = checkbox.checked
+        ? "Gerado automaticamente ao salvar"
+        : "Digite o código do produto";
+
+    if (checkbox.checked && !produtoEditandoId) {
+        campo.value = "";
+    }
+}
+
 async function salvarProduto() {
     const botaoSalvar = document.querySelector(
         "#modalProduto .modal-footer .btn-primary"
@@ -458,8 +477,11 @@ async function salvarProduto() {
 }
 
 function obterDadosFormulario() {
+    const codigoAutomatico = document.getElementById("codigoAutomatico").checked;
+
     return {
-        codigo: valorCampoProduto("codigo"),
+        codigo: codigoAutomatico ? null : valorCampoProduto("codigo"),
+        codigoAutomatico,
         nome: valorCampoProduto("nome"),
         categoriaId: Number(
             document.getElementById("categoriaId").value
@@ -484,6 +506,7 @@ function obterDadosFormulario() {
             valorCampoProduto("origemMercadoria") || null,
         ativo: true,
         variacoes: variacoes.map((variacao) => ({
+            id: variacao.id || null,
             sku: String(variacao.sku || "").trim(),
             codigoBarras:
                 String(variacao.codigoBarras || "").trim() ||
@@ -491,8 +514,8 @@ function obterDadosFormulario() {
             descricao:
                 String(variacao.descricao || "").trim() ||
                 null,
-            cor:
-                String(variacao.cor || "").trim() || null,
+            saida:
+                String(variacao.saida || "").trim() || null,
             tamanho:
                 String(variacao.tamanho || "").trim() ||
                 null,
@@ -522,8 +545,8 @@ function obterDadosFormulario() {
 }
 
 function validarProduto(produto) {
-    if (!produto.codigo) {
-        throw new Error("Informe o código do produto.");
+    if (!produto.codigoAutomatico && !produto.codigo) {
+        throw new Error("Informe o código do produto ou marque a geração automática.");
     }
 
     if (!produto.nome) {
@@ -594,7 +617,9 @@ function editarProduto(id) {
 
     produtoEditandoId = produto.id;
 
+    document.getElementById("codigoAutomatico").checked = false;
     preencherCampoProduto("codigo", produto.codigo);
+    alternarCodigoAutomatico();
     preencherCampoProduto("nome", produto.nome);
     preencherCampoProduto(
         "categoriaId",
@@ -637,8 +662,8 @@ function editarProduto(id) {
                 variacao.codigoBarras || "",
             descricao:
                 variacao.descricao || "",
-            cor:
-                variacao.cor || "",
+            saida:
+                variacao.saida || "",
             tamanho:
                 variacao.tamanho || "",
             imagemPrincipal:
@@ -802,7 +827,7 @@ function renderizarDetalhesVariacoes(lista) {
             </td>
 
             <td>
-                ${escaparHtml(variacao.cor || "-")}
+                ${escaparHtml(variacao.saida || "-")}
             </td>
 
             <td>

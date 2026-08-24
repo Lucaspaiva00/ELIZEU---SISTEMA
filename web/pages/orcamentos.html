@@ -7,7 +7,7 @@
 
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>Orçamentos | ERP Elizeu</title>
+    <title>Orçamentos | Elian Sigs</title>
 
     <link rel="stylesheet" href="../css/app.css">
 
@@ -245,6 +245,65 @@
                                     </table>
 
                                 </div>
+
+                                <hr class="mt-4 mb-4">
+
+                                <div class="d-flex justify-between align-center mb-3">
+                                    <div>
+                                        <h3>Custos internos do serviço</h3>
+                                        <p class="page-subtitle" style="margin:4px 0 0;">
+                                            Areia, cimento, combustível, deslocamento e outros custos. Estes valores não aparecem no PDF do cliente.
+                                        </p>
+                                    </div>
+                                    <button type="button" class="btn btn-light" onclick="adicionarCustoInterno()">
+                                        <i class="fas fa-plus"></i>
+                                        Adicionar custo
+                                    </button>
+                                </div>
+
+                                <div class="table-responsive">
+                                    <table class="table">
+                                        <thead>
+                                            <tr>
+                                                <th width="170">Categoria</th>
+                                                <th>Descrição</th>
+                                                <th width="120">Qtd.</th>
+                                                <th width="150">Custo unitário</th>
+                                                <th width="140">Total</th>
+                                                <th width="80">Ações</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tabelaCustosInternos"></tbody>
+                                    </table>
+                                </div>
+
+                                <div class="row mt-3">
+                                    <div class="col">
+                                        <div class="card">
+                                            <div class="card-body">
+                                                <small class="text-muted">Custo dos itens</small>
+                                                <h3 id="custoItensResumo">R$ 0,00</h3>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col">
+                                        <div class="card">
+                                            <div class="card-body">
+                                                <small class="text-muted">Despesas internas</small>
+                                                <h3 id="custoInternoResumo">R$ 0,00</h3>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col">
+                                        <div class="card">
+                                            <div class="card-body">
+                                                <small class="text-muted">Lucro estimado</small>
+                                                <h3 id="lucroEstimadoResumo">R$ 0,00</h3>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <hr class="mt-4 mb-4">
 
                                 <div class="row">
@@ -305,7 +364,7 @@
 
                                             <label>
 
-                                                Outras Despesas
+                                                Acréscimos cobrados do cliente
 
                                             </label>
 
@@ -628,6 +687,47 @@
 
                                 </table>
 
+                            </div>
+
+                            <hr>
+
+                            <h3>Custos internos e lucro</h3>
+                            <p class="page-subtitle">Área interna. Estes dados não são exibidos no PDF enviado ao cliente.</p>
+
+                            <div class="table-responsive">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>Categoria</th>
+                                            <th>Descrição</th>
+                                            <th>Qtd.</th>
+                                            <th>Unitário</th>
+                                            <th>Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="viewCustosInternos"></tbody>
+                                </table>
+                            </div>
+
+                            <div class="row mt-3">
+                                <div class="col">
+                                    <div class="form-group">
+                                        <label>Custo dos produtos/serviços</label>
+                                        <input id="viewCustoItens" class="form-control" readonly>
+                                    </div>
+                                </div>
+                                <div class="col">
+                                    <div class="form-group">
+                                        <label>Despesas internas</label>
+                                        <input id="viewCustoInterno" class="form-control" readonly>
+                                    </div>
+                                </div>
+                                <div class="col">
+                                    <div class="form-group">
+                                        <label>Lucro estimado</label>
+                                        <input id="viewLucroEstimado" class="form-control" readonly>
+                                    </div>
+                                </div>
                             </div>
 
                             <hr>

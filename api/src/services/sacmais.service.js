@@ -18,16 +18,74 @@ function chaveCampo(valor) {
         .normalize("NFD")
         .replace(/[\u0300-\u036f]/g, "")
         .trim()
-        .toLowerCase();
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, "");
 }
 
-function mapearCamposExtras(lista = []) {
+function mapearCamposExtras(...fontes) {
     const mapa = {};
-    for (const item of Array.isArray(lista) ? lista : []) {
-        const chave = chaveCampo(item?.name);
-        if (chave) mapa[chave] = texto(item?.value);
+
+    const adicionar = (chaveOriginal, valorOriginal) => {
+        const chave = chaveCampo(chaveOriginal);
+        const valor = texto(valorOriginal);
+        if (chave && valor && !mapa[chave]) mapa[chave] = valor;
+    };
+
+    for (const fonte of fontes) {
+        if (!fonte) continue;
+
+        if (Array.isArray(fonte)) {
+            for (const item of fonte) {
+                if (!item || typeof item !== "object") continue;
+
+                const chave = primeiro(
+                    item.name,
+                    item.label,
+                    item.key,
+                    typeof item.field === "string" ? item.field : null,
+                    item.campo,
+                    item.title,
+                    item?.field?.name,
+                    item?.field?.label
+                );
+
+                const valor = primeiro(
+                    item.value,
+                    item.valor,
+                    item.text,
+                    item.content,
+                    item.answer,
+                    item.resposta
+                );
+
+                adicionar(chave, valor);
+            }
+            continue;
+        }
+
+        if (typeof fonte === "object") {
+            for (const [chave, valor] of Object.entries(fonte)) {
+                if (valor && typeof valor === "object" && !Array.isArray(valor)) {
+                    adicionar(
+                        primeiro(valor.name, valor.label, valor.key, chave),
+                        primeiro(valor.value, valor.valor, valor.text, valor.content, valor.answer)
+                    );
+                } else {
+                    adicionar(chave, valor);
+                }
+            }
+        }
     }
+
     return mapa;
+}
+
+function valorExtra(mapa, ...aliases) {
+    for (const alias of aliases) {
+        const valor = mapa[chaveCampo(alias)];
+        if (texto(valor)) return texto(valor);
+    }
+    return null;
 }
 
 function primeiro(...valores) {
@@ -41,37 +99,69 @@ function contatoDoPayload(payload) {
     return payload || {};
 }
 
+function normalizarDocumento(valor) {
+    const digitos = somenteDigitos(valor);
+    return digitos && [11, 14].includes(digitos.length) ? digitos : null;
+}
+
 function mapearContato(payload) {
     const contato = contatoDoPayload(payload);
-    const adicionais = mapearCamposExtras(contato.additionalFields);
-    const extras = mapearCamposExtras(contato.extraInfo);
+    const extras = mapearCamposExtras(
+        contato.additionalFields,
+        contato.additional_fields,
+        contato.extraInfo,
+        contato.extra_info,
+        contato.customFields,
+        contato.custom_fields,
+        contato.fields,
+        contato.attributes
+    );
 
     const nome = primeiro(
         contato.name,
-        adicionais.nome_,
-        adicionais.nome,
-        extras.nome
+        contato.nome,
+        contato.fullName,
+        contato.full_name,
+        valorExtra(extras, "nome", "nome completo", "cliente")
     );
 
     const telefoneBruto = primeiro(
         contato.number,
-        adicionais.telefone,
+        contato.contactNumber,
+        contato.contact_number,
         contato.phone,
-        contato.telefone
+        contato.telefone,
+        contato.whatsapp,
+        valorExtra(extras, "telefone", "celular", "whatsapp", "numero", "número")
     );
+
     const telefone = texto(telefoneBruto);
     const telefoneId = somenteDigitos(telefoneBruto);
 
-    const documentoBruto = primeiro(
+    const documento = normalizarDocumento(primeiro(
         contato.document,
-        adicionais.cpf_cnpj,
-        adicionais.cpfcnpj,
-        adicionais.cpf,
-        adicionais.cnpj,
         contato.documento,
-        contato.cpfCnpj
-    );
-    const documento = somenteDigitos(documentoBruto);
+        contato.cpfCnpj,
+        contato.cpf_cnpj,
+        contato.cpf,
+        contato.cnpj,
+        contato.documentNumber,
+        contato.document_number,
+        contato.taxId,
+        contato.tax_id,
+        valorExtra(
+            extras,
+            "cpf/cnpj",
+            "cpf cnpj",
+            "cpf_cnpj",
+            "cpfcnpj",
+            "cpf",
+            "cnpj",
+            "documento",
+            "document",
+            "documento cpf cnpj"
+        )
+    ));
 
     if (!nome) {
         throw new Error("Contato SacMais sem nome.");
@@ -82,30 +172,44 @@ function mapearContato(payload) {
     }
 
     const tags = Array.isArray(contato.tags)
-        ? contato.tags.map((tag) => texto(tag?.name)).filter(Boolean)
+        ? contato.tags.map((tag) => texto(tag?.name || tag?.label || tag)).filter(Boolean)
         : [];
 
     const observacoes = [];
     if (tags.length) observacoes.push(`Tags SacMais: ${tags.join(", ")}`);
-    if (adicionais.valor_r) observacoes.push(`Valor R$: ${adicionais.valor_r}`);
-    if (adicionais.duracao_da_conexao) {
-        observacoes.push(`Duração da conexão: ${adicionais.duracao_da_conexao}`);
-    }
+
+    const valor = valorExtra(extras, "valor r$", "valor r", "valor", "valor_r");
+    if (valor) observacoes.push(`Valor R$: ${valor}`);
+
+    const duracao = valorExtra(
+        extras,
+        "duracao da conexao",
+        "duração da conexão",
+        "duracao_da_conexao"
+    );
+    if (duracao) observacoes.push(`Duração da conexão: ${duracao}`);
 
     return {
-        // A própria API identifica o contato pelo contactNumber. Usamos o telefone
-        // normalizado como identificador externo estável quando não existe ID explícito.
-        sacmaisId: texto(primeiro(contato.id, contato.uuid, telefoneId)),
+        sacmaisId: texto(primeiro(contato.id, contato.uuid, contato.contactId, contato.contact_id, telefoneId)),
         nome: texto(nome),
+        // O placeholder técnico só existe porque cpfCnpj é obrigatório no banco.
+        // Assim que o SacMais enviar CPF/CNPJ real, a sincronização substitui este valor.
         cpfCnpj: documento || `SACMAIS-${telefoneId}`,
         telefone,
         celular: telefone,
-        email: texto(contato.email),
+        email: texto(primeiro(contato.email, valorExtra(extras, "email", "e-mail"))),
         tipoPessoa: documento?.length === 14 ? "JURIDICA" : "FISICA",
-        cep: texto(primeiro(adicionais.cep, contato.cep)),
-        endereco: texto(primeiro(adicionais.endereco, contato.endereco, contato.address)),
-        cidade: texto(primeiro(adicionais.cidade, contato.cidade, contato.city)),
-        estado: texto(primeiro(adicionais.estado, adicionais.uf, contato.estado, contato.uf))?.toUpperCase(),
+        cep: texto(primeiro(contato.cep, valorExtra(extras, "cep"))),
+        endereco: texto(primeiro(
+            contato.endereco,
+            contato.address,
+            valorExtra(extras, "endereco", "endereço", "logradouro", "rua")
+        )),
+        numero: texto(primeiro(contato.numero, valorExtra(extras, "numero endereco", "número endereço", "numero"))),
+        complemento: texto(primeiro(contato.complemento, valorExtra(extras, "complemento"))),
+        bairro: texto(primeiro(contato.bairro, valorExtra(extras, "bairro"))),
+        cidade: texto(primeiro(contato.cidade, contato.city, valorExtra(extras, "cidade"))),
+        estado: texto(primeiro(contato.estado, contato.uf, valorExtra(extras, "estado", "uf")))?.toUpperCase(),
         observacoes: observacoes.length ? observacoes.join(" | ") : null,
         ativo: true
     };

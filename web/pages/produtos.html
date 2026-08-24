@@ -7,7 +7,7 @@
 
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>Produtos | ERP Elizeu</title>
+    <title>Produtos | Elian Sigs</title>
 
     <link rel="stylesheet" href="../css/app.css">
 
@@ -148,7 +148,12 @@
 
                                             <label>Código</label>
 
-                                            <input id="codigo" class="form-control">
+                                            <input id="codigo" class="form-control" placeholder="Gerado automaticamente">
+
+                                            <label style="display:flex;align-items:center;gap:8px;margin-top:8px;font-weight:500;">
+                                                <input type="checkbox" id="codigoAutomatico" checked onchange="alternarCodigoAutomatico()">
+                                                Gerar código automaticamente
+                                            </label>
 
                                         </div>
 
@@ -239,9 +244,9 @@
 
                                                 </th>
 
-                                                <th width="120">
+                                                <th width="140">
 
-                                                    Cor
+                                                    Saída
 
                                                 </th>
 
@@ -597,7 +602,7 @@
 
                                             <th>SKU</th>
                                             <th>Descrição</th>
-                                            <th>Cor</th>
+                                            <th>Saída</th>
                                             <th>Tamanho</th>
                                             <th>Código de barras</th>
                                             <th>Custo</th>

@@ -359,7 +359,7 @@ model VariacaoProduto {
   sku          String  @unique
   codigoBarras String?
   descricao    String?
-  cor          String?
+  saida        String?
   tamanho      String?
 
   imagemPrincipal    String?
@@ -608,6 +608,12 @@ model Orcamento {
   outrasDespesas Decimal @default(0) @db.Decimal(12, 2)
   total          Decimal @default(0) @db.Decimal(12, 2)
 
+  // Custos internos: não aparecem na proposta/PDF enviado ao cliente.
+  custosInternos    Json?
+  custoItensTotal   Decimal @default(0) @db.Decimal(12, 2)
+  custoInternoTotal Decimal @default(0) @db.Decimal(12, 2)
+  lucroEstimado     Decimal @default(0) @db.Decimal(12, 2)
+
   observacoes String?
 
   criadoEm     DateTime @default(now())
@@ -634,6 +640,7 @@ model ItemOrcamento {
   valorUnitario Decimal @db.Decimal(12, 2)
   desconto      Decimal @default(0) @db.Decimal(12, 2)
   total         Decimal @db.Decimal(12, 2)
+  custoUnitario Decimal @default(0) @db.Decimal(12, 2)
 
   criadoEm DateTime @default(now())
 
@@ -670,6 +677,12 @@ model Venda {
   frete          Decimal @default(0) @db.Decimal(12, 2)
   outrasDespesas Decimal @default(0) @db.Decimal(12, 2)
   total          Decimal @default(0) @db.Decimal(12, 2)
+
+  // Snapshot dos custos internos do orçamento para cálculo histórico do lucro.
+  custosInternos    Json?
+  custoItensTotal   Decimal @default(0) @db.Decimal(12, 2)
+  custoInternoTotal Decimal @default(0) @db.Decimal(12, 2)
+  lucroEstimado     Decimal @default(0) @db.Decimal(12, 2)
 
   formaPagamento        FormaPagamento
   quantidadeParcelas    Int                  @default(1)
