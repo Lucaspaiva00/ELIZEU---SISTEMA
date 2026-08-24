@@ -110,6 +110,118 @@ async function carregarClientes() {
     }
 }
 
+function textoClienteOrcamento(valor) {
+    return String(valor ?? "").trim();
+}
+
+function somenteDigitosClienteOrcamento(valor) {
+    return textoClienteOrcamento(valor).replace(/\D/g, "");
+}
+
+function documentoTecnicoSacMaisClienteOrcamento(valor) {
+    return /^SACMAIS-/i.test(textoClienteOrcamento(valor));
+}
+
+function nomeValidoClienteOrcamento(nome) {
+    const valor = textoClienteOrcamento(nome);
+
+    if (!valor || valor === "-" || valor === ".") {
+        return false;
+    }
+
+    if (/^\+?[\d\s().-]+$/.test(valor)) {
+        return false;
+    }
+
+    return /[A-Za-zÀ-ÿ]/.test(valor);
+}
+
+function nomeClienteOrcamento(cliente) {
+    if (nomeValidoClienteOrcamento(cliente?.nome)) {
+        return textoClienteOrcamento(cliente.nome);
+    }
+
+    return "Contato SacMais";
+}
+
+function formatarDocumentoClienteOrcamento(valor) {
+    const original = textoClienteOrcamento(valor);
+
+    if (!original || documentoTecnicoSacMaisClienteOrcamento(original)) {
+        return "";
+    }
+
+    const digitos = somenteDigitosClienteOrcamento(original);
+
+    if (digitos.length === 11) {
+        return digitos.replace(
+            /(\d{3})(\d{3})(\d{3})(\d{2})/,
+            "$1.$2.$3-$4"
+        );
+    }
+
+    if (digitos.length === 14) {
+        return digitos.replace(
+            /(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/,
+            "$1.$2.$3/$4-$5"
+        );
+    }
+
+    return "";
+}
+
+function formatarTelefoneClienteOrcamento(valor) {
+    let digitos = somenteDigitosClienteOrcamento(valor);
+
+    if (!digitos) {
+        return "";
+    }
+
+    if ((digitos.length === 12 || digitos.length === 13) && digitos.startsWith("55")) {
+        digitos = digitos.slice(2);
+    }
+
+    if (digitos.length === 11) {
+        return `(${digitos.slice(0, 2)}) ${digitos.slice(2, 7)}-${digitos.slice(7)}`;
+    }
+
+    if (digitos.length === 10) {
+        return `(${digitos.slice(0, 2)}) ${digitos.slice(2, 6)}-${digitos.slice(6)}`;
+    }
+
+    return textoClienteOrcamento(valor);
+}
+
+function descricaoClienteSelect(cliente) {
+    const nome = nomeClienteOrcamento(cliente);
+    const documento = formatarDocumentoClienteOrcamento(cliente?.cpfCnpj);
+
+    // No orçamento exibimos somente o que é dado real do cliente.
+    // Identificadores técnicos como SACMAIS-5511999999999 nunca aparecem.
+    if (documento) {
+        return `${nome} - ${documento}`;
+    }
+
+    return nome;
+}
+
+function ordenarClientesParaSelect(lista) {
+    return [...lista].sort((a, b) => {
+        const aTemDocumento = formatarDocumentoClienteOrcamento(a?.cpfCnpj) ? 1 : 0;
+        const bTemDocumento = formatarDocumentoClienteOrcamento(b?.cpfCnpj) ? 1 : 0;
+
+        if (aTemDocumento !== bTemDocumento) {
+            return bTemDocumento - aTemDocumento;
+        }
+
+        return descricaoClienteSelect(a).localeCompare(
+            descricaoClienteSelect(b),
+            "pt-BR",
+            { sensitivity: "base" }
+        );
+    });
+}
+
 function preencherSelectClientes() {
     const select = document.getElementById("clienteId");
 
@@ -119,11 +231,12 @@ function preencherSelectClientes() {
         </option>
     `;
 
-    clientes.forEach((cliente) => {
+    ordenarClientesParaSelect(clientes).forEach((cliente) => {
         const option = document.createElement("option");
 
         option.value = cliente.id;
-        option.textContent = `${cliente.nome} - ${cliente.cpfCnpj}`;
+        option.textContent = descricaoClienteSelect(cliente);
+        option.title = option.textContent;
 
         select.appendChild(option);
     });
