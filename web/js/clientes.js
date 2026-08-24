@@ -1,5 +1,7 @@
 let clientes = [];
 let clienteEditandoId = null;
+let paginaAtualClientes = 1;
+const clientesPorPagina = 20;
 
 const modalCliente = document.getElementById("modalCliente");
 const formCliente = document.getElementById("formCliente");
@@ -392,7 +394,19 @@ function renderizarTabela(lista) {
 
     tbody.innerHTML = "";
 
-    if (!lista.length) {
+    const listaOrdenada = ordenarClientesParaTabela(lista);
+    const totalRegistros = listaOrdenada.length;
+    const totalPaginas = Math.max(1, Math.ceil(totalRegistros / clientesPorPagina));
+
+    if (paginaAtualClientes > totalPaginas) {
+        paginaAtualClientes = totalPaginas;
+    }
+
+    if (paginaAtualClientes < 1) {
+        paginaAtualClientes = 1;
+    }
+
+    if (!totalRegistros) {
         tbody.innerHTML = `
             <tr>
                 <td colspan="7" class="text-center">
@@ -400,12 +414,15 @@ function renderizarTabela(lista) {
                 </td>
             </tr>
         `;
+        renderizarPaginacaoClientes(0, 1);
         return;
     }
 
-    const listaOrdenada = ordenarClientesParaTabela(lista);
+    const inicio = (paginaAtualClientes - 1) * clientesPorPagina;
+    const fim = inicio + clientesPorPagina;
+    const clientesDaPagina = listaOrdenada.slice(inicio, fim);
 
-    listaOrdenada.forEach((cliente) => {
+    clientesDaPagina.forEach((cliente) => {
         const linha = document.createElement("tr");
 
         const nome = nomeParaTabela(cliente);
@@ -461,6 +478,182 @@ function renderizarTabela(lista) {
 
         tbody.appendChild(linha);
     });
+
+    renderizarPaginacaoClientes(totalRegistros, totalPaginas);
+}
+
+function renderizarPaginacaoClientes(totalRegistros, totalPaginas) {
+    const container = document.getElementById("paginacaoClientes");
+
+    if (!container) {
+        return;
+    }
+
+    if (!totalRegistros) {
+        container.innerHTML = "";
+        return;
+    }
+
+    const inicio = (paginaAtualClientes - 1) * clientesPorPagina + 1;
+    const fim = Math.min(paginaAtualClientes * clientesPorPagina, totalRegistros);
+
+    let primeiraPagina = Math.max(1, paginaAtualClientes - 2);
+    let ultimaPagina = Math.min(totalPaginas, paginaAtualClientes + 2);
+
+    if (paginaAtualClientes <= 3) {
+        ultimaPagina = Math.min(totalPaginas, 5);
+    }
+
+    if (paginaAtualClientes >= totalPaginas - 2) {
+        primeiraPagina = Math.max(1, totalPaginas - 4);
+    }
+
+    let botoesPaginas = "";
+
+    if (primeiraPagina > 1) {
+        botoesPaginas += `
+            <button
+                type="button"
+                class="btn btn-light"
+                onclick="irParaPaginaClientes(1)"
+                style="min-width:42px;"
+            >
+                1
+            </button>
+        `;
+
+        if (primeiraPagina > 2) {
+            botoesPaginas += `<span class="paginacao-reticencias">...</span>`;
+        }
+    }
+
+    for (let pagina = primeiraPagina; pagina <= ultimaPagina; pagina++) {
+        botoesPaginas += `
+            <button
+                type="button"
+                class="btn ${pagina === paginaAtualClientes ? "btn-primary" : "btn-light"}"
+                onclick="irParaPaginaClientes(${pagina})"
+                style="min-width:42px;"
+                ${pagina === paginaAtualClientes ? 'aria-current="page"' : ""}
+            >
+                ${pagina}
+            </button>
+        `;
+    }
+
+    if (ultimaPagina < totalPaginas) {
+        if (ultimaPagina < totalPaginas - 1) {
+            botoesPaginas += `<span class="paginacao-reticencias">...</span>`;
+        }
+
+        botoesPaginas += `
+            <button
+                type="button"
+                class="btn btn-light"
+                onclick="irParaPaginaClientes(${totalPaginas})"
+                style="min-width:42px;"
+            >
+                ${totalPaginas}
+            </button>
+        `;
+    }
+
+    container.innerHTML = `
+        <div class="paginacao-clientes-info">
+            Mostrando <strong>${inicio}</strong> até <strong>${fim}</strong>
+            de <strong>${totalRegistros}</strong> clientes
+        </div>
+
+        <div class="paginacao-clientes-botoes">
+            <button
+                type="button"
+                class="btn btn-light"
+                onclick="paginaAnteriorClientes()"
+                ${paginaAtualClientes <= 1 ? "disabled" : ""}
+            >
+                <i class="fas fa-chevron-left"></i>
+                Anterior
+            </button>
+
+            ${botoesPaginas}
+
+            <button
+                type="button"
+                class="btn btn-light"
+                onclick="proximaPaginaClientes()"
+                ${paginaAtualClientes >= totalPaginas ? "disabled" : ""}
+            >
+                Próxima
+                <i class="fas fa-chevron-right"></i>
+            </button>
+        </div>
+    `;
+}
+
+function obterClientesFiltrados() {
+    const pesquisa = document
+        .getElementById("pesquisa")
+        ?.value
+        ?.trim()
+        ?.toLowerCase() || "";
+
+    if (!pesquisa) {
+        return clientes;
+    }
+
+    return clientes.filter((cliente) => {
+        const nome = nomeParaTabela(cliente).toLowerCase();
+        const cpfCnpj = formatarDocumento(cliente.cpfCnpj).toLowerCase();
+        const email = textoLimpo(cliente.email).toLowerCase();
+        const telefone = formatarTelefone(
+            cliente.telefone || cliente.celular || ""
+        ).toLowerCase();
+        const origem = origemParaTabela(cliente).toLowerCase();
+
+        return (
+            nome.includes(pesquisa) ||
+            cpfCnpj.includes(pesquisa) ||
+            email.includes(pesquisa) ||
+            telefone.includes(pesquisa) ||
+            origem.includes(pesquisa)
+        );
+    });
+}
+
+function irParaPaginaClientes(pagina) {
+    const lista = obterClientesFiltrados();
+    const totalPaginas = Math.max(1, Math.ceil(lista.length / clientesPorPagina));
+
+    paginaAtualClientes = Math.min(Math.max(1, pagina), totalPaginas);
+    renderizarTabela(lista);
+
+    const tabela = document.querySelector(".table-responsive");
+
+    if (tabela) {
+        tabela.scrollIntoView({
+            behavior: "smooth",
+            block: "start"
+        });
+    }
+}
+
+function paginaAnteriorClientes() {
+    if (paginaAtualClientes <= 1) {
+        return;
+    }
+
+    irParaPaginaClientes(paginaAtualClientes - 1);
+}
+
+function proximaPaginaClientes() {
+    const lista = obterClientesFiltrados();
+    const totalPaginas = Math.max(1, Math.ceil(lista.length / clientesPorPagina));
+
+    if (paginaAtualClientes >= totalPaginas) {
+        return;
+    }
+
+    irParaPaginaClientes(paginaAtualClientes + 1);
 }
 
 function abrirModal() {
@@ -606,36 +799,8 @@ async function excluirCliente(id) {
 }
 
 function filtrarClientes() {
-    const pesquisa = document
-        .getElementById("pesquisa")
-        .value
-        .trim()
-        .toLowerCase();
-
-    if (!pesquisa) {
-        renderizarTabela(clientes);
-        return;
-    }
-
-    const filtrados = clientes.filter((cliente) => {
-        const nome = nomeParaTabela(cliente).toLowerCase();
-        const cpfCnpj = formatarDocumento(cliente.cpfCnpj).toLowerCase();
-        const email = textoLimpo(cliente.email).toLowerCase();
-        const telefone = formatarTelefone(
-            cliente.telefone || cliente.celular || ""
-        ).toLowerCase();
-        const origem = origemParaTabela(cliente).toLowerCase();
-
-        return (
-            nome.includes(pesquisa) ||
-            cpfCnpj.includes(pesquisa) ||
-            email.includes(pesquisa) ||
-            telefone.includes(pesquisa) ||
-            origem.includes(pesquisa)
-        );
-    });
-
-    renderizarTabela(filtrados);
+    paginaAtualClientes = 1;
+    renderizarTabela(obterClientesFiltrados());
 }
 
 function obterDadosFormulario() {
