@@ -121,6 +121,7 @@ function calcularResumo(dados, custoItensTotal) {
 
 function includeOrcamentoCompleto() {
     return {
+        empresa: true,
         cliente: true,
         tabelaPreco: true,
         criadoPor: { select: { id: true, nome: true } },
