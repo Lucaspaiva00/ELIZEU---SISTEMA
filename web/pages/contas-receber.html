@@ -98,29 +98,16 @@
         </main>
     </div>
 
-    <div class="modal-overlay" id="modalConta">
-        <div class="modal modal-lg">
-            <div class="modal-header">
-                <div><span class="modal-eyebrow">Conta a receber</span><h2 class="modal-title" id="tituloModalConta">Nova cobrança</h2></div>
-                <button class="modal-close" onclick="fecharModalConta()">&times;</button>
-            </div>
+    <div class="modal-overlay" id="modalConta" data-modal-tabs>
+        <div class="modal modal-lg modal-tabbed">
+            <div class="modal-header"><div><span class="modal-eyebrow">Conta a receber</span><h2 class="modal-title" id="tituloModalConta">Nova cobrança</h2></div><button class="modal-close" onclick="fecharModalConta()">&times;</button></div>
+            <div class="modal-tabs" role="tablist"><button type="button" class="modal-tab active" data-modal-tab="dados"><i class="fas fa-user"></i> Cobrança</button><button type="button" class="modal-tab" data-modal-tab="financeiro"><i class="fas fa-calendar-days"></i> Financeiro</button><button type="button" class="modal-tab" data-modal-tab="detalhes"><i class="fas fa-list"></i> Parcela e observações</button></div>
             <form id="formConta">
                 <div class="modal-body">
                     <input type="hidden" id="contaId">
-                    <div class="form-grid form-grid-2">
-                        <div class="form-group form-span-2"><label>Cliente *</label><select id="clienteId" class="form-control" required></select></div>
-                        <div class="form-group form-span-2"><label>Descrição *</label><input id="descricao" class="form-control" required placeholder="Ex.: Parcela do orçamento 1024"></div>
-                        <div class="form-group"><label>Número do documento</label><input id="numeroDocumento" class="form-control" placeholder="Nota, contrato ou referência"></div>
-                        <div class="form-group"><label>Valor original *</label><input id="valorOriginal" type="number" min="0.01" step="0.01" class="form-control" required></div>
-                        <div class="form-group"><label>Data de competência</label><input id="dataCompetencia" type="date" class="form-control"></div>
-                        <div class="form-group"><label>Data de emissão</label><input id="dataEmissao" type="date" class="form-control"></div>
-                        <div class="form-group"><label>Data de vencimento *</label><input id="dataVencimento" type="date" class="form-control" required></div>
-                        <div class="form-group"><label>Forma de pagamento</label><select id="formaPagamento" class="form-control"></select></div>
-                        <div class="form-group"><label>Categoria financeira</label><select id="categoriaFinanceiraId" class="form-control"><option value="">Categoria padrão</option></select></div>
-                        <div class="form-group"><label>Centro de custo</label><select id="centroCustoId" class="form-control"><option value="">Geral</option></select></div>
-                        <div class="form-group"><label>Parcela</label><div class="inline-fields"><input id="parcelaNumero" type="number" min="1" value="1" class="form-control"><span>de</span><input id="totalParcelas" type="number" min="1" value="1" class="form-control"></div></div>
-                        <div class="form-group form-span-2"><label>Observações</label><textarea id="observacoes" class="form-control" rows="3"></textarea></div>
-                    </div>
+                    <section class="modal-tab-panel active" data-modal-panel="dados"><div class="modal-section-card"><div class="form-grid form-grid-2"><div class="form-group form-span-2"><label>Cliente *</label><select id="clienteId" class="form-control" required></select></div><div class="form-group form-span-2"><label>Descrição *</label><input id="descricao" class="form-control" required placeholder="Ex.: Parcela do orçamento 1024"></div><div class="form-group"><label>Número do documento</label><input id="numeroDocumento" class="form-control" placeholder="Nota, contrato ou referência"></div><div class="form-group"><label>Valor original *</label><input id="valorOriginal" type="number" min="0.01" step="0.01" class="form-control" required></div></div></div></section>
+                    <section class="modal-tab-panel" data-modal-panel="financeiro"><div class="modal-section-card"><div class="form-grid form-grid-2"><div class="form-group"><label>Data de competência</label><input id="dataCompetencia" type="date" class="form-control"></div><div class="form-group"><label>Data de emissão</label><input id="dataEmissao" type="date" class="form-control"></div><div class="form-group"><label>Data de vencimento *</label><input id="dataVencimento" type="date" class="form-control" required></div><div class="form-group"><label>Forma de pagamento</label><select id="formaPagamento" class="form-control"></select></div><div class="form-group"><label>Categoria financeira</label><select id="categoriaFinanceiraId" class="form-control"><option value="">Categoria padrão</option></select></div><div class="form-group"><label>Centro de custo</label><select id="centroCustoId" class="form-control"><option value="">Geral</option></select></div></div></div></section>
+                    <section class="modal-tab-panel" data-modal-panel="detalhes"><div class="modal-section-card"><div class="form-group"><label>Parcela</label><div class="inline-fields"><input id="parcelaNumero" type="number" min="1" value="1" class="form-control"><span>de</span><input id="totalParcelas" type="number" min="1" value="1" class="form-control"></div></div><div class="form-group"><label>Observações</label><textarea id="observacoes" class="form-control" rows="3"></textarea></div></div></section>
                 </div>
                 <div class="modal-footer"><button type="button" class="btn btn-light" onclick="fecharModalConta()">Cancelar</button><button type="submit" class="btn btn-primary" id="btnSalvarConta"><i class="fas fa-check"></i> Salvar cobrança</button></div>
             </form>

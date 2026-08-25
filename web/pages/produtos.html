@@ -116,604 +116,100 @@
 
                 </div>
 
-                <div class="modal-overlay" id="modalProduto">
-
-                    <div class="modal modal-xl">
-
+                <div class="modal-overlay" id="modalProduto" data-modal-tabs>
+                    <div class="modal modal-xl modal-tabbed">
                         <div class="modal-header">
-
-                            <h2 class="modal-title">
-
-                                Cadastro de Produto
-
-                            </h2>
-
-                            <button class="modal-close" onclick="fecharModalProduto()">
-
-                                &times;
-
-                            </button>
-
+                            <div><h2 class="modal-title">Cadastro de Produto</h2><p class="modal-section-help">Dados, variações, composição e parâmetros fiscais em etapas.</p></div>
+                            <button class="modal-close" onclick="fecharModalProduto()">&times;</button>
                         </div>
-
+                        <div class="modal-tabs" role="tablist">
+                            <button type="button" class="modal-tab active" data-modal-tab="dados"><i class="fas fa-tag"></i> Dados</button>
+                            <button type="button" class="modal-tab" data-modal-tab="variacoes"><i class="fas fa-layer-group"></i> Variações</button>
+                            <button type="button" class="modal-tab" data-modal-tab="composicao"><i class="fas fa-sitemap"></i> Composição</button>
+                            <button type="button" class="modal-tab" data-modal-tab="fiscal"><i class="fas fa-receipt"></i> Fiscal e estoque</button>
+                        </div>
                         <div class="modal-body">
-
                             <form id="formProduto">
-
-                                <div class="row">
-
-                                    <div class="col-3">
-
-                                        <div class="form-group">
-
-                                            <label>Código</label>
-
-                                            <input id="codigo" class="form-control" placeholder="Gerado automaticamente">
-
-                                            <label style="display:flex;align-items:center;gap:8px;margin-top:8px;font-weight:500;">
-                                                <input type="checkbox" id="codigoAutomatico" checked onchange="alternarCodigoAutomatico()">
-                                                Gerar código automaticamente
-                                            </label>
-
+                                <section class="modal-tab-panel active" data-modal-panel="dados">
+                                    <div class="modal-section-card">
+                                        <div class="modal-section-head"><div><h3>Identificação do produto</h3><p>Informações principais do cadastro.</p></div></div>
+                                        <div class="row">
+                                            <div class="col-3"><div class="form-group"><label>Código</label><input id="codigo" class="form-control" placeholder="Gerado automaticamente"><label style="display:flex;align-items:center;gap:8px;margin-top:8px;font-weight:500;"><input type="checkbox" id="codigoAutomatico" checked onchange="alternarCodigoAutomatico()"> Gerar código automaticamente</label></div></div>
+                                            <div class="col"><div class="form-group"><label>Nome</label><input id="nome" class="form-control"></div></div>
                                         </div>
-
-                                    </div>
-
-                                    <div class="col">
-
-                                        <div class="form-group">
-
-                                            <label>Nome</label>
-
-                                            <input id="nome" class="form-control">
-
+                                        <div class="row">
+                                            <div class="col"><div class="form-group"><label>Categoria</label><select id="categoriaId" class="form-control"></select></div></div>
+                                            <div class="col"><div class="form-group"><label>Marca</label><input id="marca" class="form-control"></div></div>
                                         </div>
-
+                                        <div class="form-group"><label>Descrição (opcional)</label><textarea id="descricao" class="form-control"></textarea></div>
                                     </div>
+                                </section>
 
-                                </div>
+                                <section class="modal-tab-panel" data-modal-panel="variacoes">
+                                    <div class="modal-section-card">
+                                        <div class="modal-section-head"><div><h3>Variações do produto</h3><p>Tamanho, saída, preços e estoque de cada opção.</p></div><button type="button" class="btn btn-success" onclick="adicionarVariacao()"><i class="fas fa-plus"></i> Nova Variação</button></div>
+                                        <div class="table-responsive"><table class="table"><thead><tr><th width="180">SKU</th><th width="120">Tamanho</th><th width="140">Saída</th><th width="160">Código Barras</th><th width="130">Custo</th><th width="130">Venda</th><th width="120">Estoque</th><th width="90">Ações</th></tr></thead><tbody id="tabelaVariacoes"></tbody></table></div>
+                                    </div>
+                                </section>
 
-                                <div class="row">
-
-                                    <div class="col">
-
-                                        <div class="form-group">
-
-                                            <label>Categoria</label>
-
-                                            <select id="categoriaId" class="form-control">
-
-                                            </select>
-
+                                <section class="modal-tab-panel" data-modal-panel="composicao">
+                                    <div class="modal-section-card">
+                                        <div class="modal-section-head">
+                                            <div><h3>Composição / Itens do Padrão</h3><p>Para produtos compostos, como “Padrão 5m Básico”. Cadastre os materiais e calcule o custo base.</p></div>
+                                            <button type="button" class="btn btn-success" onclick="adicionarComponente()"><i class="fas fa-plus"></i> Adicionar item</button>
                                         </div>
-
-                                    </div>
-
-                                    <div class="col">
-
-                                        <div class="form-group">
-
-                                            <label>Marca</label>
-
-                                            <input id="marca" class="form-control">
-
-                                        </div>
-
-                                    </div>
-
-                                </div>
-
-                                <div class="form-group">
-
-                                    <label>Descrição (opcional)</label>
-
-                                    <textarea id="descricao" class="form-control"></textarea>
-
-                                </div>
-                                <hr class="mb-3 mt-3">
-
-                                <div class="d-flex justify-between align-center mb-2">
-
-                                    <h3>
-
-                                        Variações do Produto
-
-                                    </h3>
-
-                                    <button type="button" class="btn btn-success" onclick="adicionarVariacao()">
-
-                                        <i class="fas fa-plus"></i>
-
-                                        Nova Variação
-
-                                    </button>
-
-                                </div>
-
-                                <div class="table-responsive">
-
-                                    <table class="table">
-
-                                        <thead>
-
-                                            <tr>
-
-                                                <th width="180">
-
-                                                    SKU
-
-                                                </th>
-
-                                                <th width="120">
-
-                                                    Tamanho
-
-                                                </th>
-
-                                                <th width="140">
-
-                                                    Saída
-
-                                                </th>
-
-                                                <th width="160">
-
-                                                    Código Barras
-
-                                                </th>
-
-                                                <th width="130">
-
-                                                    Custo
-
-                                                </th>
-
-                                                <th width="130">
-
-                                                    Venda
-
-                                                </th>
-
-                                                <th width="120">
-
-                                                    Estoque
-
-                                                </th>
-
-                                                <th width="90">
-
-                                                    Ações
-
-                                                </th>
-
-                                            </tr>
-
-                                        </thead>
-
-                                        <tbody id="tabelaVariacoes">
-
-                                        </tbody>
-
-                                    </table>
-
-                                </div>
-
-                                <hr class="mb-3 mt-4">
-
-                                <div class="d-flex justify-between align-center mb-2">
-                                    <div>
-                                        <h3>Composição / Itens do Padrão</h3>
-                                        <p class="page-subtitle" style="margin:4px 0 0;">
-                                            Use aqui para produtos compostos, por exemplo "Padrão 5m Básico".
-                                            Cadastre os materiais que formam o padrão e o sistema calcula o custo base automaticamente.
-                                        </p>
-                                    </div>
-
-                                    <button type="button" class="btn btn-success" onclick="adicionarComponente()">
-                                        <i class="fas fa-plus"></i>
-                                        Adicionar item
-                                    </button>
-                                </div>
-
-                                <div class="table-responsive">
-                                    <table class="table">
-                                        <thead>
-                                            <tr>
-                                                <th width="230">Produto/Material cadastrado</th>
-                                                <th>Item / descrição</th>
-                                                <th width="110">Qtd.</th>
-                                                <th width="145">Custo unitário</th>
-                                                <th width="130">Total</th>
-                                                <th width="80">Ações</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="tabelaComposicao"></tbody>
-                                    </table>
-                                </div>
-
-                                <div class="row mt-3">
-                                    <div class="col">
-                                        <div class="card">
-                                            <div class="card-body">
-                                                <small class="text-muted">Custo base calculado pelos itens do padrão</small>
-                                                <h3 id="custoComposicaoResumo">R$ 0,00</h3>
-                                            </div>
+                                        <div class="table-responsive"><table class="table"><thead><tr><th width="230">Produto/Material cadastrado</th><th>Item / descrição</th><th width="110">Qtd.</th><th width="145">Custo unitário</th><th width="130">Total</th><th width="80">Ações</th></tr></thead><tbody id="tabelaComposicao"></tbody></table></div>
+                                        <div class="row mt-3">
+                                            <div class="col"><div class="modal-kpi"><small>Custo base calculado pelos itens do padrão</small><h3 id="custoComposicaoResumo">R$ 0,00</h3></div></div>
+                                            <div class="col" style="display:flex;align-items:end;justify-content:flex-end;"><button type="button" class="btn btn-light" onclick="aplicarCustoComposicaoNasVariacoes()"><i class="fas fa-calculator"></i> Aplicar custo base nas variações</button></div>
                                         </div>
                                     </div>
-                                    <div class="col" style="display:flex;align-items:end;justify-content:flex-end;">
-                                        <button type="button" class="btn btn-light" onclick="aplicarCustoComposicaoNasVariacoes()">
-                                            <i class="fas fa-calculator"></i>
-                                            Aplicar custo base nas variações
-                                        </button>
-                                    </div>
-                                </div>
+                                </section>
 
-                                <div class="row mt-3">
-
-                                    <div class="col">
-
-                                        <div class="form-group">
-
-                                            <label>
-
-                                                Unidade
-
-                                            </label>
-
-                                            <select id="unidadeMedida" class="form-control">
-
-                                                <option value="UN">UN</option>
-                                                <option value="KG">KG</option>
-                                                <option value="G">G</option>
-                                                <option value="L">L</option>
-                                                <option value="ML">ML</option>
-                                                <option value="M">M</option>
-                                                <option value="CM">CM</option>
-                                                <option value="CX">CX</option>
-                                                <option value="PC">PC</option>
-                                                <option value="PAR">PAR</option>
-
-                                            </select>
-
+                                <section class="modal-tab-panel" data-modal-panel="fiscal">
+                                    <div class="modal-section-card">
+                                        <div class="modal-section-head"><div><h3>Fiscal e estoque</h3><p>Unidade, tributação padrão e comportamento de estoque.</p></div></div>
+                                        <div class="modal-fields-4">
+                                            <div class="form-group"><label>Unidade</label><select id="unidadeMedida" class="form-control"><option value="UN">UN</option><option value="KG">KG</option><option value="G">G</option><option value="L">L</option><option value="ML">ML</option><option value="M">M</option><option value="CM">CM</option><option value="CX">CX</option><option value="PC">PC</option><option value="PAR">PAR</option></select></div>
+                                            <div class="form-group"><label>NCM</label><input id="ncm" class="form-control"></div>
+                                            <div class="form-group"><label>CFOP</label><input id="cfopPadrao" class="form-control" maxlength="4" placeholder="5102"></div>
+                                            <div class="form-group"><label>Origem da mercadoria</label><select id="origemMercadoria" class="form-control"><option value="">Selecione</option><option value="0">0 - Nacional</option><option value="1">1 - Estrangeira, importação direta</option><option value="2">2 - Estrangeira, adquirida no mercado interno</option><option value="3">3 - Nacional, conteúdo de importação superior a 40%</option><option value="4">4 - Nacional, produção conforme processos básicos</option><option value="5">5 - Nacional, conteúdo de importação até 40%</option><option value="6">6 - Estrangeira, importação direta sem similar nacional</option><option value="7">7 - Estrangeira, mercado interno sem similar nacional</option><option value="8">8 - Nacional, conteúdo de importação superior a 70%</option></select></div>
                                         </div>
-
+                                        <div class="row"><div class="col"><label><input id="controlaEstoque" type="checkbox" checked> Controlar estoque</label></div><div class="col"><label><input id="permiteVendaSemEstoque" type="checkbox"> Permitir venda sem estoque</label></div></div>
                                     </div>
-
-                                    <div class="col">
-
-                                        <div class="form-group">
-
-                                            <label>
-
-                                                NCM
-
-                                            </label>
-
-                                            <input id="ncm" class="form-control">
-
-                                        </div>
-
-                                    </div>
-
-                                    <div class="col">
-
-                                        <div class="form-group">
-
-                                            <label>
-
-                                                CFOP
-
-                                            </label>
-
-                                            <input id="cfopPadrao" class="form-control" maxlength="4" placeholder="5102">
-
-                                        </div>
-
-                                    </div>
-
-                                    <div class="col">
-
-                                        <div class="form-group">
-
-                                            <label>
-
-                                                Origem da mercadoria
-
-                                            </label>
-
-                                            <select id="origemMercadoria" class="form-control">
-                                                <option value="">Selecione</option>
-                                                <option value="0">0 - Nacional</option>
-                                                <option value="1">1 - Estrangeira, importação direta</option>
-                                                <option value="2">2 - Estrangeira, adquirida no mercado interno</option>
-                                                <option value="3">3 - Nacional, conteúdo de importação superior a 40%</option>
-                                                <option value="4">4 - Nacional, produção conforme processos básicos</option>
-                                                <option value="5">5 - Nacional, conteúdo de importação até 40%</option>
-                                                <option value="6">6 - Estrangeira, importação direta sem similar nacional</option>
-                                                <option value="7">7 - Estrangeira, mercado interno sem similar nacional</option>
-                                                <option value="8">8 - Nacional, conteúdo de importação superior a 70%</option>
-                                            </select>
-
-                                        </div>
-
-                                    </div>
-
-                                </div>
-
-                                <div class="row">
-
-                                    <div class="col">
-
-                                        <label>
-
-                                            <input id="controlaEstoque" type="checkbox" checked>
-
-                                            Controlar estoque
-
-                                        </label>
-
-                                    </div>
-
-                                    <div class="col">
-
-                                        <label>
-
-                                            <input id="permiteVendaSemEstoque" type="checkbox">
-
-                                            Permitir venda sem estoque
-
-                                        </label>
-
-                                    </div>
-
-                                </div>
-
+                                </section>
                             </form>
-
                         </div>
-                        <div class="modal-footer">
-
-                            <button type="button" class="btn btn-light" onclick="fecharModalProduto()">
-
-                                Cancelar
-
-                            </button>
-
-                            <button type="button" class="btn btn-primary" onclick="salvarProduto()">
-
-                                <i class="fas fa-save"></i>
-
-                                Salvar Produto
-
-                            </button>
-
-                        </div>
-
+                        <div class="modal-footer"><button type="button" class="btn btn-light" onclick="fecharModalProduto()">Cancelar</button><button type="button" class="btn btn-primary" onclick="salvarProduto()"><i class="fas fa-save"></i> Salvar Produto</button></div>
                     </div>
-
                 </div>
-                <div class="modal-overlay" id="modalDetalhesProduto">
 
-                    <div class="modal modal-lg">
-
-                        <div class="modal-header">
-
-                            <h2 class="modal-title">
-                                Detalhes do Produto
-                            </h2>
-
-                            <button type="button" class="modal-close" onclick="fecharDetalhesProduto()">
-
-                                &times;
-
-                            </button>
-
+                <div class="modal-overlay" id="modalDetalhesProduto" data-modal-tabs>
+                    <div class="modal modal-xl modal-tabbed">
+                        <div class="modal-header"><div><h2 class="modal-title">Detalhes do Produto</h2><p class="modal-section-help">Consulta organizada por dados, composição e variações.</p></div><button type="button" class="modal-close" onclick="fecharDetalhesProduto()">&times;</button></div>
+                        <div class="modal-tabs" role="tablist">
+                            <button type="button" class="modal-tab active" data-modal-tab="dados"><i class="fas fa-tag"></i> Dados</button>
+                            <button type="button" class="modal-tab" data-modal-tab="composicao"><i class="fas fa-sitemap"></i> Composição</button>
+                            <button type="button" class="modal-tab" data-modal-tab="variacoes"><i class="fas fa-layer-group"></i> Variações</button>
                         </div>
-
                         <div class="modal-body">
-
-                            <div class="row">
-
-                                <div class="col-3">
-
-                                    <div class="form-group">
-
-                                        <label>Código</label>
-
-                                        <div id="detalheCodigo" class="form-control"></div>
-
-                                    </div>
-
+                            <section class="modal-tab-panel active" data-modal-panel="dados">
+                                <div class="modal-section-card">
+                                    <div class="row"><div class="col-3"><div class="form-group"><label>Código</label><div id="detalheCodigo" class="form-control"></div></div></div><div class="col"><div class="form-group"><label>Produto</label><div id="detalheNome" class="form-control"></div></div></div></div>
+                                    <div class="row"><div class="col"><div class="form-group"><label>Categoria</label><div id="detalheCategoria" class="form-control"></div></div></div><div class="col"><div class="form-group"><label>Marca</label><div id="detalheMarca" class="form-control"></div></div></div><div class="col"><div class="form-group"><label>Unidade</label><div id="detalheUnidade" class="form-control"></div></div></div></div>
+                                    <div class="form-group"><label>Descrição</label><div id="detalheDescricao" class="form-control" style="height:auto;min-height:70px;padding-top:12px;"></div></div>
+                                    <div class="row"><div class="col"><div class="form-group"><label>NCM</label><div id="detalheNcm" class="form-control"></div></div></div><div class="col"><div class="form-group"><label>CFOP</label><div id="detalheCfop" class="form-control"></div></div></div><div class="col"><div class="form-group"><label>Status</label><div id="detalheStatus"></div></div></div></div>
                                 </div>
-
-                                <div class="col">
-
-                                    <div class="form-group">
-
-                                        <label>Produto</label>
-
-                                        <div id="detalheNome" class="form-control"></div>
-
-                                    </div>
-
-                                </div>
-
-                            </div>
-
-                            <div class="row">
-
-                                <div class="col">
-
-                                    <div class="form-group">
-
-                                        <label>Categoria</label>
-
-                                        <div id="detalheCategoria" class="form-control"></div>
-
-                                    </div>
-
-                                </div>
-
-                                <div class="col">
-
-                                    <div class="form-group">
-
-                                        <label>Marca</label>
-
-                                        <div id="detalheMarca" class="form-control"></div>
-
-                                    </div>
-
-                                </div>
-
-                                <div class="col">
-
-                                    <div class="form-group">
-
-                                        <label>Unidade</label>
-
-                                        <div id="detalheUnidade" class="form-control"></div>
-
-                                    </div>
-
-                                </div>
-
-                            </div>
-
-                            <div class="form-group">
-
-                                <label>Descrição</label>
-
-                                <div id="detalheDescricao" class="form-control"
-                                    style="height: auto; min-height: 70px; padding-top: 12px;">
-                                </div>
-
-                            </div>
-
-                            <div class="row">
-
-                                <div class="col">
-
-                                    <div class="form-group">
-
-                                        <label>NCM</label>
-
-                                        <div id="detalheNcm" class="form-control"></div>
-
-                                    </div>
-
-                                </div>
-
-                                <div class="col">
-
-                                    <div class="form-group">
-
-                                        <label>CFOP</label>
-
-                                        <div id="detalheCfop" class="form-control"></div>
-
-                                    </div>
-
-                                </div>
-
-                                <div class="col">
-
-                                    <div class="form-group">
-
-                                        <label>Status</label>
-
-                                        <div id="detalheStatus"></div>
-
-                                    </div>
-
-                                </div>
-
-                            </div>
-
-                            <hr class="mt-3 mb-3">
-
-                            <div class="d-flex justify-between align-center mt-3 mb-2">
-                                <h3>Composição / Itens do Padrão</h3>
-                                <span id="detalheCustoComposicao" class="badge badge-primary">R$ 0,00</span>
-                            </div>
-
-                            <div class="table-responsive">
-                                <table class="table">
-                                    <thead>
-                                        <tr>
-                                            <th>Item</th>
-                                            <th>Qtd.</th>
-                                            <th>Custo unitário</th>
-                                            <th>Total</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="tabelaDetalhesComposicao"></tbody>
-                                </table>
-                            </div>
-
-                            <div class="d-flex justify-between align-center mt-3 mb-2">
-
-                                <h3>
-                                    Variações do Produto
-                                </h3>
-
-                                <span id="detalheQuantidadeVariacoes" class="badge badge-primary">
-                                    0 variações
-                                </span>
-
-                            </div>
-
-                            <div class="table-responsive">
-
-                                <table class="table">
-
-                                    <thead>
-
-                                        <tr>
-
-                                            <th>SKU</th>
-                                            <th>Descrição</th>
-                                            <th>Tamanho</th>
-                                            <th>Saída</th>
-                                            <th>Código de barras</th>
-                                            <th>Custo</th>
-                                            <th>Venda</th>
-                                            <th>Estoque</th>
-
-                                        </tr>
-
-                                    </thead>
-
-                                    <tbody id="tabelaDetalhesVariacoes">
-
-                                    </tbody>
-
-                                </table>
-
-                            </div>
-
+                            </section>
+                            <section class="modal-tab-panel" data-modal-panel="composicao">
+                                <div class="modal-section-card"><div class="modal-section-head"><div><h3>Composição / Itens do Padrão</h3><p>Materiais que formam o produto composto.</p></div><span id="detalheCustoComposicao" class="badge badge-primary">R$ 0,00</span></div><div class="table-responsive"><table class="table"><thead><tr><th>Item</th><th>Qtd.</th><th>Custo unitário</th><th>Total</th></tr></thead><tbody id="tabelaDetalhesComposicao"></tbody></table></div></div>
+                            </section>
+                            <section class="modal-tab-panel" data-modal-panel="variacoes">
+                                <div class="modal-section-card"><div class="modal-section-head"><div><h3>Variações do Produto</h3><p>Tamanhos, saídas, preços e estoque.</p></div><span id="detalheQuantidadeVariacoes" class="badge badge-primary">0 variações</span></div><div class="table-responsive"><table class="table"><thead><tr><th>SKU</th><th>Descrição</th><th>Tamanho</th><th>Saída</th><th>Código de barras</th><th>Custo</th><th>Venda</th><th>Estoque</th></tr></thead><tbody id="tabelaDetalhesVariacoes"></tbody></table></div></div>
+                            </section>
                         </div>
-
-                        <div class="modal-footer">
-
-                            <button type="button" class="btn btn-light" onclick="fecharDetalhesProduto()">
-
-                                Fechar
-
-                            </button>
-
-                            <button type="button" class="btn btn-warning" id="btnEditarDetalhesProduto">
-
-                                <i class="fas fa-edit"></i>
-
-                                Editar Produto
-
-                            </button>
-
-                        </div>
-
+                        <div class="modal-footer"><button type="button" class="btn btn-light" onclick="fecharDetalhesProduto()">Fechar</button><button type="button" class="btn btn-warning" id="btnEditarDetalhesProduto"><i class="fas fa-edit"></i> Editar Produto</button></div>
                     </div>
-
                 </div>
 
             </section>

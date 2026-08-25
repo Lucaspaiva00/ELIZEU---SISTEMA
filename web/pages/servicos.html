@@ -35,25 +35,14 @@
                 </table></div>
             </div></div>
 
-            <div class="modal-overlay" id="modalServico">
-                <div class="modal modal-xl">
-                    <div class="modal-header"><h2 id="tituloModalServico">Novo serviço</h2><button class="modal-close" onclick="fecharModalServico()">&times;</button></div>
+            <div class="modal-overlay" id="modalServico" data-modal-tabs>
+                <div class="modal modal-xl modal-tabbed">
+                    <div class="modal-header"><div><h2 id="tituloModalServico">Novo serviço</h2><p class="modal-section-help">Dados do serviço e suas variações em guias separadas.</p></div><button class="modal-close" onclick="fecharModalServico()">&times;</button></div>
+                    <div class="modal-tabs" role="tablist"><button type="button" class="modal-tab active" data-modal-tab="dados"><i class="fas fa-screwdriver-wrench"></i> Dados</button><button type="button" class="modal-tab" data-modal-tab="variacoes"><i class="fas fa-layer-group"></i> Variações e preços</button></div>
                     <form id="formServico">
                         <div class="modal-body">
-                            <div class="row">
-                                <div class="col"><div class="form-group"><label>Código *</label><input id="codigo" class="form-control" required></div></div>
-                                <div class="col"><div class="form-group"><label>Nome *</label><input id="nome" class="form-control" required></div></div>
-                            </div>
-                            <div class="row">
-                                <div class="col"><div class="form-group"><label>Categoria *</label><select id="categoriaId" class="form-control" required></select></div></div>
-                                <div class="col"><div class="form-group"><label>Unidade *</label><select id="unidadeMedida" class="form-control"><option value="UN">Unidade</option><option value="H">Hora</option><option value="DIA">Diária</option><option value="M">Metro</option><option value="M2">Metro quadrado</option><option value="M3">Metro cúbico</option><option value="PC">Peça</option></select></div></div>
-                            </div>
-                            <div class="form-group"><label>Descrição</label><textarea id="descricao" class="form-control" rows="2"></textarea></div>
-                            <div class="d-flex justify-between align-center mb-3 mt-3"><h3>Variações do serviço</h3><button type="button" class="btn btn-success" onclick="adicionarVariacao()"><i class="fas fa-plus"></i> Adicionar variação</button></div>
-                            <div class="table-responsive"><table class="table">
-                                <thead><tr><th>Código *</th><th>Descrição *</th><th>Custo</th><th>Preço de venda *</th><th width="60"></th></tr></thead>
-                                <tbody id="tabelaVariacoes"></tbody>
-                            </table></div>
+                            <section class="modal-tab-panel active" data-modal-panel="dados"><div class="modal-section-card"><div class="modal-section-head"><div><h3>Identificação do serviço</h3><p>Cadastro principal e unidade de cobrança.</p></div></div><div class="row"><div class="col"><div class="form-group"><label>Código *</label><input id="codigo" class="form-control" required></div></div><div class="col"><div class="form-group"><label>Nome *</label><input id="nome" class="form-control" required></div></div></div><div class="row"><div class="col"><div class="form-group"><label>Categoria *</label><select id="categoriaId" class="form-control" required></select></div></div><div class="col"><div class="form-group"><label>Unidade *</label><select id="unidadeMedida" class="form-control"><option value="UN">Unidade</option><option value="H">Hora</option><option value="DIA">Diária</option><option value="M">Metro</option><option value="M2">Metro quadrado</option><option value="M3">Metro cúbico</option><option value="PC">Peça</option></select></div></div></div><div class="form-group"><label>Descrição</label><textarea id="descricao" class="form-control" rows="2"></textarea></div></div></section>
+                            <section class="modal-tab-panel" data-modal-panel="variacoes"><div class="modal-section-card"><div class="modal-section-head"><div><h3>Variações do serviço</h3><p>Defina custo e preço de venda de cada variação.</p></div><button type="button" class="btn btn-success" onclick="adicionarVariacao()"><i class="fas fa-plus"></i> Adicionar variação</button></div><div class="table-responsive"><table class="table"><thead><tr><th>Código *</th><th>Descrição *</th><th>Custo</th><th>Preço de venda *</th><th width="60"></th></tr></thead><tbody id="tabelaVariacoes"></tbody></table></div></div></section>
                         </div>
                         <div class="modal-footer"><button type="button" class="btn btn-light" onclick="fecharModalServico()">Cancelar</button><button type="submit" class="btn btn-primary">Salvar serviço</button></div>
                     </form>

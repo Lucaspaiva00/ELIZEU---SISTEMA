@@ -175,307 +175,37 @@
                 </div>
                 <!-- Modal -->
 
-                <div class="modal-overlay" id="modalCliente">
-
-                    <div class="modal modal-lg">
-
-                        <div class="modal-header">
-
-                            <h2 class="modal-title">
-
-                                Cadastro de Cliente
-
-                            </h2>
-
-                            <button type="button" class="modal-close" onclick="fecharModal()">
-
-                                &times;
-
-                            </button>
-
+                <div class="modal-overlay" id="modalCliente" data-modal-tabs>
+                    <div class="modal modal-lg modal-tabbed">
+                        <div class="modal-header"><div><h2 class="modal-title">Cadastro de Cliente</h2><p class="modal-section-help">Cadastro separado em identificação, contato, endereço e condições comerciais.</p></div><button type="button" class="modal-close" onclick="fecharModal()">&times;</button></div>
+                        <div class="modal-tabs" role="tablist">
+                            <button type="button" class="modal-tab active" data-modal-tab="dados"><i class="fas fa-user"></i> Identificação</button>
+                            <button type="button" class="modal-tab" data-modal-tab="contato"><i class="fas fa-phone"></i> Contato</button>
+                            <button type="button" class="modal-tab" data-modal-tab="endereco"><i class="fas fa-location-dot"></i> Endereço</button>
+                            <button type="button" class="modal-tab" data-modal-tab="comercial"><i class="fas fa-handshake"></i> Comercial</button>
                         </div>
-
                         <div class="modal-body">
-
                             <form id="formCliente">
-
-                                <div class="row">
-
-                                    <div class="col-3">
-
-                                        <div class="form-group">
-
-                                            <label>Tipo Pessoa</label>
-
-                                            <select id="tipoPessoa" class="form-control">
-
-                                                <option value="FISICA">
-
-                                                    Pessoa Física
-
-                                                </option>
-
-                                                <option value="JURIDICA">
-
-                                                    Pessoa Jurídica
-
-                                                </option>
-
-                                            </select>
-
-                                        </div>
-
+                                <section class="modal-tab-panel active" data-modal-panel="dados">
+                                    <div class="modal-section-card">
+                                        <div class="modal-section-head"><div><h3>Identificação</h3><p>Dados principais do cliente.</p></div></div>
+                                        <div class="row"><div class="col-3"><div class="form-group"><label>Tipo Pessoa</label><select id="tipoPessoa" class="form-control"><option value="FISICA">Pessoa Física</option><option value="JURIDICA">Pessoa Jurídica</option></select></div></div><div class="col"><div class="form-group"><label>Nome</label><input type="text" id="nome" class="form-control" required></div></div></div>
+                                        <div class="row"><div class="col"><div class="form-group"><label>Nome Fantasia</label><input type="text" id="nomeFantasia" class="form-control"></div></div><div class="col-3"><div class="form-group"><label>CPF / CNPJ</label><input type="text" id="cpfCnpj" class="form-control"></div></div><div class="col-3"><div class="form-group"><label>Inscrição Estadual</label><input type="text" id="inscricaoEstadual" class="form-control"></div></div></div>
                                     </div>
-
-                                    <div class="col">
-
-                                        <div class="form-group">
-
-                                            <label>Nome</label>
-
-                                            <input type="text" id="nome" class="form-control" required>
-
-                                        </div>
-
-                                    </div>
-
-                                </div>
-
-                                <div class="row">
-
-                                    <div class="col">
-
-                                        <div class="form-group">
-
-                                            <label>Nome Fantasia</label>
-
-                                            <input type="text" id="nomeFantasia" class="form-control">
-
-                                        </div>
-
-                                    </div>
-
-                                    <div class="col-3">
-
-                                        <div class="form-group">
-
-                                            <label>CPF / CNPJ</label>
-
-                                            <input type="text" id="cpfCnpj" class="form-control">
-
-                                        </div>
-
-                                    </div>
-
-                                    <div class="col-3">
-
-                                        <div class="form-group">
-
-                                            <label>Inscrição Estadual</label>
-
-                                            <input type="text" id="inscricaoEstadual" class="form-control">
-
-                                        </div>
-
-                                    </div>
-
-                                </div>
-
-                                <div class="row">
-
-                                    <div class="col">
-
-                                        <div class="form-group">
-
-                                            <label>E-mail</label>
-
-                                            <input type="email" id="email" class="form-control">
-
-                                        </div>
-
-                                    </div>
-
-                                    <div class="col-3">
-
-                                        <div class="form-group">
-
-                                            <label>Telefone</label>
-
-                                            <input type="text" id="telefone" class="form-control">
-
-                                        </div>
-
-                                    </div>
-
-                                    <div class="col-3">
-
-                                        <div class="form-group">
-
-                                            <label>Celular</label>
-
-                                            <input type="text" id="celular" class="form-control">
-
-                                        </div>
-
-                                    </div>
-
-                                </div>
-
-                                <div class="row">
-
-                                    <div class="col-3">
-
-                                        <div class="form-group">
-
-                                            <label>CEP</label>
-
-                                            <input type="text" id="cep" class="form-control">
-
-                                        </div>
-
-                                    </div>
-
-                                    <div class="col">
-
-                                        <div class="form-group">
-
-                                            <label>Endereço</label>
-
-                                            <input type="text" id="endereco" class="form-control">
-
-                                        </div>
-
-                                    </div>
-
-                                    <div class="col-3">
-
-                                        <div class="form-group">
-
-                                            <label>Número</label>
-
-                                            <input type="text" id="numero" class="form-control">
-
-                                        </div>
-
-                                    </div>
-
-                                </div>
-
-                                <div class="row">
-
-                                    <div class="col">
-
-                                        <div class="form-group">
-
-                                            <label>Complemento</label>
-
-                                            <input type="text" id="complemento" class="form-control">
-
-                                        </div>
-
-                                    </div>
-
-                                    <div class="col">
-
-                                        <div class="form-group">
-
-                                            <label>Bairro</label>
-
-                                            <input type="text" id="bairro" class="form-control">
-
-                                        </div>
-
-                                    </div>
-
-                                </div>
-                                <div class="row">
-
-                                    <div class="col">
-
-                                        <div class="form-group">
-
-                                            <label>Cidade</label>
-
-                                            <input type="text" id="cidade" class="form-control">
-
-                                        </div>
-
-                                    </div>
-
-                                    <div class="col-3">
-
-                                        <div class="form-group">
-
-                                            <label>Estado</label>
-
-                                            <input type="text" id="estado" maxlength="2" class="form-control">
-
-                                        </div>
-
-                                    </div>
-
-                                </div>
-
-                                <div class="row">
-
-                                    <div class="col-3">
-
-                                        <div class="form-group">
-
-                                            <label>Limite de Crédito</label>
-
-                                            <input type="number" step="0.01" id="limiteCredito" class="form-control">
-
-                                        </div>
-
-                                    </div>
-
-                                    <div class="col-3">
-
-                                        <div class="form-group">
-
-                                            <label>Prazo Padrão (dias)</label>
-
-                                            <input type="number" id="prazoPagamentoPadrao" class="form-control">
-
-                                        </div>
-
-                                    </div>
-
-                                </div>
-
-                                <div class="form-group">
-
-                                    <label>Observações</label>
-
-                                    <textarea id="observacoes" class="form-control"></textarea>
-
-                                </div>
-
+                                </section>
+                                <section class="modal-tab-panel" data-modal-panel="contato">
+                                    <div class="modal-section-card"><div class="modal-section-head"><div><h3>Contato</h3><p>Canais usados para comunicação e envio de documentos.</p></div></div><div class="modal-fields-3"><div class="form-group"><label>E-mail</label><input type="email" id="email" class="form-control"></div><div class="form-group"><label>Telefone</label><input type="text" id="telefone" class="form-control"></div><div class="form-group"><label>Celular</label><input type="text" id="celular" class="form-control"></div></div></div>
+                                </section>
+                                <section class="modal-tab-panel" data-modal-panel="endereco">
+                                    <div class="modal-section-card"><div class="modal-section-head"><div><h3>Endereço</h3><p>O CEP continua preenchendo os dados automaticamente.</p></div></div><div class="row"><div class="col-3"><div class="form-group"><label>CEP</label><input type="text" id="cep" class="form-control"></div></div><div class="col"><div class="form-group"><label>Endereço</label><input type="text" id="endereco" class="form-control"></div></div><div class="col-3"><div class="form-group"><label>Número</label><input type="text" id="numero" class="form-control"></div></div></div><div class="row"><div class="col"><div class="form-group"><label>Complemento</label><input type="text" id="complemento" class="form-control"></div></div><div class="col"><div class="form-group"><label>Bairro</label><input type="text" id="bairro" class="form-control"></div></div></div><div class="row"><div class="col"><div class="form-group"><label>Cidade</label><input type="text" id="cidade" class="form-control"></div></div><div class="col-3"><div class="form-group"><label>Estado</label><input type="text" id="estado" maxlength="2" class="form-control"></div></div></div></div>
+                                </section>
+                                <section class="modal-tab-panel" data-modal-panel="comercial">
+                                    <div class="modal-section-card"><div class="modal-section-head"><div><h3>Condições comerciais</h3><p>Crédito, prazo padrão e observações internas.</p></div></div><div class="modal-fields-2"><div class="form-group"><label>Limite de Crédito</label><input type="number" step="0.01" id="limiteCredito" class="form-control"></div><div class="form-group"><label>Prazo Padrão (dias)</label><input type="number" id="prazoPagamentoPadrao" class="form-control"></div></div><div class="form-group"><label>Observações</label><textarea id="observacoes" class="form-control"></textarea></div></div>
+                                </section>
                             </form>
-
                         </div>
-
-                        <div class="modal-footer">
-
-                            <button class="btn btn-light" onclick="fecharModal()">
-
-                                Cancelar
-
-                            </button>
-
-                            <button type="button" class="btn btn-primary" onclick="salvarCliente()">
-
-                                <i class="fas fa-save"></i>
-
-                                Salvar Cliente
-
-                            </button>
-
-                        </div>
-
+                        <div class="modal-footer"><button class="btn btn-light" onclick="fecharModal()">Cancelar</button><button type="button" class="btn btn-primary" onclick="salvarCliente()"><i class="fas fa-save"></i> Salvar Cliente</button></div>
                     </div>
-
                 </div>
 
             </section>

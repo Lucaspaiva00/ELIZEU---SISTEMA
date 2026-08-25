@@ -44,38 +44,16 @@
         </main>
     </div>
 
-    <div class="modal-overlay" id="modalConta">
-        <div class="modal modal-lg">
+    <div class="modal-overlay" id="modalConta" data-modal-tabs>
+        <div class="modal modal-lg modal-tabbed">
             <div class="modal-header"><div><span class="modal-eyebrow">Conta a pagar</span><h2 class="modal-title" id="tituloModalConta">Nova despesa</h2></div><button class="modal-close" onclick="fecharModalConta()">&times;</button></div>
+            <div class="modal-tabs" role="tablist"><button type="button" class="modal-tab active" data-modal-tab="dados"><i class="fas fa-building"></i> Despesa</button><button type="button" class="modal-tab" data-modal-tab="financeiro"><i class="fas fa-calendar-days"></i> Financeiro</button><button type="button" class="modal-tab" data-modal-tab="geracao"><i class="fas fa-repeat"></i> Parcelamento</button></div>
             <form id="formConta">
                 <div class="modal-body">
                     <input type="hidden" id="contaId">
-                    <div class="form-grid form-grid-2">
-                        <div class="form-group"><label>Fornecedor</label><input id="fornecedorNome" class="form-control" placeholder="Nome ou razão social"></div>
-                        <div class="form-group"><label>CPF/CNPJ do fornecedor</label><input id="fornecedorDocumento" class="form-control" placeholder="Documento opcional"></div>
-                        <div class="form-group form-span-2"><label>Descrição *</label><input id="descricao" class="form-control" required placeholder="Ex.: Aluguel do escritório"></div>
-                        <div class="form-group"><label>Número do documento</label><input id="numeroDocumento" class="form-control" placeholder="Nota, boleto ou referência"></div>
-                        <div class="form-group"><label>Valor total *</label><input id="valorOriginal" type="number" min="0.01" step="0.01" class="form-control" required></div>
-                        <div class="form-group"><label>Data de competência</label><input id="dataCompetencia" type="date" class="form-control"></div>
-                        <div class="form-group"><label>Data de emissão</label><input id="dataEmissao" type="date" class="form-control"></div>
-                        <div class="form-group"><label>Primeiro vencimento *</label><input id="dataVencimento" type="date" class="form-control" required></div>
-                        <div class="form-group"><label>Forma de pagamento</label><select id="formaPagamento" class="form-control"></select></div>
-                        <div class="form-group"><label>Categoria financeira</label><select id="categoriaFinanceiraId" class="form-control"><option value="">Despesas Operacionais</option></select></div>
-                        <div class="form-group"><label>Centro de custo</label><select id="centroCustoId" class="form-control"><option value="">Geral</option></select></div>
-                    </div>
-
-                    <div id="blocoGeracao" class="generation-box">
-                        <div class="generation-header"><div><strong>Gerar mais de um lançamento</strong><span>Parcelamento divide o valor; recorrência repete o valor.</span></div><label class="switch-control"><input id="gerarMultiplos" type="checkbox"><span></span></label></div>
-                        <div id="camposGeracao" class="form-grid form-grid-3 d-none">
-                            <div class="form-group"><label>Modo de geração</label><select id="modoGeracao" class="form-control"><option value="PARCELAMENTO">Parcelamento</option><option value="RECORRENCIA">Recorrência</option></select></div>
-                            <div class="form-group"><label>Quantidade</label><input id="quantidadeParcelas" type="number" min="2" max="120" value="2" class="form-control"></div>
-                            <div class="form-group"><label>Periodicidade</label><select id="periodicidadeParcelas" class="form-control"><option value="SEMANAL">Semanal</option><option value="QUINZENAL">Quinzenal</option><option value="MENSAL" selected>Mensal</option><option value="BIMESTRAL">Bimestral</option><option value="TRIMESTRAL">Trimestral</option><option value="SEMESTRAL">Semestral</option><option value="ANUAL">Anual</option><option value="PERSONALIZADA">Personalizada</option></select></div>
-                            <div class="form-group d-none" id="grupoIntervalo"><label>Intervalo em dias</label><input id="intervaloPersonalizadoDias" type="number" min="1" value="30" class="form-control"></div>
-                            <div class="generation-preview form-span-2" id="textoGeracao"></div>
-                        </div>
-                    </div>
-
-                    <div class="form-group"><label>Observações</label><textarea id="observacoes" class="form-control" rows="3"></textarea></div>
+                    <section class="modal-tab-panel active" data-modal-panel="dados"><div class="modal-section-card"><div class="form-grid form-grid-2"><div class="form-group"><label>Fornecedor</label><input id="fornecedorNome" class="form-control" placeholder="Nome ou razão social"></div><div class="form-group"><label>CPF/CNPJ do fornecedor</label><input id="fornecedorDocumento" class="form-control" placeholder="Documento opcional"></div><div class="form-group form-span-2"><label>Descrição *</label><input id="descricao" class="form-control" required placeholder="Ex.: Aluguel do escritório"></div><div class="form-group"><label>Número do documento</label><input id="numeroDocumento" class="form-control" placeholder="Nota, boleto ou referência"></div><div class="form-group"><label>Valor total *</label><input id="valorOriginal" type="number" min="0.01" step="0.01" class="form-control" required></div></div></div></section>
+                    <section class="modal-tab-panel" data-modal-panel="financeiro"><div class="modal-section-card"><div class="form-grid form-grid-2"><div class="form-group"><label>Data de competência</label><input id="dataCompetencia" type="date" class="form-control"></div><div class="form-group"><label>Data de emissão</label><input id="dataEmissao" type="date" class="form-control"></div><div class="form-group"><label>Primeiro vencimento *</label><input id="dataVencimento" type="date" class="form-control" required></div><div class="form-group"><label>Forma de pagamento</label><select id="formaPagamento" class="form-control"></select></div><div class="form-group"><label>Categoria financeira</label><select id="categoriaFinanceiraId" class="form-control"><option value="">Despesas Operacionais</option></select></div><div class="form-group"><label>Centro de custo</label><select id="centroCustoId" class="form-control"><option value="">Geral</option></select></div></div><div class="form-group"><label>Observações</label><textarea id="observacoes" class="form-control" rows="3"></textarea></div></div></section>
+                    <section class="modal-tab-panel" data-modal-panel="geracao"><div class="modal-section-card"><div id="blocoGeracao" class="generation-box"><div class="generation-header"><div><strong>Gerar mais de um lançamento</strong><span>Parcelamento divide o valor; recorrência repete o valor.</span></div><label class="switch-control"><input id="gerarMultiplos" type="checkbox"><span></span></label></div><div id="camposGeracao" class="form-grid form-grid-3 d-none"><div class="form-group"><label>Modo de geração</label><select id="modoGeracao" class="form-control"><option value="PARCELAMENTO">Parcelamento</option><option value="RECORRENCIA">Recorrência</option></select></div><div class="form-group"><label>Quantidade</label><input id="quantidadeParcelas" type="number" min="2" max="120" value="2" class="form-control"></div><div class="form-group"><label>Periodicidade</label><select id="periodicidadeParcelas" class="form-control"><option value="SEMANAL">Semanal</option><option value="QUINZENAL">Quinzenal</option><option value="MENSAL" selected>Mensal</option><option value="BIMESTRAL">Bimestral</option><option value="TRIMESTRAL">Trimestral</option><option value="SEMESTRAL">Semestral</option><option value="ANUAL">Anual</option><option value="PERSONALIZADA">Personalizada</option></select></div><div class="form-group d-none" id="grupoIntervalo"><label>Intervalo em dias</label><input id="intervaloPersonalizadoDias" type="number" min="1" value="30" class="form-control"></div><div class="generation-preview form-span-2" id="textoGeracao"></div></div></div></div></section>
                 </div>
                 <div class="modal-footer"><button type="button" class="btn btn-light" onclick="fecharModalConta()">Cancelar</button><button type="submit" class="btn btn-primary" id="btnSalvarConta"><i class="fas fa-check"></i> Salvar despesa</button></div>
             </form>
