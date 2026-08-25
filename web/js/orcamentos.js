@@ -9,6 +9,9 @@ let orcamentoEditandoId = null;
 let orcamentoVisualizadoId = null;
 let orcamentoAprovandoId = null;
 
+let whatsappOrcamentoAtual = null;
+let whatsappPdfBlob = null;
+
 const modalOrcamento = document.getElementById("modalOrcamento");
 const modalSelecionarProduto = document.getElementById(
     "modalSelecionarProduto"
@@ -350,6 +353,7 @@ function renderizarTabelaOrcamentos(lista) {
             <td><div class="table-actions">
                 <button type="button" class="btn btn-light" onclick="visualizarOrcamento(${orcamento.id})" title="Visualizar"><i class="fas fa-eye"></i></button>
                 <button type="button" class="btn btn-light" onclick="gerarPdfOrcamento(${orcamento.id})" title="Gerar PDF"><i class="fas fa-file-pdf"></i></button>
+                <button type="button" class="btn btn-success" onclick="abrirEnvioWhatsApp(${orcamento.id}, this)" title="Enviar orçamento pelo WhatsApp"><i class="fa-brands fa-whatsapp"></i></button>
                 ${podeAprovar ? `<button type="button" class="btn btn-success" onclick="abrirModalAprovacao(${orcamento.id})" title="Aprovar e gerar venda"><i class="fas fa-check"></i></button>` : ""}
                 ${podeEditar ? `<button type="button" class="btn btn-warning" onclick="editarOrcamento(${orcamento.id})" title="Editar"><i class="fas fa-edit"></i></button>` : ""}
                 ${podeEditar ? `<button type="button" class="btn btn-danger" onclick="excluirOrcamento(${orcamento.id})" title="Excluir"><i class="fas fa-trash"></i></button>` : ""}
@@ -1566,6 +1570,12 @@ function gerarPdfOrcamentoVisualizado() {
     if (orcamentoVisualizadoId) gerarPdfOrcamento(orcamentoVisualizadoId);
 }
 
+function enviarWhatsAppOrcamentoVisualizado(botao) {
+    if (orcamentoVisualizadoId) {
+        abrirEnvioWhatsApp(orcamentoVisualizadoId, botao);
+    }
+}
+
 function abrirModalAprovacao(id) {
     orcamentoAprovandoId = id;
     const hoje = new Date();
@@ -1608,6 +1618,377 @@ async function confirmarAprovacaoOrcamento() {
     } finally {
         botao.disabled = false;
         botao.innerHTML = '<i class="fas fa-check"></i> Aprovar e gerar venda';
+    }
+}
+
+function normalizarNumeroWhatsApp(valor) {
+    let digitos = String(valor ?? "").replace(/\D/g, "");
+
+    if (!digitos) return "";
+
+    while (digitos.startsWith("0")) {
+        digitos = digitos.slice(1);
+    }
+
+    if (digitos.length === 10 || digitos.length === 11) {
+        return `55${digitos}`;
+    }
+
+    if ((digitos.length === 12 || digitos.length === 13) && digitos.startsWith("55")) {
+        return digitos;
+    }
+
+    return digitos;
+}
+
+function mensagemPadraoWhatsApp(orcamento) {
+    const cliente = orcamento?.cliente || {};
+    const nomeCliente = String(cliente.nome || "").trim();
+    const primeiroNome = nomeCliente ? nomeCliente.split(/\s+/)[0] : "";
+    const saudacao = primeiroNome ? `Olá, ${primeiroNome}!` : "Olá!";
+    const numero = String(orcamento?.numero ?? "").padStart(5, "0");
+
+    return `${saudacao}\n\nSegue o orçamento nº ${numero} da Potência Padrões, no valor total de ${moeda(orcamento?.total || 0)}.\n\nQualquer dúvida, estamos à disposição.`;
+}
+
+function nomeArquivoPdfWhatsApp(orcamento) {
+    const numero = String(orcamento?.numero ?? orcamento?.id ?? "orcamento").padStart(5, "0");
+    return `ORCAMENTO-${numero}-POTENCIA-PADROES.pdf`;
+}
+
+function baixarArquivoBlob(blob, nomeArquivo) {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = nomeArquivo;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+}
+
+async function capturarHtmlPdfOrcamento(id) {
+    let htmlGerado = "";
+    const abrirJanelaOriginal = window.open;
+
+    const janelaFalsa = {
+        document: {
+            write(conteudo) {
+                htmlGerado += String(conteudo ?? "");
+            },
+            close() {}
+        },
+        focus() {},
+        print() {},
+        close() {}
+    };
+
+    window.open = () => janelaFalsa;
+
+    try {
+        await gerarPdfOrcamento(id);
+    } finally {
+        window.open = abrirJanelaOriginal;
+    }
+
+    if (!htmlGerado.trim()) {
+        throw new Error("Não foi possível montar o PDF do orçamento.");
+    }
+
+    return htmlGerado.replace(
+        /<script>[\s\S]*?window\.onload[\s\S]*?<\/script>/i,
+        ""
+    );
+}
+
+async function aguardarIframePdf(iframe) {
+    await new Promise((resolve) => {
+        let resolvido = false;
+
+        const finalizar = () => {
+            if (resolvido) return;
+            resolvido = true;
+            setTimeout(resolve, 250);
+        };
+
+        iframe.addEventListener("load", finalizar, { once: true });
+        setTimeout(finalizar, 1800);
+    });
+
+    const documento = iframe.contentDocument;
+    const imagens = Array.from(documento?.images || []);
+
+    await Promise.all(
+        imagens.map((imagem) => {
+            if (imagem.complete) return Promise.resolve();
+
+            return new Promise((resolve) => {
+                imagem.addEventListener("load", resolve, { once: true });
+                imagem.addEventListener("error", resolve, { once: true });
+                setTimeout(resolve, 1200);
+            });
+        })
+    );
+}
+
+async function gerarBlobPdfOrcamento(id) {
+    if (typeof window.html2canvas !== "function") {
+        throw new Error("Biblioteca de geração do PDF não carregou. Atualize a página e tente novamente.");
+    }
+
+    const JsPdf = window.jspdf?.jsPDF || window.jsPDF;
+
+    if (!JsPdf) {
+        throw new Error("Biblioteca de PDF não carregou. Atualize a página e tente novamente.");
+    }
+
+    const html = await capturarHtmlPdfOrcamento(id);
+    const iframe = document.createElement("iframe");
+
+    iframe.setAttribute("aria-hidden", "true");
+    iframe.style.position = "fixed";
+    iframe.style.left = "-12000px";
+    iframe.style.top = "0";
+    iframe.style.width = "900px";
+    iframe.style.height = "1400px";
+    iframe.style.border = "0";
+    iframe.style.opacity = "0";
+    iframe.style.pointerEvents = "none";
+
+    document.body.appendChild(iframe);
+    iframe.srcdoc = html;
+
+    try {
+        await aguardarIframePdf(iframe);
+
+        const documento = iframe.contentDocument;
+        const alvo = documento?.querySelector(".folha") || documento?.body;
+
+        if (!alvo) {
+            throw new Error("Não foi possível renderizar o orçamento para PDF.");
+        }
+
+        const canvas = await window.html2canvas(alvo, {
+            scale: 2,
+            useCORS: true,
+            backgroundColor: "#ffffff",
+            logging: false,
+            scrollX: 0,
+            scrollY: 0,
+            windowWidth: Math.max(alvo.scrollWidth, 900),
+            windowHeight: Math.max(alvo.scrollHeight, 1200)
+        });
+
+        const pdf = new JsPdf({
+            orientation: "portrait",
+            unit: "mm",
+            format: "a4",
+            compress: true
+        });
+
+        const margem = 8;
+        const larguraPagina = pdf.internal.pageSize.getWidth();
+        const alturaPagina = pdf.internal.pageSize.getHeight();
+        const larguraImagem = larguraPagina - (margem * 2);
+        const alturaImagem = (canvas.height * larguraImagem) / canvas.width;
+        const alturaUtil = alturaPagina - (margem * 2);
+        const imagem = canvas.toDataURL("image/jpeg", 0.96);
+
+        let alturaRestante = alturaImagem;
+        let posicaoY = margem;
+
+        pdf.addImage(
+            imagem,
+            "JPEG",
+            margem,
+            posicaoY,
+            larguraImagem,
+            alturaImagem,
+            undefined,
+            "FAST"
+        );
+
+        alturaRestante -= alturaUtil;
+
+        while (alturaRestante > 0.5) {
+            pdf.addPage();
+            posicaoY = margem - (alturaImagem - alturaRestante);
+
+            pdf.addImage(
+                imagem,
+                "JPEG",
+                margem,
+                posicaoY,
+                larguraImagem,
+                alturaImagem,
+                undefined,
+                "FAST"
+            );
+
+            alturaRestante -= alturaUtil;
+        }
+
+        return pdf.output("blob");
+    } finally {
+        iframe.remove();
+    }
+}
+
+function abrirModalWhatsApp() {
+    document.getElementById("modalEnviarWhatsApp")?.classList.add("active");
+}
+
+function fecharModalWhatsApp() {
+    document.getElementById("modalEnviarWhatsApp")?.classList.remove("active");
+    whatsappOrcamentoAtual = null;
+    whatsappPdfBlob = null;
+}
+
+async function abrirEnvioWhatsApp(id, botao = null) {
+    const htmlOriginal = botao?.innerHTML;
+
+    try {
+        if (botao) {
+            botao.disabled = true;
+            botao.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        }
+
+        const resposta = await get(`/orcamentos/${id}`);
+
+        if (!resposta?.sucesso || !resposta.orcamento) {
+            throw new Error(resposta?.mensagem || "Não foi possível carregar o orçamento.");
+        }
+
+        const orcamento = resposta.orcamento;
+        const cliente = orcamento.cliente || {};
+        const numero = normalizarNumeroWhatsApp(cliente.celular || cliente.telefone);
+
+        if (!numero || numero.length < 12) {
+            throw new Error("O cliente não possui um WhatsApp válido cadastrado. Cadastre o celular do cliente e tente novamente.");
+        }
+
+        whatsappOrcamentoAtual = orcamento;
+        whatsappPdfBlob = await gerarBlobPdfOrcamento(id);
+
+        document.getElementById("whatsappCliente").value = cliente.nome || "Cliente";
+        document.getElementById("whatsappNumero").value = `+${numero}`;
+        document.getElementById("whatsappMensagem").value = mensagemPadraoWhatsApp(orcamento);
+        document.getElementById("whatsappArquivoNome").textContent = nomeArquivoPdfWhatsApp(orcamento);
+
+        const btnCompartilhar = document.getElementById("btnCompartilharPdfWhatsApp");
+        const arquivoTeste = new File(
+            [whatsappPdfBlob],
+            nomeArquivoPdfWhatsApp(orcamento),
+            { type: "application/pdf" }
+        );
+
+        const suporteCompartilhar = Boolean(
+            navigator.share &&
+            navigator.canShare &&
+            navigator.canShare({ files: [arquivoTeste] })
+        );
+
+        btnCompartilhar.style.display = suporteCompartilhar ? "inline-flex" : "none";
+
+        abrirModalWhatsApp();
+    } catch (erro) {
+        console.error(erro);
+        mostrarMensagem(erro.message || "Erro ao preparar envio pelo WhatsApp.");
+    } finally {
+        if (botao) {
+            botao.disabled = false;
+            botao.innerHTML = htmlOriginal;
+        }
+    }
+}
+
+async function marcarOrcamentoEnviadoWhatsApp() {
+    if (!whatsappOrcamentoAtual?.id) return;
+
+    try {
+        await put(`/orcamentos/${whatsappOrcamentoAtual.id}/enviado`, {
+            canal: "WHATSAPP"
+        });
+        await carregarOrcamentos();
+    } catch (erro) {
+        console.error("Não foi possível atualizar o status do orçamento:", erro);
+    }
+}
+
+async function compartilharPdfWhatsApp() {
+    if (!whatsappOrcamentoAtual || !whatsappPdfBlob) {
+        return mostrarMensagem("Prepare o orçamento antes de compartilhar.");
+    }
+
+    const arquivo = new File(
+        [whatsappPdfBlob],
+        nomeArquivoPdfWhatsApp(whatsappOrcamentoAtual),
+        { type: "application/pdf" }
+    );
+
+    if (!navigator.share || !navigator.canShare?.({ files: [arquivo] })) {
+        return abrirWhatsAppWebComPdf();
+    }
+
+    try {
+        await navigator.share({
+            title: `Orçamento ${String(whatsappOrcamentoAtual.numero).padStart(5, "0")} - Potência Padrões`,
+            text: document.getElementById("whatsappMensagem").value.trim(),
+            files: [arquivo]
+        });
+
+        await marcarOrcamentoEnviadoWhatsApp();
+        fecharModalWhatsApp();
+        mostrarMensagem("Orçamento compartilhado com o PDF anexado.");
+    } catch (erro) {
+        if (erro?.name !== "AbortError") {
+            console.error(erro);
+            mostrarMensagem("Não foi possível compartilhar o PDF. Use a opção de abrir o WhatsApp.");
+        }
+    }
+}
+
+async function abrirWhatsAppWebComPdf() {
+    if (!whatsappOrcamentoAtual || !whatsappPdfBlob) {
+        return mostrarMensagem("Prepare o orçamento antes de enviar.");
+    }
+
+    const cliente = whatsappOrcamentoAtual.cliente || {};
+    const numero = normalizarNumeroWhatsApp(cliente.celular || cliente.telefone);
+    const mensagem = document.getElementById("whatsappMensagem").value.trim();
+    const nomeArquivo = nomeArquivoPdfWhatsApp(whatsappOrcamentoAtual);
+
+    if (!numero) {
+        return mostrarMensagem("O cliente não possui WhatsApp válido cadastrado.");
+    }
+
+    baixarArquivoBlob(whatsappPdfBlob, nomeArquivo);
+
+    const url = `https://wa.me/${numero}?text=${encodeURIComponent(mensagem)}`;
+    const janela = window.open(url, "_blank");
+
+    if (!janela) {
+        return mostrarMensagem("Permita pop-ups para abrir o WhatsApp.");
+    }
+
+    await marcarOrcamentoEnviadoWhatsApp();
+    fecharModalWhatsApp();
+    mostrarMensagem("PDF baixado e conversa do cliente aberta no WhatsApp. Anexe o arquivo que acabou de ser baixado e envie.");
+}
+
+async function copiarMensagemWhatsApp() {
+    const campo = document.getElementById("whatsappMensagem");
+    const texto = campo?.value || "";
+
+    if (!texto.trim()) return;
+
+    try {
+        await navigator.clipboard.writeText(texto);
+        mostrarMensagem("Mensagem copiada.");
+    } catch {
+        campo.select();
+        document.execCommand("copy");
+        mostrarMensagem("Mensagem copiada.");
     }
 }
 

@@ -373,6 +373,30 @@ class OrcamentoRepository {
         );
     }
 
+    async marcarEnviado(id, empresaId) {
+        const orcamento = await prisma.orcamento.findFirst({
+            where: { id, empresaId },
+            select: { id: true, status: true }
+        });
+
+        if (!orcamento) {
+            throw new Error("Orçamento não encontrado.");
+        }
+
+        if (["CANCELADO", "REJEITADO", "VENCIDO"].includes(orcamento.status)) {
+            throw new Error(`Não é possível marcar como enviado um orçamento com status ${orcamento.status}.`);
+        }
+
+        if (orcamento.status === "RASCUNHO") {
+            await prisma.orcamento.update({
+                where: { id },
+                data: { status: "ENVIADO" }
+            });
+        }
+
+        return this.buscarPorId(id, empresaId);
+    }
+
     async excluir(id, empresaId) {
         const resultado = await prisma.orcamento.deleteMany({
             where: { id, empresaId }

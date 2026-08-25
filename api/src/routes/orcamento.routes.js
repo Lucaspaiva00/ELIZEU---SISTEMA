@@ -9,6 +9,7 @@ router.post("/", auth, orcamentoController.criar);
 router.get("/", auth, orcamentoController.listar);
 
 router.put("/:id/aprovar", auth, orcamentoController.aprovar);
+router.put("/:id/enviado", auth, orcamentoController.marcarEnviado);
 
 router.get("/:id", auth, orcamentoController.buscarPorId);
 router.put("/:id", auth, orcamentoController.atualizar);

@@ -105,6 +105,26 @@ class OrcamentoController {
         }
     }
 
+    async marcarEnviado(req, res) {
+        try {
+            const orcamento = await orcamentoService.marcarEnviado(
+                Number(req.params.id),
+                req.usuario.empresaId
+            );
+
+            return res.json({
+                sucesso: true,
+                mensagem: "Orçamento marcado como enviado pelo WhatsApp.",
+                orcamento
+            });
+        } catch (error) {
+            return res.status(400).json({
+                sucesso: false,
+                mensagem: error.message
+            });
+        }
+    }
+
     async excluir(req, res) {
         try {
             await orcamentoService.excluir(

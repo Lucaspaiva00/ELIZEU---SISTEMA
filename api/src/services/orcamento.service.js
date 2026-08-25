@@ -191,6 +191,11 @@ class OrcamentoService {
         });
     }
 
+    async marcarEnviado(id, empresaId) {
+        await this.buscarPorId(id, empresaId);
+        return orcamentoRepository.marcarEnviado(id, empresaId);
+    }
+
     async excluir(id, empresaId) {
         const orcamento = await this.buscarPorId(id, empresaId);
 
