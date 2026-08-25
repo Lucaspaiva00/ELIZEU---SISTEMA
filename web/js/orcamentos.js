@@ -11,6 +11,7 @@ let orcamentoAprovandoId = null;
 
 let whatsappOrcamentoAtual = null;
 let whatsappPdfBlob = null;
+let whatsappAberturaManualConcluida = false;
 
 const modalOrcamento = document.getElementById("modalOrcamento");
 const modalSelecionarProduto = document.getElementById(
@@ -1838,10 +1839,23 @@ function abrirModalWhatsApp() {
     document.getElementById("modalEnviarWhatsApp")?.classList.add("active");
 }
 
+function atualizarEstadoConfirmacaoWhatsApp(habilitado) {
+    whatsappAberturaManualConcluida = Boolean(habilitado);
+
+    const botao = document.getElementById("btnConfirmarEnvioWhatsApp");
+    if (!botao) return;
+
+    botao.disabled = !whatsappAberturaManualConcluida;
+    botao.innerHTML = whatsappAberturaManualConcluida
+        ? '<i class="fas fa-check"></i> Confirmar envio'
+        : '<i class="fas fa-check"></i> Confirmar envio';
+}
+
 function fecharModalWhatsApp() {
     document.getElementById("modalEnviarWhatsApp")?.classList.remove("active");
     whatsappOrcamentoAtual = null;
     whatsappPdfBlob = null;
+    atualizarEstadoConfirmacaoWhatsApp(false);
 }
 
 async function abrirEnvioWhatsApp(id, botao = null) {
@@ -1869,6 +1883,7 @@ async function abrirEnvioWhatsApp(id, botao = null) {
 
         whatsappOrcamentoAtual = orcamento;
         whatsappPdfBlob = await gerarBlobPdfOrcamento(id);
+        atualizarEstadoConfirmacaoWhatsApp(false);
 
         document.getElementById("whatsappCliente").value = cliente.nome || "Cliente";
         document.getElementById("whatsappNumero").value = `+${numero}`;
@@ -1887,118 +1902,21 @@ async function abrirEnvioWhatsApp(id, botao = null) {
     }
 }
 
-function blobParaBase64(blob) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-
-        reader.onloadend = () => {
-            const resultado = String(reader.result || "");
-            resolve(resultado.includes(",") ? resultado.split(",").pop() : resultado);
-        };
-
-        reader.onerror = () => reject(new Error("Não foi possível preparar o PDF para envio."));
-        reader.readAsDataURL(blob);
-    });
-}
-
-async function enviarWhatsAppViaSacMais() {
-    if (!whatsappOrcamentoAtual || !whatsappPdfBlob) {
-        return mostrarMensagem("Prepare o orçamento antes de enviar.");
-    }
-
-    const botao = document.getElementById("btnEnviarWhatsappApi");
-    const htmlOriginal = botao?.innerHTML;
-
-    try {
-        if (botao) {
-            botao.disabled = true;
-            botao.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando PDF...';
-        }
-
-        const mensagem = document.getElementById("whatsappMensagem")?.value?.trim() || "";
-
-        if (!mensagem) {
-            throw new Error("Informe a mensagem que será enviada ao cliente.");
-        }
-
-        const pdfBase64 = await blobParaBase64(whatsappPdfBlob);
-        const resposta = await post(
-            `/integracoes/sacmais/orcamentos/${whatsappOrcamentoAtual.id}/enviar-whatsapp`,
-            {
-                mensagem,
-                nomeArquivo: nomeArquivoPdfWhatsApp(whatsappOrcamentoAtual),
-                pdfBase64
-            }
-        );
-
-        if (!resposta?.sucesso) {
-            throw new Error(
-                resposta?.mensagem ||
-                "O SacMais não confirmou o envio do orçamento."
-            );
-        }
-
-        await carregarOrcamentos();
-        fecharModalWhatsApp();
-        mostrarMensagem("Orçamento enviado com sucesso pelo WhatsApp, com o PDF anexado.");
-    } catch (erro) {
-        console.error(erro);
-        mostrarMensagem(
-            erro.message ||
-            "Não foi possível enviar o orçamento pela API do SacMais."
-        );
-    } finally {
-        if (botao) {
-            botao.disabled = false;
-            botao.innerHTML = htmlOriginal || '<i class="fa-brands fa-whatsapp"></i> Enviar agora pelo WhatsApp';
-        }
-    }
-}
-
 async function marcarOrcamentoEnviadoWhatsApp() {
-    if (!whatsappOrcamentoAtual?.id) return;
-
-    try {
-        await put(`/orcamentos/${whatsappOrcamentoAtual.id}/enviado`, {
-            canal: "WHATSAPP"
-        });
-        await carregarOrcamentos();
-    } catch (erro) {
-        console.error("Não foi possível atualizar o status do orçamento:", erro);
-    }
-}
-
-async function compartilharPdfWhatsApp() {
-    if (!whatsappOrcamentoAtual || !whatsappPdfBlob) {
-        return mostrarMensagem("Prepare o orçamento antes de compartilhar.");
+    if (!whatsappOrcamentoAtual?.id) {
+        throw new Error("Nenhum orçamento preparado para confirmação.");
     }
 
-    const arquivo = new File(
-        [whatsappPdfBlob],
-        nomeArquivoPdfWhatsApp(whatsappOrcamentoAtual),
-        { type: "application/pdf" }
-    );
+    const resposta = await put(`/orcamentos/${whatsappOrcamentoAtual.id}/enviado`, {
+        canal: "WHATSAPP"
+    });
 
-    if (!navigator.share || !navigator.canShare?.({ files: [arquivo] })) {
-        return abrirWhatsAppWebComPdf();
+    if (!resposta?.sucesso) {
+        throw new Error(resposta?.mensagem || "Não foi possível atualizar o status do orçamento.");
     }
 
-    try {
-        await navigator.share({
-            title: `Orçamento ${String(whatsappOrcamentoAtual.numero).padStart(5, "0")} - Potência Padrões`,
-            text: document.getElementById("whatsappMensagem").value.trim(),
-            files: [arquivo]
-        });
-
-        await marcarOrcamentoEnviadoWhatsApp();
-        fecharModalWhatsApp();
-        mostrarMensagem("Orçamento compartilhado com o PDF anexado.");
-    } catch (erro) {
-        if (erro?.name !== "AbortError") {
-            console.error(erro);
-            mostrarMensagem("Não foi possível compartilhar o PDF. Use a opção de abrir o WhatsApp.");
-        }
-    }
+    await carregarOrcamentos();
+    return resposta.orcamento;
 }
 
 async function abrirWhatsAppWebComPdf() {
@@ -2015,6 +1933,10 @@ async function abrirWhatsAppWebComPdf() {
         return mostrarMensagem("O cliente não possui WhatsApp válido cadastrado.");
     }
 
+    if (!mensagem) {
+        return mostrarMensagem("Informe a mensagem que será enviada ao cliente.");
+    }
+
     baixarArquivoBlob(whatsappPdfBlob, nomeArquivo);
 
     const url = `https://wa.me/${numero}?text=${encodeURIComponent(mensagem)}`;
@@ -2024,9 +1946,44 @@ async function abrirWhatsAppWebComPdf() {
         return mostrarMensagem("Permita pop-ups para abrir o WhatsApp.");
     }
 
-    await marcarOrcamentoEnviadoWhatsApp();
-    fecharModalWhatsApp();
-    mostrarMensagem("PDF baixado e conversa do cliente aberta no WhatsApp. Anexe o arquivo que acabou de ser baixado e envie.");
+    atualizarEstadoConfirmacaoWhatsApp(true);
+    mostrarMensagem(
+        "PDF baixado e conversa aberta no WhatsApp. Anexe o PDF, envie ao cliente e depois clique em 'Confirmar envio' no sistema."
+    );
+}
+
+async function confirmarEnvioWhatsAppManual() {
+    if (!whatsappOrcamentoAtual?.id) {
+        return mostrarMensagem("Nenhum orçamento preparado para confirmação.");
+    }
+
+    if (!whatsappAberturaManualConcluida) {
+        return mostrarMensagem(
+            "Primeiro clique em 'Baixar PDF + abrir WhatsApp', envie o arquivo ao cliente e depois confirme o envio."
+        );
+    }
+
+    const botao = document.getElementById("btnConfirmarEnvioWhatsApp");
+    const htmlOriginal = botao?.innerHTML;
+
+    try {
+        if (botao) {
+            botao.disabled = true;
+            botao.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Confirmando...';
+        }
+
+        await marcarOrcamentoEnviadoWhatsApp();
+        fecharModalWhatsApp();
+        mostrarMensagem("Envio confirmado. O orçamento foi marcado como Enviado.");
+    } catch (erro) {
+        console.error(erro);
+        mostrarMensagem(erro.message || "Não foi possível confirmar o envio do orçamento.");
+    } finally {
+        if (botao && document.getElementById("modalEnviarWhatsApp")?.classList.contains("active")) {
+            botao.disabled = !whatsappAberturaManualConcluida;
+            botao.innerHTML = htmlOriginal || '<i class="fas fa-check"></i> Confirmar envio';
+        }
+    }
 }
 
 async function copiarMensagemWhatsApp() {
