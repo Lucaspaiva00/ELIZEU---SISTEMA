@@ -120,7 +120,13 @@ function preencherFinanceiro(dashboard) {
     document.getElementById("kpiTicketMedio").textContent = moeda(kpis.ticketMedio);
     document.getElementById("kpiOrcamentosPeriodo").textContent = comercial.orcamentos;
     document.getElementById("kpiOrcamentosAprovados").textContent = `${comercial.orcamentosAprovados} aprovados`;
+    const orcamentosEmAberto = document.getElementById("kpiOrcamentosEmAberto");
+    if (orcamentosEmAberto) {
+        orcamentosEmAberto.textContent = `${comercial.orcamentosEmAberto || 0} em aberto • ${moeda(comercial.valorOrcamentosEmAberto || 0)}`;
+    }
     document.getElementById("kpiConversao").textContent = `${Number(comercial.taxaConversao).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%`;
+
+    preencherGerencial(dashboard.gerencial || {});
 
     const inicio = formatarDataPeriodo(periodo.dataInicio);
     const fim = formatarDataPeriodo(periodo.dataFim);
@@ -135,6 +141,84 @@ function preencherFinanceiro(dashboard) {
 
     const ultimaProjecao = dashboard.projecao30Dias.at(-1);
     document.getElementById("saldoProjetado").textContent = moeda(ultimaProjecao?.saldoProjetado || kpis.saldoConsolidado);
+}
+
+function classeRentabilidade(valor) {
+    return Number(valor || 0) < 0 ? "managerial-negative" : "managerial-positive";
+}
+
+function preencherGerencial(gerencial) {
+    const margemEstimada = Number(gerencial.margemEstimada || 0);
+    const margemRealizada = Number(gerencial.margemRealizada || 0);
+
+    document.getElementById("kpiGerencialFaturamento").textContent = moeda(gerencial.faturamento || 0);
+    document.getElementById("kpiCustoTotalEstimado").textContent = moeda(gerencial.custoTotalEstimado || 0);
+    document.getElementById("kpiLucroEstimadoGerencial").textContent = moeda(gerencial.lucroEstimado || 0);
+    document.getElementById("kpiMargemEstimadaGerencial").textContent = `Margem ${margemEstimada.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}%`;
+    document.getElementById("kpiValorRecebidoGerencial").textContent = moeda(gerencial.valorRecebido || 0);
+    document.getElementById("kpiCustosPagosGerencial").textContent = moeda(gerencial.custosInternosPagos || 0);
+
+    const lucroReal = document.getElementById("kpiLucroRealizadoGerencial");
+    lucroReal.textContent = moeda(gerencial.lucroRealizado || 0);
+    lucroReal.classList.remove("managerial-positive", "managerial-negative");
+    lucroReal.classList.add(classeRentabilidade(gerencial.lucroRealizado));
+
+    const margemReal = document.getElementById("kpiMargemRealizadaGerencial");
+    margemReal.textContent = `Margem ${margemRealizada.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}%`;
+    margemReal.classList.remove("managerial-positive", "managerial-negative");
+    margemReal.classList.add(classeRentabilidade(margemRealizada));
+
+    preencherRankingProdutos(gerencial.produtosMaisVendidos || []);
+    preencherRankingClientes(gerencial.clientesMaisCompram || []);
+    preencherRentabilidadeVendas(gerencial.rentabilidadeVendas || []);
+}
+
+function preencherRankingProdutos(lista) {
+    const tbody = document.getElementById("tabelaProdutosMaisVendidos");
+    if (!lista.length) {
+        tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">Nenhuma venda no período.</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = lista.map(item => `<tr>
+        <td><strong>${escaparHtml(item.nome || "Item")}</strong><br><small class="text-muted">${item.tipo === "SERVICO" ? "Serviço" : "Produto"}</small></td>
+        <td>${Number(item.quantidade || 0).toLocaleString("pt-BR", { maximumFractionDigits: 3 })}</td>
+        <td><strong>${moeda(item.valor || 0)}</strong></td>
+    </tr>`).join("");
+}
+
+function preencherRankingClientes(lista) {
+    const tbody = document.getElementById("tabelaClientesMaisCompram");
+    if (!lista.length) {
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Nenhuma venda no período.</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = lista.map(cliente => `<tr>
+        <td><strong>${escaparHtml(cliente.nome || "Cliente")}</strong></td>
+        <td>${cliente.quantidadeVendas || 0}</td>
+        <td>${moeda(cliente.valor || 0)}</td>
+        <td class="${classeRentabilidade(cliente.lucroEstimado)}">${moeda(cliente.lucroEstimado || 0)}</td>
+    </tr>`).join("");
+}
+
+function preencherRentabilidadeVendas(lista) {
+    const tbody = document.getElementById("tabelaRentabilidadeVendas");
+    if (!lista.length) {
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">Nenhuma venda no período.</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = lista.map(venda => `<tr>
+        <td><strong>#${String(venda.numero || 0).padStart(5, "0")}</strong></td>
+        <td>${escaparHtml(venda.cliente?.nome || "—")}</td>
+        <td>${moeda(venda.total || 0)}</td>
+        <td class="${classeRentabilidade(venda.lucroEstimado)}">${moeda(venda.lucroEstimado || 0)}</td>
+        <td>${moeda(venda.recebido || 0)}</td>
+        <td>${moeda(venda.custosInternosPagos || 0)}</td>
+        <td class="${classeRentabilidade(venda.lucroRealizado)}"><strong>${moeda(venda.lucroRealizado || 0)}</strong></td>
+        <td class="${classeRentabilidade(venda.margemRealizada)}">${Number(venda.margemRealizada || 0).toLocaleString("pt-BR", { maximumFractionDigits: 2 })}%</td>
+    </tr>`).join("");
 }
 
 function preencherContas(lista) {

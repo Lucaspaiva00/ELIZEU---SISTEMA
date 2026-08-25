@@ -345,6 +345,7 @@ model Produto {
   // Ex.: poste, caixa, cabo, disjuntor etc.
   composicao        Json?
   custoComposicao   Decimal @default(0) @db.Decimal(12, 2)
+  margemLucroPadrao Decimal @default(0) @db.Decimal(7, 3)
 
   variacoes VariacaoProduto[]
 
@@ -701,6 +702,7 @@ model Venda {
 
   itens                ItemVenda[]
   contasReceber        ContaReceber[]
+  contasPagar          ContaPagar[]
   movimentacoesEstoque MovimentacaoEstoque[]
   notaFiscal           NotaFiscal?
 
@@ -922,6 +924,13 @@ model ContaPagar {
   empresaId Int
   empresa   Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
 
+  vendaId Int?
+  venda   Venda? @relation(fields: [vendaId], references: [id], onDelete: SetNull)
+
+  // Identifica a linha de custo interno que originou o título.
+  // Em conjunto com vendaId impede geração duplicada no faturamento.
+  custoInternoIndice Int?
+
   categoriaFinanceiraId Int?
   categoriaFinanceira   CategoriaFinanceira? @relation(fields: [categoriaFinanceiraId], references: [id], onDelete: SetNull)
 
@@ -957,7 +966,9 @@ model ContaPagar {
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
 
+  @@unique([vendaId, custoInternoIndice])
   @@index([empresaId, status, dataVencimento])
+  @@index([vendaId])
   @@index([recorrenciaGrupo])
 }
 

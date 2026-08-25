@@ -161,8 +161,10 @@
                                         <div class="table-responsive"><table class="table"><thead><tr><th width="210">Produto/Material</th><th width="210">Variação</th><th>Item / descrição</th><th width="95">Qtd.</th><th width="130">Custo unitário</th><th width="120">Total</th><th width="75">Ações</th></tr></thead><tbody id="tabelaComposicao"></tbody></table></div>
                                         <div class="row mt-3">
                                             <div class="col"><div class="modal-kpi"><small>Custo base calculado pelos itens do padrão</small><h3 id="custoComposicaoResumo">R$ 0,00</h3></div></div>
-                                            <div class="col" style="display:flex;align-items:end;justify-content:flex-end;"><button type="button" class="btn btn-light" onclick="aplicarCustoComposicaoNasVariacoes()"><i class="fas fa-calculator"></i> Aplicar custo base nas variações</button></div>
+                                            <div class="col"><div class="form-group" style="margin-bottom:0;"><label>Margem desejada (%)</label><input id="margemLucroPadrao" type="number" min="0" max="99.99" step="0.1" value="0" class="form-control" oninput="atualizarResumoComposicao()"><small class="text-muted">Margem sobre o preço final de venda.</small></div></div>
+                                            <div class="col"><div class="modal-kpi"><small>Preço de venda sugerido</small><h3 id="precoVendaSugeridoResumo">R$ 0,00</h3></div></div>
                                         </div>
+                                        <div class="d-flex justify-end mt-3"><button type="button" class="btn btn-light" onclick="aplicarCustoComposicaoNasVariacoes()"><i class="fas fa-calculator"></i> Aplicar custo + preço sugerido nas variações</button></div>
                                     </div>
                                 </section>
 
@@ -202,7 +204,15 @@
                                 </div>
                             </section>
                             <section class="modal-tab-panel" data-modal-panel="composicao">
-                                <div class="modal-section-card"><div class="modal-section-head"><div><h3>Composição / Itens do Padrão</h3><p>Materiais e variações que formam o produto composto.</p></div><span id="detalheCustoComposicao" class="badge badge-primary">R$ 0,00</span></div><div class="table-responsive"><table class="table"><thead><tr><th>Item</th><th>Variação</th><th>Qtd.</th><th>Custo unitário</th><th>Total</th></tr></thead><tbody id="tabelaDetalhesComposicao"></tbody></table></div></div>
+                                <div class="modal-section-card">
+                                    <div class="modal-section-head"><div><h3>Composição / Itens do Padrão</h3><p>Materiais e variações que formam o produto composto.</p></div></div>
+                                    <div class="modal-fields-3 mb-3">
+                                        <div class="modal-kpi"><small>Custo base</small><h3 id="detalheCustoComposicao">R$ 0,00</h3></div>
+                                        <div class="modal-kpi"><small>Margem desejada</small><h3 id="detalheMargemComposicao">0%</h3></div>
+                                        <div class="modal-kpi"><small>Preço sugerido</small><h3 id="detalhePrecoSugeridoComposicao">R$ 0,00</h3></div>
+                                    </div>
+                                    <div class="table-responsive"><table class="table"><thead><tr><th>Item</th><th>Variação</th><th>Qtd.</th><th>Custo unitário</th><th>Total</th></tr></thead><tbody id="tabelaDetalhesComposicao"></tbody></table></div>
+                                </div>
                             </section>
                             <section class="modal-tab-panel" data-modal-panel="variacoes">
                                 <div class="modal-section-card"><div class="modal-section-head"><div><h3>Variações do Produto</h3><p>Tamanhos, saídas, preços e estoque.</p></div><span id="detalheQuantidadeVariacoes" class="badge badge-primary">0 variações</span></div><div class="table-responsive"><table class="table"><thead><tr><th>SKU</th><th>Descrição</th><th>Tamanho</th><th>Saída</th><th>Código de barras</th><th>Custo</th><th>Venda</th><th>Estoque</th></tr></thead><tbody id="tabelaDetalhesVariacoes"></tbody></table></div></div>

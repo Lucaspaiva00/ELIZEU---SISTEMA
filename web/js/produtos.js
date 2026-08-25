@@ -193,6 +193,7 @@ function abrirModalProduto() {
     document.getElementById(
         "permiteVendaSemEstoque"
     ).checked = false;
+    preencherCampoProduto("margemLucroPadrao", 0);
 
     document.querySelector(
         "#modalProduto .modal-title"
@@ -608,8 +609,9 @@ function renderizarComposicao() {
                     step="0.01"
                     class="form-control"
                     value="${numeroInput(item.custoUnitario || 0)}"
+                    ${item.variacaoProdutoId ? "readonly" : ""}
                     onchange="atualizarComponenteNumero(${index}, 'custoUnitario', this.value)"
-                    title="O custo é preenchido pela variação escolhida, mas pode ser ajustado manualmente"
+                    title="${item.variacaoProdutoId ? "Custo atualizado automaticamente pela variação selecionada" : "Informe o custo do item manual"}"
                 >
             </td>
 
@@ -744,13 +746,35 @@ function calcularCustoComposicao() {
     );
 }
 
+function margemDesejadaComposicao() {
+    const campo = document.getElementById("margemLucroPadrao");
+    const margem = Number(campo?.value || 0);
+    return Number.isFinite(margem) ? Math.max(0, Math.min(margem, 99.99)) : 0;
+}
+
+function calcularPrecoVendaSugerido(custoBase, margem = margemDesejadaComposicao()) {
+    const custo = Number(custoBase || 0);
+    if (!Number.isFinite(custo) || custo <= 0) return 0;
+    if (!Number.isFinite(margem) || margem <= 0) return custo;
+    if (margem >= 100) return 0;
+
+    return Math.round(((custo / (1 - margem / 100)) + Number.EPSILON) * 100) / 100;
+}
+
 function atualizarResumoComposicao() {
+    const custoBase = calcularCustoComposicao();
+    const precoSugerido = calcularPrecoVendaSugerido(custoBase);
     const elemento = document.getElementById("custoComposicaoResumo");
-    if (elemento) elemento.textContent = moeda(calcularCustoComposicao());
+    const preco = document.getElementById("precoVendaSugeridoResumo");
+
+    if (elemento) elemento.textContent = moeda(custoBase);
+    if (preco) preco.textContent = moeda(precoSugerido);
 }
 
 function aplicarCustoComposicaoNasVariacoes() {
     const custoBase = calcularCustoComposicao();
+    const margem = margemDesejadaComposicao();
+    const precoSugerido = calcularPrecoVendaSugerido(custoBase, margem);
 
     if (!composicao.length) {
         mostrarMensagem("Adicione os itens que compõem o padrão antes de calcular o custo base.");
@@ -764,10 +788,15 @@ function aplicarCustoComposicaoNasVariacoes() {
 
     variacoes.forEach((variacao) => {
         variacao.precoCusto = custoBase;
+        if (margem > 0) variacao.precoVenda = precoSugerido;
     });
 
     renderizarVariacoes();
-    mostrarMensagem(`Custo base de ${moeda(custoBase)} aplicado às variações do produto.`);
+    mostrarMensagem(
+        margem > 0
+            ? `Custo ${moeda(custoBase)} e preço sugerido ${moeda(precoSugerido)} aplicados às variações.`
+            : `Custo base de ${moeda(custoBase)} aplicado às variações. Informe uma margem para calcular o preço de venda.`
+    );
 }
 
 function alternarCodigoAutomatico() {
@@ -880,6 +909,7 @@ function obterDadosFormulario() {
             valorCampoProduto("cfopPadrao") || null,
         origemMercadoria:
             valorCampoProduto("origemMercadoria") || null,
+        margemLucroPadrao: Number(document.getElementById("margemLucroPadrao")?.value || 0),
         ativo: true,
         composicao: composicao
             .map((item) => ({
@@ -953,6 +983,10 @@ function validarProduto(produto) {
         throw new Error(
             "Cadastre ao menos uma variação."
         );
+    }
+
+    if (!Number.isFinite(produto.margemLucroPadrao) || produto.margemLucroPadrao < 0 || produto.margemLucroPadrao >= 100) {
+        throw new Error("A margem desejada deve estar entre 0% e 99,99%.");
     }
 
     produto.composicao.forEach((item, index) => {
@@ -1060,6 +1094,10 @@ function editarProduto(id) {
         "origemMercadoria",
         produto.origemMercadoria
     );
+    preencherCampoProduto(
+        "margemLucroPadrao",
+        Number(produto.margemLucroPadrao || 0)
+    );
 
     document.getElementById(
         "controlaEstoque"
@@ -1089,15 +1127,22 @@ function editarProduto(id) {
                 }
             }
 
+            const variacaoAtual = variacaoProdutoId
+                ? variacaoDaComposicao(item?.produtoId, variacaoProdutoId)
+                : null;
+            const custoAtual = variacaoAtual
+                ? custoSugeridoVariacaoComposicao(variacaoAtual)
+                : Number(item?.custoUnitario || 0);
+
             return {
                 produtoId: item?.produtoId || null,
                 variacaoProdutoId,
-                variacaoNome,
-                sku,
+                variacaoNome: variacaoAtual ? rotuloVariacaoComposicao(variacaoAtual) : variacaoNome,
+                sku: variacaoAtual?.sku || sku,
                 nome: item?.nome || "",
                 quantidade: Number(item?.quantidade || 1),
-                custoUnitario: Number(item?.custoUnitario || 0),
-                total: Number(item?.total || 0)
+                custoUnitario: custoAtual,
+                total: Number(item?.quantidade || 1) * custoAtual
             };
         })
         : [];
@@ -1228,7 +1273,8 @@ function visualizarProduto(id) {
 
     renderizarDetalhesComposicao(
         Array.isArray(produto.composicao) ? produto.composicao : [],
-        Number(produto.custoComposicao || 0)
+        Number(produto.custoComposicao || 0),
+        Number(produto.margemLucroPadrao || 0)
     );
 
     renderizarDetalhesVariacoes(
@@ -1246,11 +1292,16 @@ function visualizarProduto(id) {
     modalDetalhesProduto.classList.add("active");
 }
 
-function renderizarDetalhesComposicao(lista, custoTotal) {
+function renderizarDetalhesComposicao(lista, custoTotal, margem = 0) {
     const tbody = document.getElementById("tabelaDetalhesComposicao");
-    const badge = document.getElementById("detalheCustoComposicao");
+    const custo = document.getElementById("detalheCustoComposicao");
+    const margemElemento = document.getElementById("detalheMargemComposicao");
+    const precoElemento = document.getElementById("detalhePrecoSugeridoComposicao");
+    const precoSugerido = calcularPrecoVendaSugerido(custoTotal, margem);
 
-    if (badge) badge.textContent = moeda(custoTotal || 0);
+    if (custo) custo.textContent = moeda(custoTotal || 0);
+    if (margemElemento) margemElemento.textContent = `${Number(margem || 0).toLocaleString("pt-BR", { maximumFractionDigits: 2 })}%`;
+    if (precoElemento) precoElemento.textContent = moeda(precoSugerido);
     if (!tbody) return;
 
     tbody.innerHTML = "";

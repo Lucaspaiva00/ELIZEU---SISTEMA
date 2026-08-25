@@ -150,3 +150,52 @@
     .chart-container { height: 235px; }
     .overdue-box { grid-template-columns: 1fr; }
 }
+
+/* ===========================================
+   RENTABILIDADE GERENCIAL
+=========================================== */
+.managerial-section {
+    margin-top: 34px;
+    padding-top: 29px;
+    border-top: 1px solid #dfe5ec;
+}
+
+.managerial-kpis {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.managerial-kpis .managerial-highlight {
+    border-color: rgba(22, 163, 74, .28);
+    background: linear-gradient(180deg, #ffffff 0%, #f3fbf7 100%);
+}
+
+.managerial-tables {
+    grid-template-columns: 1fr 1fr;
+}
+
+.managerial-profit-table {
+    margin-bottom: 20px;
+}
+
+.managerial-positive {
+    color: var(--dashboard-green) !important;
+}
+
+.managerial-negative {
+    color: var(--dashboard-red) !important;
+}
+
+@media (max-width: 1100px) {
+    .managerial-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 900px) {
+    .managerial-tables { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 640px) {
+    .managerial-kpis { grid-template-columns: 1fr; }
+}

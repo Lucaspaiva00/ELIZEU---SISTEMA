@@ -64,7 +64,8 @@ class DashboardRepository {
             pagarProjecao,
             ultimasMovimentacoes,
             vendasPeriodo,
-            orcamentosPeriodo
+            orcamentosPeriodo,
+            itensVendaPeriodo
         ] = await Promise.all([
             prisma.contaFinanceira.findMany({
                 where: { empresaId },
@@ -124,11 +125,39 @@ class DashboardRepository {
             }),
             prisma.venda.findMany({
                 where: { empresaId, status: { in: ["CONFIRMADA", "FATURADA"] }, dataVenda: filtroPeriodo },
-                select: { id: true, total: true }
+                select: {
+                    id: true,
+                    numero: true,
+                    status: true,
+                    dataVenda: true,
+                    total: true,
+                    custoItensTotal: true,
+                    custoInternoTotal: true,
+                    lucroEstimado: true,
+                    cliente: { select: { id: true, nome: true } },
+                    contasReceber: { select: { valorRecebido: true } },
+                    contasPagar: { select: { valorPago: true, status: true } }
+                },
+                orderBy: [{ dataVenda: "desc" }, { numero: "desc" }]
             }),
             prisma.orcamento.findMany({
                 where: { empresaId, criadoEm: filtroPeriodo },
                 select: { status: true, total: true }
+            }),
+            prisma.itemVenda.findMany({
+                where: {
+                    venda: {
+                        empresaId,
+                        status: { in: ["CONFIRMADA", "FATURADA"] },
+                        dataVenda: filtroPeriodo
+                    }
+                },
+                select: {
+                    descricao: true,
+                    tipo: true,
+                    quantidade: true,
+                    total: true
+                }
             })
         ]);
 
@@ -192,6 +221,95 @@ class DashboardRepository {
         const pagarAtrasado = pagarAbertas.filter(titulo => titulo.status === "ATRASADO");
         const totalVendas = vendasPeriodo.reduce((total, venda) => total + this.numero(venda.total), 0);
         const aprovados = orcamentosPeriodo.filter(orcamento => orcamento.status === "APROVADO");
+        const orcamentosEmAberto = orcamentosPeriodo.filter(orcamento =>
+            ["RASCUNHO", "ENVIADO"].includes(orcamento.status)
+        );
+
+        const vendasGerenciais = vendasPeriodo.map((venda) => {
+            const total = this.numero(venda.total);
+            const custoItens = this.numero(venda.custoItensTotal);
+            const custoInternoEstimado = this.numero(venda.custoInternoTotal);
+            const lucroEstimado = this.numero(venda.lucroEstimado);
+            const recebido = (venda.contasReceber || []).reduce(
+                (soma, conta) => soma + this.numero(conta.valorRecebido),
+                0
+            );
+            const custosInternosPagos = (venda.contasPagar || [])
+                .filter(conta => conta.status !== "CANCELADO")
+                .reduce((soma, conta) => soma + this.numero(conta.valorPago), 0);
+            const percentualRecebido = total > 0
+                ? Math.min(Math.max(recebido / total, 0), 1)
+                : 0;
+            const custoItensReconhecido = custoItens * percentualRecebido;
+            const lucroRealizado = recebido - custoItensReconhecido - custosInternosPagos;
+
+            return {
+                id: venda.id,
+                numero: venda.numero,
+                status: venda.status,
+                dataVenda: venda.dataVenda,
+                cliente: venda.cliente,
+                total,
+                custoItens,
+                custoInternoEstimado,
+                lucroEstimado,
+                margemEstimada: total > 0 ? (lucroEstimado / total) * 100 : 0,
+                recebido,
+                custosInternosPagos,
+                custoItensReconhecido,
+                lucroRealizado,
+                margemRealizada: recebido > 0 ? (lucroRealizado / recebido) * 100 : 0
+            };
+        });
+
+        const gerencialTotais = vendasGerenciais.reduce((acc, venda) => {
+            acc.custoItens += venda.custoItens;
+            acc.custoInternoEstimado += venda.custoInternoEstimado;
+            acc.lucroEstimado += venda.lucroEstimado;
+            acc.recebido += venda.recebido;
+            acc.custosInternosPagos += venda.custosInternosPagos;
+            acc.custoItensReconhecido += venda.custoItensReconhecido;
+            acc.lucroRealizado += venda.lucroRealizado;
+            return acc;
+        }, {
+            custoItens: 0,
+            custoInternoEstimado: 0,
+            lucroEstimado: 0,
+            recebido: 0,
+            custosInternosPagos: 0,
+            custoItensReconhecido: 0,
+            lucroRealizado: 0
+        });
+
+        const rankingItens = new Map();
+        itensVendaPeriodo.forEach((item) => {
+            const chave = String(item.descricao || "Item").trim() || "Item";
+            if (!rankingItens.has(chave)) {
+                rankingItens.set(chave, { nome: chave, tipo: item.tipo, quantidade: 0, valor: 0 });
+            }
+            const registro = rankingItens.get(chave);
+            registro.quantidade += this.numero(item.quantidade);
+            registro.valor += this.numero(item.total);
+        });
+
+        const rankingClientes = new Map();
+        vendasGerenciais.forEach((venda) => {
+            const id = venda.cliente?.id || 0;
+            const chave = `${id}:${venda.cliente?.nome || "Cliente"}`;
+            if (!rankingClientes.has(chave)) {
+                rankingClientes.set(chave, {
+                    id,
+                    nome: venda.cliente?.nome || "Cliente",
+                    quantidadeVendas: 0,
+                    valor: 0,
+                    lucroEstimado: 0
+                });
+            }
+            const registro = rankingClientes.get(chave);
+            registro.quantidadeVendas += 1;
+            registro.valor += venda.total;
+            registro.lucroEstimado += venda.lucroEstimado;
+        });
 
         const eventosProjecao = new Map();
         receberProjecao.forEach(titulo => {
@@ -273,12 +391,40 @@ class DashboardRepository {
             comercial: {
                 orcamentos: orcamentosPeriodo.length,
                 orcamentosAprovados: aprovados.length,
+                orcamentosEmAberto: orcamentosEmAberto.length,
+                valorOrcamentosEmAberto: orcamentosEmAberto.reduce(
+                    (total, orcamento) => total + this.numero(orcamento.total), 0
+                ),
                 valorOrcamentos: orcamentosPeriodo.reduce(
                     (total, orcamento) => total + this.numero(orcamento.total), 0
                 ),
                 taxaConversao: orcamentosPeriodo.length
                     ? (aprovados.length / orcamentosPeriodo.length) * 100
                     : 0
+            },
+            gerencial: {
+                faturamento: totalVendas,
+                custoItens: gerencialTotais.custoItens,
+                custosInternosEstimados: gerencialTotais.custoInternoEstimado,
+                custoTotalEstimado: gerencialTotais.custoItens + gerencialTotais.custoInternoEstimado,
+                lucroEstimado: gerencialTotais.lucroEstimado,
+                margemEstimada: totalVendas > 0
+                    ? (gerencialTotais.lucroEstimado / totalVendas) * 100
+                    : 0,
+                valorRecebido: gerencialTotais.recebido,
+                custosInternosPagos: gerencialTotais.custosInternosPagos,
+                custoItensReconhecido: gerencialTotais.custoItensReconhecido,
+                lucroRealizado: gerencialTotais.lucroRealizado,
+                margemRealizada: gerencialTotais.recebido > 0
+                    ? (gerencialTotais.lucroRealizado / gerencialTotais.recebido) * 100
+                    : 0,
+                produtosMaisVendidos: Array.from(rankingItens.values())
+                    .sort((a, b) => b.valor - a.valor)
+                    .slice(0, 8),
+                clientesMaisCompram: Array.from(rankingClientes.values())
+                    .sort((a, b) => b.valor - a.valor)
+                    .slice(0, 8),
+                rentabilidadeVendas: vendasGerenciais.slice(0, 10)
             },
             contasReceberProximas: receberProximas.map(formatarReceber),
             contasPagarProximas: pagarProximas.map(formatarPagar),

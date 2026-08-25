@@ -38,6 +38,7 @@ class ProdutoRepository {
                     origemMercadoria: dados.origemMercadoria,
                     composicao: dados.composicao || [],
                     custoComposicao: dados.custoComposicao || 0,
+                    margemLucroPadrao: dados.margemLucroPadrao || 0,
                     ativo: dados.ativo ?? true
                 }
             });
@@ -125,6 +126,7 @@ class ProdutoRepository {
                     origemMercadoria: dados.origemMercadoria,
                     composicao: dados.composicao || [],
                     custoComposicao: dados.custoComposicao || 0,
+                    margemLucroPadrao: dados.margemLucroPadrao || 0,
                     ativo: dados.ativo
                 }
             });

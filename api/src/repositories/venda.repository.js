@@ -34,7 +34,58 @@ function dividirValor(valorTotal, quantidade) {
     const totalCentavos = Math.round(Number(valorTotal) * 100);
     const base = Math.floor(totalCentavos / quantidade);
     const resto = totalCentavos - base * quantidade;
-    return Array.from({ length: quantidade }, (_, i) => new Prisma.Decimal(base + (i < resto ? 1 : 0)).dividedBy(100));
+    return Array.from(
+        { length: quantidade },
+        (_, i) => new Prisma.Decimal(base + (i < resto ? 1 : 0)).dividedBy(100)
+    );
+}
+
+function numero(valor) {
+    const n = Number(valor || 0);
+    return Number.isFinite(n) ? n : 0;
+}
+
+function arredondar(valor) {
+    return Math.round((numero(valor) + Number.EPSILON) * 100) / 100;
+}
+
+function calcularRentabilidadeRealizada(venda) {
+    const totalVenda = numero(venda?.total);
+    const recebido = (venda?.contasReceber || []).reduce(
+        (total, conta) => total + numero(conta.valorRecebido),
+        0
+    );
+
+    const custosInternosPagos = (venda?.contasPagar || [])
+        .filter((conta) => conta.status !== "CANCELADO")
+        .reduce((total, conta) => total + numero(conta.valorPago), 0);
+
+    const percentualRecebido = totalVenda > 0
+        ? Math.min(Math.max(recebido / totalVenda, 0), 1)
+        : 0;
+
+    // O custo dos itens é reconhecido proporcionalmente ao valor recebido.
+    // Isso evita mostrar prejuízo "realizado" enquanto a venda ainda não recebeu nada.
+    const custoItensReconhecido = numero(venda?.custoItensTotal) * percentualRecebido;
+    const lucroRealizado = recebido - custoItensReconhecido - custosInternosPagos;
+    const margemRealizada = recebido > 0 ? (lucroRealizado / recebido) * 100 : 0;
+
+    return {
+        valorRecebido: arredondar(recebido),
+        percentualRecebido: arredondar(percentualRecebido * 100),
+        custoItensReconhecido: arredondar(custoItensReconhecido),
+        custosInternosPagos: arredondar(custosInternosPagos),
+        lucroRealizado: arredondar(lucroRealizado),
+        margemRealizada: arredondar(margemRealizada)
+    };
+}
+
+function enriquecerVenda(venda) {
+    if (!venda) return venda;
+    return {
+        ...venda,
+        rentabilidadeRealizada: calcularRentabilidadeRealizada(venda)
+    };
 }
 
 function includeVenda() {
@@ -50,25 +101,159 @@ function includeVenda() {
             orderBy: { id: "asc" }
         },
         contasReceber: { orderBy: { parcelaNumero: "asc" } },
+        contasPagar: {
+            orderBy: [{ custoInternoIndice: "asc" }, { id: "asc" }]
+        },
         movimentacoesEstoque: true,
         notaFiscal: true
     };
 }
 
+function nomeCategoriaCustoInterno(categoria) {
+    switch (String(categoria || "OUTRO").toUpperCase()) {
+        case "MATERIAL": return "Compras e Fornecedores";
+        case "MAO_DE_OBRA": return "Folha e Prestadores";
+        case "COMBUSTIVEL":
+        case "FRETE":
+        case "OUTRO":
+        default: return "Despesas Operacionais";
+    }
+}
+
+function rotuloCategoriaCustoInterno(categoria) {
+    switch (String(categoria || "OUTRO").toUpperCase()) {
+        case "MATERIAL": return "Material";
+        case "COMBUSTIVEL": return "Combustível";
+        case "FRETE": return "Frete / deslocamento";
+        case "MAO_DE_OBRA": return "Mão de obra";
+        default: return "Outro custo";
+    }
+}
+
+async function resolverCategoriaCustoInterno(tx, empresaId, categoria) {
+    const nome = nomeCategoriaCustoInterno(categoria);
+
+    const categoriaExata = await tx.categoriaFinanceira.findFirst({
+        where: {
+            empresaId,
+            nome,
+            ativa: true,
+            natureza: { in: ["DESPESA", "AMBAS"] }
+        },
+        select: { id: true }
+    });
+
+    if (categoriaExata) return categoriaExata.id;
+
+    const fallback = await tx.categoriaFinanceira.findFirst({
+        where: {
+            empresaId,
+            ativa: true,
+            natureza: { in: ["DESPESA", "AMBAS"] }
+        },
+        orderBy: { id: "asc" },
+        select: { id: true }
+    });
+
+    return fallback?.id || null;
+}
+
+async function resolverCentroCustoPadrao(tx, empresaId) {
+    const centro = await tx.centroCusto.findFirst({
+        where: {
+            empresaId,
+            codigo: "GERAL",
+            ativo: true
+        },
+        select: { id: true }
+    });
+
+    return centro?.id || null;
+}
+
+async function gerarContasPagarCustosInternos(tx, venda, empresaId) {
+    const custos = Array.isArray(venda.custosInternos) ? venda.custosInternos : [];
+    if (!custos.length) return;
+
+    const centroCustoId = await resolverCentroCustoPadrao(tx, empresaId);
+    const agora = new Date();
+
+    for (let indice = 0; indice < custos.length; indice += 1) {
+        const custo = custos[indice] || {};
+        const quantidade = numero(custo.quantidade || 1);
+        const valorUnitario = numero(custo.valorUnitario);
+        const valorTotal = arredondar(
+            numero(custo.total) || (quantidade * valorUnitario)
+        );
+
+        if (valorTotal <= 0) continue;
+
+        const existente = await tx.contaPagar.findFirst({
+            where: {
+                vendaId: venda.id,
+                custoInternoIndice: indice
+            },
+            select: { id: true }
+        });
+
+        if (existente) continue;
+
+        const categoriaFinanceiraId = await resolverCategoriaCustoInterno(
+            tx,
+            empresaId,
+            custo.categoria
+        );
+
+        const rotulo = rotuloCategoriaCustoInterno(custo.categoria);
+        const detalhe = String(custo.descricao || "").trim();
+        const descricao = detalhe
+            ? `Venda nº ${venda.numero} - ${rotulo}: ${detalhe}`
+            : `Venda nº ${venda.numero} - ${rotulo}`;
+
+        await tx.contaPagar.create({
+            data: {
+                empresaId,
+                vendaId: venda.id,
+                custoInternoIndice: indice,
+                categoriaFinanceiraId,
+                centroCustoId,
+                fornecedorNome: `Custo interno - Venda nº ${venda.numero}`,
+                fornecedorDocumento: null,
+                descricao,
+                numeroDocumento: `VENDA-${venda.numero}-CUSTO-${indice + 1}`,
+                parcelaNumero: 1,
+                totalParcelas: 1,
+                valorOriginal: new Prisma.Decimal(valorTotal),
+                dataCompetencia: agora,
+                dataEmissao: agora,
+                dataVencimento: agora,
+                formaPagamento: null,
+                status: "PENDENTE",
+                recorrente: false,
+                observacoes: "Gerado automaticamente a partir dos custos internos da venda no faturamento."
+            }
+        });
+    }
+}
+
 class VendaRepository {
     async listar(empresaId) {
-        return prisma.venda.findMany({
+        const vendas = await prisma.venda.findMany({
             where: { empresaId },
             include: includeVenda(),
             orderBy: { numero: "desc" }
         });
+
+        return vendas.map(enriquecerVenda);
     }
 
     async buscarPorId(id, empresaId) {
-        return prisma.venda.findFirst({
+        const venda = await prisma.venda.findFirst({
             where: { id, empresaId },
             include: includeVenda()
         });
+
+        return enriquecerVenda(venda);
     }
 
     async faturar(id, dados) {
@@ -86,9 +271,6 @@ class VendaRepository {
                 if (item.tipo !== "PRODUTO" || !item.variacaoProduto) continue;
 
                 const produto = item.variacaoProduto.produto;
-
-                // Serviço não movimenta estoque e produto sem controle de estoque
-                // também não deve bloquear o faturamento.
                 if (!produto.controlaEstoque) continue;
 
                 const movimentoExistente = await tx.movimentacaoEstoque.findFirst({
@@ -113,19 +295,6 @@ class VendaRepository {
                 const quantidade = new Prisma.Decimal(item.quantidade || 0);
                 const saldoPosterior = saldoAnterior.minus(quantidade);
 
-                /*
-                 * IMPORTANTE:
-                 * O faturamento não é mais bloqueado por estoque insuficiente.
-                 *
-                 * Isso é necessário porque o ERP pode possuir produtos legados,
-                 * recém-importados ou ainda sem saldo inicial lançado.
-                 *
-                 * O estoque pode ficar negativo. Isso mantém:
-                 * - a venda faturada;
-                 * - o contas a receber gerado;
-                 * - a movimentação de saída registrada;
-                 * - a divergência visível para posterior ajuste de inventário.
-                 */
                 await tx.variacaoProduto.update({
                     where: { id: item.variacaoProdutoId },
                     data: {
@@ -180,7 +349,7 @@ class VendaRepository {
                 const parcelas = dividirValor(venda.total, venda.quantidadeParcelas);
 
                 for (let i = 0; i < venda.quantidadeParcelas; i += 1) {
-                    const numero = i + 1;
+                    const numeroParcela = i + 1;
 
                     await tx.contaReceber.create({
                         data: {
@@ -189,9 +358,9 @@ class VendaRepository {
                             clienteId: venda.clienteId,
                             categoriaFinanceiraId: categoria?.id || null,
                             centroCustoId: centro?.id || null,
-                            descricao: `Venda nº ${venda.numero} - Parcela ${numero}/${venda.quantidadeParcelas}`,
+                            descricao: `Venda nº ${venda.numero} - Parcela ${numeroParcela}/${venda.quantidadeParcelas}`,
                             numeroDocumento: `VENDA-${venda.numero}`,
-                            parcelaNumero: numero,
+                            parcelaNumero: numeroParcela,
                             totalParcelas: venda.quantidadeParcelas,
                             valorOriginal: parcelas[i],
                             dataCompetencia: new Date(),
@@ -208,15 +377,21 @@ class VendaRepository {
                 }
             }
 
+            // Cada custo interno do orçamento vira um título em Contas a Pagar.
+            // O vínculo com a venda permite medir custo realizado sem expor isso ao cliente.
+            await gerarContasPagarCustosInternos(tx, venda, dados.empresaId);
+
             await tx.venda.update({
                 where: { id: venda.id },
                 data: { status: "FATURADA" }
             });
 
-            return tx.venda.findUnique({
+            const vendaFinal = await tx.venda.findUnique({
                 where: { id: venda.id },
                 include: includeVenda()
             });
+
+            return enriquecerVenda(vendaFinal);
         }, {
             isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
             maxWait: 5000,
@@ -235,7 +410,7 @@ class VendaRepository {
             throw new Error("Venda já está cancelada.");
         }
 
-        return prisma.venda.update({
+        const atualizada = await prisma.venda.update({
             where: { id },
             data: {
                 status: "CANCELADA",
@@ -244,6 +419,8 @@ class VendaRepository {
             },
             include: includeVenda()
         });
+
+        return enriquecerVenda(atualizada);
     }
 }
 

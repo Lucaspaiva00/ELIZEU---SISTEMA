@@ -84,12 +84,18 @@ class ProdutoService {
     prepararDados(dados) {
         const composicao = this.normalizarComposicao(dados.composicao);
         const custoComposicao = this.calcularCustoComposicao(composicao);
+        const margemLucroPadrao = Number(dados.margemLucroPadrao ?? 0);
+
+        if (!Number.isFinite(margemLucroPadrao) || margemLucroPadrao < 0 || margemLucroPadrao >= 100) {
+            throw new Error("A margem desejada deve estar entre 0% e 99,99%.");
+        }
 
         return {
             ...dados,
             descricao: String(dados.descricao || "").trim() || null,
             composicao,
-            custoComposicao
+            custoComposicao,
+            margemLucroPadrao
         };
     }
 

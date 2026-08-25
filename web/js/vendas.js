@@ -142,11 +142,20 @@ async function visualizarVenda(id) {
     document.getElementById("viewVendaCustoItens").value = fmtMoeda(v.custoItensTotal || 0);
     document.getElementById("viewVendaCustoInterno").value = fmtMoeda(v.custoInternoTotal || 0);
     document.getElementById("viewVendaLucro").value = fmtMoeda(v.lucroEstimado || 0);
+
+    const realizado = v.rentabilidadeRealizada || {};
+    document.getElementById("viewVendaValorRecebido").textContent = fmtMoeda(realizado.valorRecebido || 0);
+    document.getElementById("viewVendaCustosPagos").textContent = fmtMoeda(realizado.custosInternosPagos || 0);
+    document.getElementById("viewVendaLucroRealizado").textContent = fmtMoeda(realizado.lucroRealizado || 0);
+    document.getElementById("viewVendaMargemRealizada").textContent = `${Number(realizado.margemRealizada || 0).toLocaleString("pt-BR", { maximumFractionDigits: 2 })}%`;
+
     document.getElementById("viewVendaCustosInternos").innerHTML = Array.isArray(v.custosInternos) && v.custosInternos.length
         ? v.custosInternos.map(c => `<tr><td>${esc(c.categoria || "OUTRO")}</td><td>${esc(c.descricao || "-")}</td><td>${Number(c.quantidade || 0)}</td><td>${fmtMoeda(c.valorUnitario || 0)}</td><td>${fmtMoeda(c.total || 0)}</td></tr>`).join("")
         : '<tr><td colspan="5" class="text-center">Nenhuma despesa interna lançada.</td></tr>';
 
-    document.getElementById("viewVendaParcelasTabela").innerHTML = (v.contasReceber || []).map(c => `<tr><td>${c.parcelaNumero}/${c.totalParcelas}</td><td>${fmtData(c.dataVencimento)}</td><td>${fmtMoeda(c.valorOriginal)}</td><td>${esc(c.status)}</td></tr>`).join("") || '<tr><td colspan="4">As contas a receber serão geradas no faturamento.</td></tr>';
+    document.getElementById("viewVendaParcelasTabela").innerHTML = (v.contasReceber || []).map(c => `<tr><td>${c.parcelaNumero}/${c.totalParcelas}</td><td>${fmtData(c.dataVencimento)}</td><td>${fmtMoeda(c.valorOriginal)}</td><td>${fmtMoeda(c.valorRecebido || 0)}</td><td>${esc(c.status)}</td></tr>`).join("") || '<tr><td colspan="5">As contas a receber serão geradas no faturamento.</td></tr>';
+
+    document.getElementById("viewVendaContasPagar").innerHTML = (v.contasPagar || []).map(c => `<tr><td>${esc(c.descricao || "Custo interno")}</td><td>${fmtData(c.dataVencimento)}</td><td>${fmtMoeda(c.valorOriginal)}</td><td>${fmtMoeda(c.valorPago || 0)}</td><td>${esc(c.status)}</td></tr>`).join("") || '<tr><td colspan="5" class="text-center">Os custos internos serão lançados em Contas a Pagar no faturamento.</td></tr>';
     const fiscal = fiscalVenda(v);
     const fiscalStatus = document.getElementById("viewVendaFiscalStatus");
     const fiscalPendencias = document.getElementById("viewVendaFiscalPendencias");
@@ -188,10 +197,10 @@ function fecharVenda() {
 }
 
 async function faturarVenda(id) {
-    if (!confirm("Faturar esta venda? Isso fará a baixa de estoque e gerará as contas a receber.")) return;
+    if (!confirm("Faturar esta venda? Isso fará a baixa de estoque, gerará as contas a receber e lançará os custos internos em Contas a Pagar.")) return;
     const r = await put(`/vendas/${id}/faturar`, {});
     if (!r?.sucesso) return mostrarMensagem(r?.mensagem || "Erro ao faturar venda.");
-    mostrarMensagem("Venda faturada. Contas a receber e estoque atualizados.");
+    mostrarMensagem("Venda faturada. Contas a receber, custos internos em Contas a Pagar e estoque atualizados.");
     await carregarVendas();
     if (vendaAtualId === id) await visualizarVenda(id);
 }

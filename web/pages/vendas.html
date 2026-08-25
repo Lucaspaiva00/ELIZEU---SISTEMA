@@ -51,8 +51,33 @@
                     <div class="modal-body">
                         <section class="modal-tab-panel active" data-modal-panel="resumo"><div class="modal-section-card"><div class="modal-fields-4"><div class="form-group"><label>Venda</label><input id="viewVendaNumero" class="form-control" readonly></div><div class="form-group"><label>Orçamento</label><input id="viewVendaOrcamento" class="form-control" readonly></div><div class="form-group"><label>Cliente</label><input id="viewVendaCliente" class="form-control" readonly></div><div class="form-group"><label>Status</label><input id="viewVendaStatus" class="form-control" readonly></div></div><div class="modal-fields-4"><div class="form-group"><label>Forma de pagamento</label><input id="viewVendaPagamento" class="form-control" readonly></div><div class="form-group"><label>Parcelas</label><input id="viewVendaParcelas" class="form-control" readonly></div><div class="form-group"><label>Primeiro vencimento</label><input id="viewVendaVencimento" class="form-control" readonly></div><div class="form-group"><label>Total</label><input id="viewVendaTotal" class="form-control" readonly></div></div></div></section>
                         <section class="modal-tab-panel" data-modal-panel="itens"><div class="modal-section-card"><div class="modal-section-head"><div><h3>Itens da venda</h3><p>Produtos e serviços originados do orçamento.</p></div></div><div class="table-responsive"><table class="table"><thead><tr><th>Item</th><th>Qtd.</th><th>Unitário</th><th>Total</th></tr></thead><tbody id="viewVendaItens"></tbody></table></div></div></section>
-                        <section class="modal-tab-panel" data-modal-panel="custos"><div class="modal-section-card"><div class="modal-section-head"><div><h3>Custos e lucro da venda</h3><p>Informação interna. Não faz parte da nota ou do documento do cliente.</p></div></div><div class="modal-fields-3"><div class="form-group"><label>Custo dos itens</label><input id="viewVendaCustoItens" class="form-control" readonly></div><div class="form-group"><label>Despesas internas</label><input id="viewVendaCustoInterno" class="form-control" readonly></div><div class="form-group"><label>Lucro estimado</label><input id="viewVendaLucro" class="form-control" readonly></div></div><div class="table-responsive"><table class="table"><thead><tr><th>Categoria</th><th>Descrição</th><th>Qtd.</th><th>Unitário</th><th>Total</th></tr></thead><tbody id="viewVendaCustosInternos"></tbody></table></div></div></section>
-                        <section class="modal-tab-panel" data-modal-panel="financeiro"><div class="modal-section-card"><div class="modal-section-head"><div><h3>Contas a receber</h3><p>Parcelas geradas quando a venda é faturada.</p></div></div><div class="table-responsive"><table class="table"><thead><tr><th>Parcela</th><th>Vencimento</th><th>Valor</th><th>Status</th></tr></thead><tbody id="viewVendaParcelasTabela"></tbody></table></div></div></section>
+                        <section class="modal-tab-panel" data-modal-panel="custos">
+                            <div class="modal-section-card">
+                                <div class="modal-section-head"><div><h3>Custos e rentabilidade</h3><p>Informação gerencial interna. Não aparece para o cliente.</p></div></div>
+                                <div class="modal-fields-3">
+                                    <div class="form-group"><label>Custo dos itens</label><input id="viewVendaCustoItens" class="form-control" readonly></div>
+                                    <div class="form-group"><label>Despesas internas estimadas</label><input id="viewVendaCustoInterno" class="form-control" readonly></div>
+                                    <div class="form-group"><label>Lucro estimado</label><input id="viewVendaLucro" class="form-control" readonly></div>
+                                </div>
+                                <div class="modal-fields-4">
+                                    <div class="modal-kpi"><small>Valor recebido</small><h3 id="viewVendaValorRecebido">R$ 0,00</h3></div>
+                                    <div class="modal-kpi"><small>Custos internos pagos</small><h3 id="viewVendaCustosPagos">R$ 0,00</h3></div>
+                                    <div class="modal-kpi"><small>Lucro realizado</small><h3 id="viewVendaLucroRealizado">R$ 0,00</h3></div>
+                                    <div class="modal-kpi"><small>Margem realizada</small><h3 id="viewVendaMargemRealizada">0%</h3></div>
+                                </div>
+                                <div class="table-responsive mt-3"><table class="table"><thead><tr><th>Categoria</th><th>Descrição</th><th>Qtd.</th><th>Unitário</th><th>Total</th></tr></thead><tbody id="viewVendaCustosInternos"></tbody></table></div>
+                            </div>
+                        </section>
+                        <section class="modal-tab-panel" data-modal-panel="financeiro">
+                            <div class="modal-section-card">
+                                <div class="modal-section-head"><div><h3>Contas a receber</h3><p>Parcelas geradas quando a venda é faturada.</p></div></div>
+                                <div class="table-responsive"><table class="table"><thead><tr><th>Parcela</th><th>Vencimento</th><th>Valor</th><th>Recebido</th><th>Status</th></tr></thead><tbody id="viewVendaParcelasTabela"></tbody></table></div>
+                            </div>
+                            <div class="modal-section-card mt-3">
+                                <div class="modal-section-head"><div><h3>Custos internos em Contas a Pagar</h3><p>Gerados automaticamente no faturamento e vinculados a esta venda.</p></div></div>
+                                <div class="table-responsive"><table class="table"><thead><tr><th>Descrição</th><th>Vencimento</th><th>Valor</th><th>Pago</th><th>Status</th></tr></thead><tbody id="viewVendaContasPagar"></tbody></table></div>
+                            </div>
+                        </section>
                         <section class="modal-tab-panel" data-modal-panel="fiscal"><div class="modal-section-card"><div class="modal-section-head"><div><h3>Situação fiscal</h3><p>Status e pendências da NF-e.</p></div></div><div id="viewVendaFiscal" class="card"><div class="card-body"><div id="viewVendaFiscalStatus">Nenhuma NF-e preparada.</div><div id="viewVendaFiscalPendencias" style="display:none;margin-top:12px;"></div></div></div></div></section>
                     </div>
                     <div class="modal-footer"><button class="btn btn-light" onclick="fecharVenda()">Fechar</button><button id="btnCancelarVenda" class="btn btn-danger" onclick="cancelarVendaAtual()"><i class="fas fa-ban"></i> Cancelar venda</button><button id="btnEmitirNfe" class="btn btn-primary" style="display:none" onclick="emitirNfeAtual()"><i class="fas fa-file-invoice"></i> Emitir NF-e</button><button id="btnFaturarVenda" class="btn btn-success" onclick="faturarVendaAtual()"><i class="fas fa-file-invoice-dollar"></i> Faturar venda</button></div>
