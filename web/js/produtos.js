@@ -399,19 +399,48 @@ function removerVariacao(index) {
     renderizarVariacoes();
 }
 
-function custoSugeridoProdutoComposicao(produto) {
-    const variacoesAtivas = (produto?.variacoes || []).filter(
-        (variacao) => variacao.ativo !== false
-    );
+function variacoesAtivasProdutoComposicao(produto) {
+    return (produto?.variacoes || [])
+        .filter((variacao) => variacao.ativo !== false)
+        .sort((a, b) =>
+            rotuloVariacaoComposicao(a).localeCompare(
+                rotuloVariacaoComposicao(b),
+                "pt-BR",
+                { sensitivity: "base" }
+            )
+        );
+}
 
-    if (!variacoesAtivas.length) return 0;
+function rotuloVariacaoComposicao(variacao) {
+    if (!variacao) return "Variação";
 
-    return Number(variacoesAtivas[0].precoCusto || 0);
+    const partes = [
+        variacao.tamanho,
+        variacao.saida,
+        variacao.descricao
+    ]
+        .map((valor) => String(valor || "").trim())
+        .filter(Boolean);
+
+    const unicas = [...new Set(partes)];
+
+    if (unicas.length) {
+        return unicas.join(" / ");
+    }
+
+    return String(variacao.sku || "Variação").trim();
+}
+
+function custoSugeridoVariacaoComposicao(variacao) {
+    return Number(variacao?.precoCusto || 0);
 }
 
 function adicionarComponente() {
     composicao.push({
         produtoId: null,
+        variacaoProdutoId: null,
+        variacaoNome: "",
+        sku: "",
         nome: "",
         quantidade: 1,
         custoUnitario: 0,
@@ -451,6 +480,56 @@ function opcoesProdutosComposicao(produtoSelecionadoId) {
     `;
 }
 
+function produtoDaComposicao(produtoId) {
+    const id = Number(produtoId);
+    if (!Number.isInteger(id) || id <= 0) return null;
+
+    return produtos.find(
+        (produto) => Number(produto.id) === id
+    ) || null;
+}
+
+function variacaoDaComposicao(produtoId, variacaoProdutoId) {
+    const produto = produtoDaComposicao(produtoId);
+    if (!produto) return null;
+
+    const id = Number(variacaoProdutoId);
+    if (!Number.isInteger(id) || id <= 0) return null;
+
+    return (produto.variacoes || []).find(
+        (variacao) => Number(variacao.id) === id
+    ) || null;
+}
+
+function opcoesVariacoesComposicao(produtoId, variacaoSelecionadaId) {
+    const produto = produtoDaComposicao(produtoId);
+
+    if (!produto) {
+        return '<option value="">Selecione um produto primeiro</option>';
+    }
+
+    const variacoesProduto = variacoesAtivasProdutoComposicao(produto);
+    const atual = Number(variacaoSelecionadaId) || 0;
+
+    if (!variacoesProduto.length) {
+        return '<option value="">Produto sem variações ativas</option>';
+    }
+
+    return `
+        <option value="">Selecione a variação</option>
+        ${variacoesProduto
+            .map((variacao) => `
+                <option
+                    value="${variacao.id}"
+                    ${Number(variacao.id) === atual ? "selected" : ""}
+                >
+                    ${escaparHtml(rotuloVariacaoComposicao(variacao))}
+                </option>
+            `)
+            .join("")}
+    `;
+}
+
 function renderizarComposicao() {
     const tbody = document.getElementById("tabelaComposicao");
 
@@ -461,7 +540,7 @@ function renderizarComposicao() {
     if (!composicao.length) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="6" class="text-center">
+                <td colspan="7" class="text-center">
                     Nenhum item na composição. Use esta área quando o produto for um padrão composto por materiais.
                 </td>
             </tr>
@@ -475,6 +554,9 @@ function renderizarComposicao() {
         const custoUnitario = Number(item.custoUnitario || 0);
         item.total = quantidade * custoUnitario;
 
+        const produtoSelecionado = produtoDaComposicao(item.produtoId);
+        const usaProdutoCadastrado = Boolean(produtoSelecionado);
+
         const linha = document.createElement("tr");
         linha.innerHTML = `
             <td>
@@ -487,11 +569,23 @@ function renderizarComposicao() {
             </td>
 
             <td>
+                <select
+                    class="form-control"
+                    ${usaProdutoCadastrado ? "" : "disabled"}
+                    onchange="selecionarVariacaoComposicao(${index}, this.value)"
+                    title="Escolha exatamente a variação que compõe este padrão"
+                >
+                    ${opcoesVariacoesComposicao(item.produtoId, item.variacaoProdutoId)}
+                </select>
+            </td>
+
+            <td>
                 <input
                     type="text"
                     class="form-control"
                     value="${escaparAtributo(item.nome || "")}"
                     placeholder="Ex.: Caixa, cabo, disjuntor..."
+                    ${usaProdutoCadastrado ? "readonly" : ""}
                     oninput="atualizarComponente(${index}, 'nome', this.value)"
                 >
             </td>
@@ -515,6 +609,7 @@ function renderizarComposicao() {
                     class="form-control"
                     value="${numeroInput(item.custoUnitario || 0)}"
                     onchange="atualizarComponenteNumero(${index}, 'custoUnitario', this.value)"
+                    title="O custo é preenchido pela variação escolhida, mas pode ser ajustado manualmente"
                 >
             </td>
 
@@ -548,19 +643,70 @@ function selecionarProdutoComposicao(index, valor) {
 
     if (!Number.isInteger(produtoId) || produtoId <= 0) {
         item.produtoId = null;
+        item.variacaoProdutoId = null;
+        item.variacaoNome = "";
+        item.sku = "";
+        item.nome = "";
+        item.custoUnitario = 0;
+        item.total = 0;
         renderizarComposicao();
         return;
     }
 
-    const produto = produtos.find(
-        (registro) => Number(registro.id) === produtoId
-    );
-
+    const produto = produtoDaComposicao(produtoId);
     if (!produto) return;
 
     item.produtoId = produto.id;
-    item.nome = produto.nome || item.nome || "";
-    item.custoUnitario = custoSugeridoProdutoComposicao(produto);
+    item.nome = produto.nome || "";
+    item.variacaoProdutoId = null;
+    item.variacaoNome = "";
+    item.sku = "";
+    item.custoUnitario = 0;
+
+    const variacoesProduto = variacoesAtivasProdutoComposicao(produto);
+
+    // Se houver uma única opção, seleciona automaticamente.
+    // Com duas ou mais opções (ex.: Monofásico / Trifásico), o usuário escolhe.
+    if (variacoesProduto.length === 1) {
+        const variacao = variacoesProduto[0];
+        item.variacaoProdutoId = variacao.id;
+        item.variacaoNome = rotuloVariacaoComposicao(variacao);
+        item.sku = variacao.sku || "";
+        item.custoUnitario = custoSugeridoVariacaoComposicao(variacao);
+    }
+
+    item.total = Number(item.quantidade || 1) * Number(item.custoUnitario || 0);
+
+    renderizarComposicao();
+}
+
+function selecionarVariacaoComposicao(index, valor) {
+    const item = composicao[index];
+    if (!item) return;
+
+    const variacaoId = Number(valor);
+
+    if (!Number.isInteger(variacaoId) || variacaoId <= 0) {
+        item.variacaoProdutoId = null;
+        item.variacaoNome = "";
+        item.sku = "";
+        item.custoUnitario = 0;
+        item.total = 0;
+        renderizarComposicao();
+        return;
+    }
+
+    const variacao = variacaoDaComposicao(item.produtoId, variacaoId);
+
+    if (!variacao) {
+        mostrarMensagem("A variação selecionada não pertence ao produto escolhido.");
+        return;
+    }
+
+    item.variacaoProdutoId = variacao.id;
+    item.variacaoNome = rotuloVariacaoComposicao(variacao);
+    item.sku = variacao.sku || "";
+    item.custoUnitario = custoSugeridoVariacaoComposicao(variacao);
     item.total = Number(item.quantidade || 1) * Number(item.custoUnitario || 0);
 
     renderizarComposicao();
@@ -738,6 +884,9 @@ function obterDadosFormulario() {
         composicao: composicao
             .map((item) => ({
                 produtoId: item.produtoId || null,
+                variacaoProdutoId: item.variacaoProdutoId || null,
+                variacaoNome: String(item.variacaoNome || "").trim() || null,
+                sku: String(item.sku || "").trim() || null,
                 nome: String(item.nome || "").trim(),
                 quantidade: Number(item.quantidade || 0),
                 custoUnitario: Number(item.custoUnitario || 0),
@@ -809,6 +958,17 @@ function validarProduto(produto) {
     produto.composicao.forEach((item, index) => {
         if (!item.nome) {
             throw new Error(`Informe o item/material da composição ${index + 1}.`);
+        }
+
+        if (item.produtoId && !item.variacaoProdutoId) {
+            const produtoComponente = produtoDaComposicao(item.produtoId);
+            const quantidadeVariacoes = variacoesAtivasProdutoComposicao(produtoComponente).length;
+
+            if (quantidadeVariacoes > 0) {
+                throw new Error(
+                    `Selecione a variação do item ${item.nome} na composição ${index + 1}.`
+                );
+            }
         }
 
         if (!Number.isFinite(item.quantidade) || item.quantidade <= 0) {
@@ -912,13 +1072,34 @@ function editarProduto(id) {
     );
 
     composicao = Array.isArray(produto.composicao)
-        ? produto.composicao.map((item) => ({
-            produtoId: item?.produtoId || null,
-            nome: item?.nome || "",
-            quantidade: Number(item?.quantidade || 1),
-            custoUnitario: Number(item?.custoUnitario || 0),
-            total: Number(item?.total || 0)
-        }))
+        ? produto.composicao.map((item) => {
+            const produtoComponente = produtoDaComposicao(item?.produtoId);
+            let variacaoProdutoId = item?.variacaoProdutoId || null;
+            let variacaoNome = item?.variacaoNome || "";
+            let sku = item?.sku || "";
+
+            // Compatibilidade com composições antigas, gravadas antes da escolha de variação.
+            // Se o produto possui uma única variação, ela é assumida automaticamente.
+            if (produtoComponente && !variacaoProdutoId) {
+                const opcoes = variacoesAtivasProdutoComposicao(produtoComponente);
+                if (opcoes.length === 1) {
+                    variacaoProdutoId = opcoes[0].id;
+                    variacaoNome = rotuloVariacaoComposicao(opcoes[0]);
+                    sku = opcoes[0].sku || "";
+                }
+            }
+
+            return {
+                produtoId: item?.produtoId || null,
+                variacaoProdutoId,
+                variacaoNome,
+                sku,
+                nome: item?.nome || "",
+                quantidade: Number(item?.quantidade || 1),
+                custoUnitario: Number(item?.custoUnitario || 0),
+                total: Number(item?.total || 0)
+            };
+        })
         : [];
 
     renderizarComposicao();
@@ -1077,7 +1258,7 @@ function renderizarDetalhesComposicao(lista, custoTotal) {
     if (!lista.length) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="4" class="text-center">
+                <td colspan="5" class="text-center">
                     Nenhum item de composição cadastrado.
                 </td>
             </tr>
@@ -1091,8 +1272,11 @@ function renderizarDetalhesComposicao(lista, custoTotal) {
             Number(item.custoUnitario || 0);
 
         const linha = document.createElement("tr");
+        const variacao = item.variacaoNome || item.sku || "-";
+
         linha.innerHTML = `
             <td>${escaparHtml(item.nome || "-")}</td>
+            <td>${escaparHtml(variacao)}</td>
             <td>${numero(item.quantidade || 0)}</td>
             <td>${moeda(item.custoUnitario || 0)}</td>
             <td><strong>${moeda(item.total ?? total)}</strong></td>

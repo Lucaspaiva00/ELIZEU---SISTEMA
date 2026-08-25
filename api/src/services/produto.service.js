@@ -12,10 +12,15 @@ class ProdutoService {
         return composicao
             .map((item, index) => {
                 const produtoId = Number(item?.produtoId);
+                const variacaoProdutoId = Number(item?.variacaoProdutoId);
                 const nome = String(item?.nome || "").trim();
+                const variacaoNome = String(item?.variacaoNome || "").trim();
+                const sku = String(item?.sku || "").trim();
                 const quantidade = Number(item?.quantidade ?? 1);
                 const custoUnitario = Number(item?.custoUnitario ?? 0);
                 const produtoIdValido = Number.isInteger(produtoId) && produtoId > 0;
+                const variacaoProdutoIdValido =
+                    Number.isInteger(variacaoProdutoId) && variacaoProdutoId > 0;
 
                 const linhaVazia =
                     !nome &&
@@ -28,6 +33,10 @@ class ProdutoService {
                     throw new Error(`Informe o item/material da composição ${index + 1}.`);
                 }
 
+                if (produtoIdValido && !variacaoProdutoIdValido) {
+                    throw new Error(`Selecione a variação do item ${nome} na composição ${index + 1}.`);
+                }
+
                 if (!Number.isFinite(quantidade) || quantidade <= 0) {
                     throw new Error(`A quantidade da composição ${index + 1} deve ser maior que zero.`);
                 }
@@ -38,6 +47,11 @@ class ProdutoService {
 
                 return {
                     produtoId: produtoIdValido ? produtoId : null,
+                    variacaoProdutoId: produtoIdValido && variacaoProdutoIdValido
+                        ? variacaoProdutoId
+                        : null,
+                    variacaoNome: variacaoNome || null,
+                    sku: sku || null,
                     nome,
                     quantidade,
                     custoUnitario,
