@@ -118,7 +118,7 @@
 
                 <div class="modal-overlay" id="modalProduto">
 
-                    <div class="modal modal-lg">
+                    <div class="modal modal-xl">
 
                         <div class="modal-header">
 
@@ -205,7 +205,7 @@
 
                                 <div class="form-group">
 
-                                    <label>Descrição</label>
+                                    <label>Descrição (opcional)</label>
 
                                     <textarea id="descricao" class="form-control"></textarea>
 
@@ -244,15 +244,15 @@
 
                                                 </th>
 
-                                                <th width="140">
-
-                                                    Saída
-
-                                                </th>
-
                                                 <th width="120">
 
                                                     Tamanho
+
+                                                </th>
+
+                                                <th width="140">
+
+                                                    Saída
 
                                                 </th>
 
@@ -296,6 +296,56 @@
 
                                     </table>
 
+                                </div>
+
+                                <hr class="mb-3 mt-4">
+
+                                <div class="d-flex justify-between align-center mb-2">
+                                    <div>
+                                        <h3>Composição / Itens do Padrão</h3>
+                                        <p class="page-subtitle" style="margin:4px 0 0;">
+                                            Use aqui para produtos compostos, por exemplo "Padrão 5m Básico".
+                                            Cadastre os materiais que formam o padrão e o sistema calcula o custo base automaticamente.
+                                        </p>
+                                    </div>
+
+                                    <button type="button" class="btn btn-success" onclick="adicionarComponente()">
+                                        <i class="fas fa-plus"></i>
+                                        Adicionar item
+                                    </button>
+                                </div>
+
+                                <div class="table-responsive">
+                                    <table class="table">
+                                        <thead>
+                                            <tr>
+                                                <th width="230">Produto/Material cadastrado</th>
+                                                <th>Item / descrição</th>
+                                                <th width="110">Qtd.</th>
+                                                <th width="145">Custo unitário</th>
+                                                <th width="130">Total</th>
+                                                <th width="80">Ações</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tabelaComposicao"></tbody>
+                                    </table>
+                                </div>
+
+                                <div class="row mt-3">
+                                    <div class="col">
+                                        <div class="card">
+                                            <div class="card-body">
+                                                <small class="text-muted">Custo base calculado pelos itens do padrão</small>
+                                                <h3 id="custoComposicaoResumo">R$ 0,00</h3>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col" style="display:flex;align-items:end;justify-content:flex-end;">
+                                        <button type="button" class="btn btn-light" onclick="aplicarCustoComposicaoNasVariacoes()">
+                                            <i class="fas fa-calculator"></i>
+                                            Aplicar custo base nas variações
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <div class="row mt-3">
@@ -580,6 +630,27 @@
 
                             </div>
 
+                            <hr class="mt-3 mb-3">
+
+                            <div class="d-flex justify-between align-center mt-3 mb-2">
+                                <h3>Composição / Itens do Padrão</h3>
+                                <span id="detalheCustoComposicao" class="badge badge-primary">R$ 0,00</span>
+                            </div>
+
+                            <div class="table-responsive">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>Item</th>
+                                            <th>Qtd.</th>
+                                            <th>Custo unitário</th>
+                                            <th>Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tabelaDetalhesComposicao"></tbody>
+                                </table>
+                            </div>
+
                             <div class="d-flex justify-between align-center mt-3 mb-2">
 
                                 <h3>
@@ -602,8 +673,8 @@
 
                                             <th>SKU</th>
                                             <th>Descrição</th>
-                                            <th>Saída</th>
                                             <th>Tamanho</th>
+                                            <th>Saída</th>
                                             <th>Código de barras</th>
                                             <th>Custo</th>
                                             <th>Venda</th>

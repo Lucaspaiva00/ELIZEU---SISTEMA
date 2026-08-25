@@ -107,13 +107,17 @@ class ClienteController {
 
         try {
 
-            await clienteService.excluir(
+            const resultado = await clienteService.excluir(
                 Number(req.params.id)
             );
 
             return res.json({
                 sucesso: true,
-                mensagem: "Cliente removido com sucesso."
+                inativado: Boolean(resultado?.inativado),
+                excluido: Boolean(resultado?.excluido),
+                mensagem: resultado?.inativado
+                    ? "Este cliente possui histórico de orçamento, venda ou financeiro. Para preservar os registros, ele não pode ser apagado definitivamente e foi inativado com sucesso."
+                    : "Cliente removido com sucesso."
             });
 
         } catch (error) {

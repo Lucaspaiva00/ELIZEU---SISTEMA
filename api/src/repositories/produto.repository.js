@@ -36,6 +36,8 @@ class ProdutoRepository {
                     ncm: dados.ncm,
                     cfopPadrao: dados.cfopPadrao,
                     origemMercadoria: dados.origemMercadoria,
+                    composicao: dados.composicao || [],
+                    custoComposicao: dados.custoComposicao || 0,
                     ativo: dados.ativo ?? true
                 }
             });
@@ -121,6 +123,8 @@ class ProdutoRepository {
                     ncm: dados.ncm,
                     cfopPadrao: dados.cfopPadrao,
                     origemMercadoria: dados.origemMercadoria,
+                    composicao: dados.composicao || [],
+                    custoComposicao: dados.custoComposicao || 0,
                     ativo: dados.ativo
                 }
             });

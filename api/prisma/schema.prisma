@@ -341,6 +341,11 @@ model Produto {
   origemMercadoria String?
   ativo            Boolean @default(true)
 
+  // Composição do produto/padrão para formação do custo base.
+  // Ex.: poste, caixa, cabo, disjuntor etc.
+  composicao        Json?
+  custoComposicao   Decimal @default(0) @db.Decimal(12, 2)
+
   variacoes VariacaoProduto[]
 
   criadoEm     DateTime @default(now())

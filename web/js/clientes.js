@@ -791,7 +791,12 @@ async function excluirCliente(id) {
         }
 
         await carregarClientes();
-        mostrarMensagem("Cliente removido com sucesso.");
+        mostrarMensagem(
+            resposta.mensagem ||
+            (resposta.inativado
+                ? "Cliente possui histórico e foi inativado para preservar os registros."
+                : "Cliente removido com sucesso.")
+        );
     } catch (erro) {
         console.error(erro);
         mostrarMensagem("Erro ao excluir cliente.");

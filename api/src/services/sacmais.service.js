@@ -287,7 +287,12 @@ async function salvarContato(empresaId, payload) {
             acao: "atualizado",
             cliente: await prisma.cliente.update({
                 where: { id: existente.id },
-                data
+                data: {
+                    ...data,
+                    // Se o usuário inativou o cliente manualmente para preservar
+                    // histórico, uma nova importação do SacMais não deve reativá-lo.
+                    ativo: existente.ativo
+                }
             })
         };
     }

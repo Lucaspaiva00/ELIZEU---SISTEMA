@@ -273,14 +273,24 @@ function preencherSelectProdutos() {
         </option>
     `;
 
-    produtos.forEach((produto) => {
-        const option = document.createElement("option");
+    [...produtos]
+        .sort((a, b) =>
+            String(a.nome || "").localeCompare(
+                String(b.nome || ""),
+                "pt-BR",
+                { sensitivity: "base" }
+            )
+        )
+        .forEach((produto) => {
+            const option = document.createElement("option");
 
-        option.value = produto.id;
-        option.textContent = `${produto.codigo} - ${produto.nome}`;
+            option.value = produto.id;
+            // No orçamento o cliente pediu somente o nome do produto,
+            // em ordem alfabética.
+            option.textContent = produto.nome || "Produto sem nome";
 
-        select.appendChild(option);
-    });
+            select.appendChild(option);
+        });
 }
 
 async function carregarOrcamentos() {
@@ -478,7 +488,7 @@ function carregarVariacoesProduto() {
         option.value = v.id;
 
         option.textContent =
-            `${v.sku} | ${v.saida || "-"} | ${v.tamanho || "-"} | ${moeda(v.precoVenda)}`;
+            `${v.sku} | ${v.tamanho || "-"} | ${v.saida || "-"} | ${moeda(v.precoVenda)}`;
 
         select.appendChild(option);
 
@@ -661,9 +671,9 @@ function adicionarItemOrcamento() {
 
                 [
 
-                    variacao.saida,
+                    variacao.tamanho,
 
-                    variacao.tamanho
+                    variacao.saida
 
                 ]
 
@@ -1253,9 +1263,8 @@ function validarOrcamento(orcamento) {
     }
 
     orcamento.custosInternos.forEach((custo, index) => {
-        if (!custo.descricao) {
-            throw new Error(`Informe a descrição do custo interno ${index + 1}.`);
-        }
+        // A descrição do custo é opcional. A categoria já identifica o tipo
+        // de despesa quando o usuário não precisar detalhar.
         if (custo.quantidade <= 0) {
             throw new Error(`Informe uma quantidade válida no custo interno ${index + 1}.`);
         }
@@ -1340,9 +1349,9 @@ async function editarOrcamento(id) {
 
                 [
 
-                    item.variacaoProduto.saida,
+                    item.variacaoProduto.tamanho,
 
-                    item.variacaoProduto.tamanho
+                    item.variacaoProduto.saida
 
                 ]
 
@@ -1428,7 +1437,7 @@ async function visualizarOrcamento(id) {
         const nome = servico ? item.variacaoServico.servico.nome : item.variacaoProduto.produto.nome;
         const variacao = servico
             ? (item.variacaoServico.descricao || item.variacaoServico.codigo)
-            : `${item.variacaoProduto.saida || "-"} / ${item.variacaoProduto.tamanho || "-"}`;
+            : `${item.variacaoProduto.tamanho || "-"} / ${item.variacaoProduto.saida || "-"}`;
 
         tbody.innerHTML += `
 
@@ -1852,8 +1861,8 @@ async function gerarPdfOrcamento(id) {
                     ""
                 )
                 : [
-                    item.variacaoProduto?.saida,
-                    item.variacaoProduto?.tamanho
+                    item.variacaoProduto?.tamanho,
+                    item.variacaoProduto?.saida
                 ]
                     .filter(Boolean)
                     .join(" / ");
@@ -2574,6 +2583,13 @@ async function gerarPdfOrcamento(id) {
                     <th>Subtotal:</th>
                     <td>
                         ${numeroPtBrPdf(o.subtotal, 2, 2)}
+                    </td>
+                </tr>
+
+                <tr>
+                    <th>Frete:</th>
+                    <td>
+                        ${numeroPtBrPdf(o.frete || 0, 2, 2)}
                     </td>
                 </tr>
 

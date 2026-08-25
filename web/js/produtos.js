@@ -3,6 +3,7 @@ let categorias = [];
 let produtoEditandoId = null;
 let produtoDetalhesId = null;
 let variacoes = [];
+let composicao = [];
 
 const modalProduto = document.getElementById("modalProduto");
 const modalDetalhesProduto = document.getElementById(
@@ -181,6 +182,7 @@ function renderizarTabela(lista) {
 function abrirModalProduto() {
     produtoEditandoId = null;
     variacoes = [];
+    composicao = [];
 
     formProduto.reset();
 
@@ -197,6 +199,7 @@ function abrirModalProduto() {
     ).textContent = "Cadastro de Produto";
 
     adicionarVariacao();
+    renderizarComposicao();
 
     modalProduto.classList.add("active");
 }
@@ -208,8 +211,10 @@ function fecharModalProduto() {
 
     produtoEditandoId = null;
     variacoes = [];
+    composicao = [];
 
     renderizarVariacoes();
+    renderizarComposicao();
 }
 
 function adicionarVariacao() {
@@ -272,26 +277,26 @@ function renderizarVariacoes() {
                 <input
                     type="text"
                     class="form-control"
-                    value="${escaparAtributo(variacao.saida)}"
-                    oninput="atualizarVariacao(
-                        ${index},
-                        'saida',
-                        this.value
-                    )"
-                    placeholder="Ex.: Venda / Instalação">
-            </td>
-
-            <td>
-                <input
-                    type="text"
-                    class="form-control"
                     value="${escaparAtributo(variacao.tamanho)}"
                     oninput="atualizarVariacao(
                         ${index},
                         'tamanho',
                         this.value
                     )"
-                    placeholder="Tamanho">
+                    placeholder="Ex.: 5m / 7m">
+            </td>
+
+            <td>
+                <input
+                    type="text"
+                    class="form-control"
+                    value="${escaparAtributo(variacao.saida)}"
+                    oninput="atualizarVariacao(
+                        ${index},
+                        'saida',
+                        this.value
+                    )"
+                    placeholder="Ex.: Aérea / Subterrânea">
             </td>
 
             <td>
@@ -392,6 +397,231 @@ function removerVariacao(index) {
     variacoes.splice(index, 1);
 
     renderizarVariacoes();
+}
+
+function custoSugeridoProdutoComposicao(produto) {
+    const variacoesAtivas = (produto?.variacoes || []).filter(
+        (variacao) => variacao.ativo !== false
+    );
+
+    if (!variacoesAtivas.length) return 0;
+
+    return Number(variacoesAtivas[0].precoCusto || 0);
+}
+
+function adicionarComponente() {
+    composicao.push({
+        produtoId: null,
+        nome: "",
+        quantidade: 1,
+        custoUnitario: 0,
+        total: 0
+    });
+
+    renderizarComposicao();
+}
+
+function produtosDisponiveisParaComposicao() {
+    return [...produtos]
+        .filter((produto) => Number(produto.id) !== Number(produtoEditandoId))
+        .sort((a, b) =>
+            String(a.nome || "").localeCompare(
+                String(b.nome || ""),
+                "pt-BR",
+                { sensitivity: "base" }
+            )
+        );
+}
+
+function opcoesProdutosComposicao(produtoSelecionadoId) {
+    const atual = Number(produtoSelecionadoId) || 0;
+
+    return `
+        <option value="">Item manual</option>
+        ${produtosDisponiveisParaComposicao()
+            .map((produto) => `
+                <option
+                    value="${produto.id}"
+                    ${Number(produto.id) === atual ? "selected" : ""}
+                >
+                    ${escaparHtml(produto.nome || "Produto")}
+                </option>
+            `)
+            .join("")}
+    `;
+}
+
+function renderizarComposicao() {
+    const tbody = document.getElementById("tabelaComposicao");
+
+    if (!tbody) return;
+
+    tbody.innerHTML = "";
+
+    if (!composicao.length) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" class="text-center">
+                    Nenhum item na composição. Use esta área quando o produto for um padrão composto por materiais.
+                </td>
+            </tr>
+        `;
+        atualizarResumoComposicao();
+        return;
+    }
+
+    composicao.forEach((item, index) => {
+        const quantidade = Number(item.quantidade || 0);
+        const custoUnitario = Number(item.custoUnitario || 0);
+        item.total = quantidade * custoUnitario;
+
+        const linha = document.createElement("tr");
+        linha.innerHTML = `
+            <td>
+                <select
+                    class="form-control"
+                    onchange="selecionarProdutoComposicao(${index}, this.value)"
+                >
+                    ${opcoesProdutosComposicao(item.produtoId)}
+                </select>
+            </td>
+
+            <td>
+                <input
+                    type="text"
+                    class="form-control"
+                    value="${escaparAtributo(item.nome || "")}"
+                    placeholder="Ex.: Caixa, cabo, disjuntor..."
+                    oninput="atualizarComponente(${index}, 'nome', this.value)"
+                >
+            </td>
+
+            <td>
+                <input
+                    type="number"
+                    min="0.5"
+                    step="0.5"
+                    class="form-control"
+                    value="${numeroInput(item.quantidade || 1)}"
+                    onchange="atualizarComponenteNumero(${index}, 'quantidade', this.value)"
+                >
+            </td>
+
+            <td>
+                <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    class="form-control"
+                    value="${numeroInput(item.custoUnitario || 0)}"
+                    onchange="atualizarComponenteNumero(${index}, 'custoUnitario', this.value)"
+                >
+            </td>
+
+            <td>
+                <strong>${moeda(item.total || 0)}</strong>
+            </td>
+
+            <td>
+                <button
+                    type="button"
+                    class="btn btn-danger"
+                    onclick="removerComponente(${index})"
+                    title="Remover item da composição"
+                >
+                    <i class="fas fa-trash"></i>
+                </button>
+            </td>
+        `;
+
+        tbody.appendChild(linha);
+    });
+
+    atualizarResumoComposicao();
+}
+
+function selecionarProdutoComposicao(index, valor) {
+    const item = composicao[index];
+    if (!item) return;
+
+    const produtoId = Number(valor);
+
+    if (!Number.isInteger(produtoId) || produtoId <= 0) {
+        item.produtoId = null;
+        renderizarComposicao();
+        return;
+    }
+
+    const produto = produtos.find(
+        (registro) => Number(registro.id) === produtoId
+    );
+
+    if (!produto) return;
+
+    item.produtoId = produto.id;
+    item.nome = produto.nome || item.nome || "";
+    item.custoUnitario = custoSugeridoProdutoComposicao(produto);
+    item.total = Number(item.quantidade || 1) * Number(item.custoUnitario || 0);
+
+    renderizarComposicao();
+}
+
+function atualizarComponente(index, campo, valor) {
+    if (!composicao[index]) return;
+    composicao[index][campo] = valor;
+}
+
+function atualizarComponenteNumero(index, campo, valor) {
+    if (!composicao[index]) return;
+
+    const numero = Number(valor);
+    composicao[index][campo] = Number.isFinite(numero) ? numero : 0;
+    composicao[index].total =
+        Number(composicao[index].quantidade || 0) *
+        Number(composicao[index].custoUnitario || 0);
+
+    renderizarComposicao();
+}
+
+function removerComponente(index) {
+    composicao.splice(index, 1);
+    renderizarComposicao();
+}
+
+function calcularCustoComposicao() {
+    return composicao.reduce(
+        (total, item) =>
+            total +
+            Number(item.quantidade || 0) *
+            Number(item.custoUnitario || 0),
+        0
+    );
+}
+
+function atualizarResumoComposicao() {
+    const elemento = document.getElementById("custoComposicaoResumo");
+    if (elemento) elemento.textContent = moeda(calcularCustoComposicao());
+}
+
+function aplicarCustoComposicaoNasVariacoes() {
+    const custoBase = calcularCustoComposicao();
+
+    if (!composicao.length) {
+        mostrarMensagem("Adicione os itens que compõem o padrão antes de calcular o custo base.");
+        return;
+    }
+
+    if (!variacoes.length) {
+        mostrarMensagem("Cadastre ao menos uma variação antes de aplicar o custo base.");
+        return;
+    }
+
+    variacoes.forEach((variacao) => {
+        variacao.precoCusto = custoBase;
+    });
+
+    renderizarVariacoes();
+    mostrarMensagem(`Custo base de ${moeda(custoBase)} aplicado às variações do produto.`);
 }
 
 function alternarCodigoAutomatico() {
@@ -505,6 +735,19 @@ function obterDadosFormulario() {
         origemMercadoria:
             valorCampoProduto("origemMercadoria") || null,
         ativo: true,
+        composicao: composicao
+            .map((item) => ({
+                produtoId: item.produtoId || null,
+                nome: String(item.nome || "").trim(),
+                quantidade: Number(item.quantidade || 0),
+                custoUnitario: Number(item.custoUnitario || 0),
+                total: Number(item.quantidade || 0) * Number(item.custoUnitario || 0)
+            }))
+            .filter((item) =>
+                item.produtoId ||
+                item.nome ||
+                item.custoUnitario > 0
+            ),
         variacoes: variacoes.map((variacao) => ({
             id: variacao.id || null,
             sku: String(variacao.sku || "").trim(),
@@ -562,6 +805,20 @@ function validarProduto(produto) {
             "Cadastre ao menos uma variação."
         );
     }
+
+    produto.composicao.forEach((item, index) => {
+        if (!item.nome) {
+            throw new Error(`Informe o item/material da composição ${index + 1}.`);
+        }
+
+        if (!Number.isFinite(item.quantidade) || item.quantidade <= 0) {
+            throw new Error(`Informe uma quantidade válida na composição ${index + 1}.`);
+        }
+
+        if (!Number.isFinite(item.custoUnitario) || item.custoUnitario < 0) {
+            throw new Error(`Informe um custo válido na composição ${index + 1}.`);
+        }
+    });
 
     const skus = new Set();
 
@@ -653,6 +910,18 @@ function editarProduto(id) {
     ).checked = Boolean(
         produto.permiteVendaSemEstoque
     );
+
+    composicao = Array.isArray(produto.composicao)
+        ? produto.composicao.map((item) => ({
+            produtoId: item?.produtoId || null,
+            nome: item?.nome || "",
+            quantidade: Number(item?.quantidade || 1),
+            custoUnitario: Number(item?.custoUnitario || 0),
+            total: Number(item?.total || 0)
+        }))
+        : [];
+
+    renderizarComposicao();
 
     variacoes = (produto.variacoes || []).map(
         (variacao) => ({
@@ -776,6 +1045,11 @@ function visualizarProduto(id) {
         }`
     );
 
+    renderizarDetalhesComposicao(
+        Array.isArray(produto.composicao) ? produto.composicao : [],
+        Number(produto.custoComposicao || 0)
+    );
+
     renderizarDetalhesVariacoes(
         produto.variacoes || []
     );
@@ -789,6 +1063,42 @@ function visualizarProduto(id) {
     };
 
     modalDetalhesProduto.classList.add("active");
+}
+
+function renderizarDetalhesComposicao(lista, custoTotal) {
+    const tbody = document.getElementById("tabelaDetalhesComposicao");
+    const badge = document.getElementById("detalheCustoComposicao");
+
+    if (badge) badge.textContent = moeda(custoTotal || 0);
+    if (!tbody) return;
+
+    tbody.innerHTML = "";
+
+    if (!lista.length) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="4" class="text-center">
+                    Nenhum item de composição cadastrado.
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    lista.forEach((item) => {
+        const total =
+            Number(item.quantidade || 0) *
+            Number(item.custoUnitario || 0);
+
+        const linha = document.createElement("tr");
+        linha.innerHTML = `
+            <td>${escaparHtml(item.nome || "-")}</td>
+            <td>${numero(item.quantidade || 0)}</td>
+            <td>${moeda(item.custoUnitario || 0)}</td>
+            <td><strong>${moeda(item.total ?? total)}</strong></td>
+        `;
+        tbody.appendChild(linha);
+    });
 }
 
 function renderizarDetalhesVariacoes(lista) {
@@ -827,13 +1137,13 @@ function renderizarDetalhesVariacoes(lista) {
             </td>
 
             <td>
-                ${escaparHtml(variacao.saida || "-")}
-            </td>
-
-            <td>
                 ${escaparHtml(
             variacao.tamanho || "-"
         )}
+            </td>
+
+            <td>
+                ${escaparHtml(variacao.saida || "-")}
             </td>
 
             <td>

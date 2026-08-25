@@ -84,10 +84,6 @@ class OrcamentoService {
                 const quantidade = Number(custo?.quantidade ?? 1);
                 const valorUnitario = Number(custo?.valorUnitario ?? 0);
 
-                if (!descricao) {
-                    throw new Error(`Informe a descrição do custo interno ${indice + 1}.`);
-                }
-
                 if (!Number.isFinite(quantidade) || quantidade <= 0) {
                     throw new Error(`A quantidade do custo interno ${indice + 1} é inválida.`);
                 }
@@ -97,7 +93,7 @@ class OrcamentoService {
                 }
 
                 return {
-                    descricao,
+                    descricao: descricao || null,
                     categoria: String(custo?.categoria || "OUTRO").trim().toUpperCase(),
                     quantidade,
                     valorUnitario,

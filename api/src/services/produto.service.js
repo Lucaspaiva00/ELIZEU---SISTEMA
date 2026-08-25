@@ -6,6 +6,53 @@ class ProdutoService {
         return codigo || null;
     }
 
+    normalizarComposicao(composicao) {
+        if (!Array.isArray(composicao)) return [];
+
+        return composicao
+            .map((item, index) => {
+                const produtoId = Number(item?.produtoId);
+                const nome = String(item?.nome || "").trim();
+                const quantidade = Number(item?.quantidade ?? 1);
+                const custoUnitario = Number(item?.custoUnitario ?? 0);
+                const produtoIdValido = Number.isInteger(produtoId) && produtoId > 0;
+
+                const linhaVazia =
+                    !nome &&
+                    !produtoIdValido &&
+                    (!Number.isFinite(custoUnitario) || custoUnitario === 0);
+
+                if (linhaVazia) return null;
+
+                if (!nome) {
+                    throw new Error(`Informe o item/material da composição ${index + 1}.`);
+                }
+
+                if (!Number.isFinite(quantidade) || quantidade <= 0) {
+                    throw new Error(`A quantidade da composição ${index + 1} deve ser maior que zero.`);
+                }
+
+                if (!Number.isFinite(custoUnitario) || custoUnitario < 0) {
+                    throw new Error(`O custo unitário da composição ${index + 1} é inválido.`);
+                }
+
+                return {
+                    produtoId: produtoIdValido ? produtoId : null,
+                    nome,
+                    quantidade,
+                    custoUnitario,
+                    total: Math.round((quantidade * custoUnitario + Number.EPSILON) * 100) / 100
+                };
+            })
+            .filter(Boolean);
+    }
+
+    calcularCustoComposicao(composicao) {
+        return Math.round(
+            (composicao.reduce((total, item) => total + Number(item.total || 0), 0) + Number.EPSILON) * 100
+        ) / 100;
+    }
+
     async resolverCodigo(dados, produtoAtual = null) {
         const codigoInformado = this.normalizarCodigo(dados.codigo);
 
@@ -20,13 +67,26 @@ class ProdutoService {
         throw new Error("Informe o código do produto ou marque a geração automática.");
     }
 
-    async criar(dados) {
-        const codigo = await this.resolverCodigo(dados);
+    prepararDados(dados) {
+        const composicao = this.normalizarComposicao(dados.composicao);
+        const custoComposicao = this.calcularCustoComposicao(composicao);
 
-        const existe = await produtoRepository.buscarPorCodigo(codigo, dados.empresaId);
+        return {
+            ...dados,
+            descricao: String(dados.descricao || "").trim() || null,
+            composicao,
+            custoComposicao
+        };
+    }
+
+    async criar(dados) {
+        const preparados = this.prepararDados(dados);
+        const codigo = await this.resolverCodigo(preparados);
+
+        const existe = await produtoRepository.buscarPorCodigo(codigo, preparados.empresaId);
         if (existe) throw new Error("Já existe um produto com este código.");
 
-        return produtoRepository.criar({ ...dados, codigo });
+        return produtoRepository.criar({ ...preparados, codigo });
     }
 
     async listar(empresaId) {
@@ -41,14 +101,15 @@ class ProdutoService {
 
     async atualizar(id, dados) {
         const produtoAtual = await this.buscarPorId(id);
-        const codigo = await this.resolverCodigo(dados, produtoAtual);
+        const preparados = this.prepararDados(dados);
+        const codigo = await this.resolverCodigo(preparados, produtoAtual);
 
-        const existente = await produtoRepository.buscarPorCodigo(codigo, dados.empresaId);
+        const existente = await produtoRepository.buscarPorCodigo(codigo, preparados.empresaId);
         if (existente && existente.id !== id) {
             throw new Error("Já existe outro produto utilizando este código.");
         }
 
-        return produtoRepository.atualizar(id, { ...dados, codigo });
+        return produtoRepository.atualizar(id, { ...preparados, codigo });
     }
 
     async excluir(id) {
