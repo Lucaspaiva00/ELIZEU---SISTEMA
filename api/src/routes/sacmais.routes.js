@@ -6,6 +6,17 @@ const controller = require("../controllers/sacmais.controller");
 // URL pública que deve ser cadastrada no webhook do SacMais.
 router.post("/webhook/:empresaId", controller.webhook);
 
+// PDF temporário gerado pelo ERP para que a API do SacMais consiga buscar
+// o documento e anexá-lo na mensagem do WhatsApp.
+router.get("/arquivos/:token", controller.arquivoTemporario);
+
+// Envia mensagem + PDF do orçamento diretamente pela API do SacMais.
+router.post(
+    "/orcamentos/:orcamentoId/enviar-whatsapp",
+    auth,
+    controller.enviarOrcamento
+);
+
 // Consulta/importa UM contato pelo contactNumber usando o endpoint oficial
 // GET /contacts/{contactNumber} do SacMais.
 router.post("/contatos/:contactNumber/importar", auth, controller.importarContato);

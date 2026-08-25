@@ -416,7 +416,7 @@
                         <div class="modal-header">
                             <div>
                                 <h2 class="modal-title"><i class="fa-brands fa-whatsapp"></i> Enviar orçamento pelo WhatsApp</h2>
-                                <p class="modal-section-help">O PDF já é preparado automaticamente com os mesmos dados do orçamento.</p>
+                                <p class="modal-section-help">O sistema gera o PDF e envia diretamente ao WhatsApp do cliente pela API do SacMais.</p>
                             </div>
                             <button class="modal-close" onclick="fecharModalWhatsApp()">&times;</button>
                         </div>
@@ -450,8 +450,8 @@
                         <div class="modal-footer">
                             <button type="button" class="btn btn-light" onclick="fecharModalWhatsApp()">Fechar</button>
                             <button type="button" class="btn btn-light" onclick="copiarMensagemWhatsApp()"><i class="fas fa-copy"></i> Copiar mensagem</button>
-                            <button type="button" class="btn btn-success" id="btnCompartilharPdfWhatsApp" onclick="compartilharPdfWhatsApp()"><i class="fas fa-share-nodes"></i> Compartilhar PDF</button>
-                            <button type="button" class="btn btn-success" onclick="abrirWhatsAppWebComPdf()"><i class="fa-brands fa-whatsapp"></i> Baixar PDF + abrir WhatsApp</button>
+                            <button type="button" class="btn btn-light" onclick="abrirWhatsAppWebComPdf()"><i class="fas fa-up-right-from-square"></i> Abrir WhatsApp manualmente</button>
+                            <button type="button" class="btn btn-success" id="btnEnviarWhatsappApi" onclick="enviarWhatsAppViaSacMais()"><i class="fa-brands fa-whatsapp"></i> Enviar agora pelo WhatsApp</button>
                         </div>
                     </div>
                 </div>

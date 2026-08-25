@@ -1875,21 +1875,6 @@ async function abrirEnvioWhatsApp(id, botao = null) {
         document.getElementById("whatsappMensagem").value = mensagemPadraoWhatsApp(orcamento);
         document.getElementById("whatsappArquivoNome").textContent = nomeArquivoPdfWhatsApp(orcamento);
 
-        const btnCompartilhar = document.getElementById("btnCompartilharPdfWhatsApp");
-        const arquivoTeste = new File(
-            [whatsappPdfBlob],
-            nomeArquivoPdfWhatsApp(orcamento),
-            { type: "application/pdf" }
-        );
-
-        const suporteCompartilhar = Boolean(
-            navigator.share &&
-            navigator.canShare &&
-            navigator.canShare({ files: [arquivoTeste] })
-        );
-
-        btnCompartilhar.style.display = suporteCompartilhar ? "inline-flex" : "none";
-
         abrirModalWhatsApp();
     } catch (erro) {
         console.error(erro);
@@ -1898,6 +1883,74 @@ async function abrirEnvioWhatsApp(id, botao = null) {
         if (botao) {
             botao.disabled = false;
             botao.innerHTML = htmlOriginal;
+        }
+    }
+}
+
+function blobParaBase64(blob) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+
+        reader.onloadend = () => {
+            const resultado = String(reader.result || "");
+            resolve(resultado.includes(",") ? resultado.split(",").pop() : resultado);
+        };
+
+        reader.onerror = () => reject(new Error("Não foi possível preparar o PDF para envio."));
+        reader.readAsDataURL(blob);
+    });
+}
+
+async function enviarWhatsAppViaSacMais() {
+    if (!whatsappOrcamentoAtual || !whatsappPdfBlob) {
+        return mostrarMensagem("Prepare o orçamento antes de enviar.");
+    }
+
+    const botao = document.getElementById("btnEnviarWhatsappApi");
+    const htmlOriginal = botao?.innerHTML;
+
+    try {
+        if (botao) {
+            botao.disabled = true;
+            botao.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando PDF...';
+        }
+
+        const mensagem = document.getElementById("whatsappMensagem")?.value?.trim() || "";
+
+        if (!mensagem) {
+            throw new Error("Informe a mensagem que será enviada ao cliente.");
+        }
+
+        const pdfBase64 = await blobParaBase64(whatsappPdfBlob);
+        const resposta = await post(
+            `/integracoes/sacmais/orcamentos/${whatsappOrcamentoAtual.id}/enviar-whatsapp`,
+            {
+                mensagem,
+                nomeArquivo: nomeArquivoPdfWhatsApp(whatsappOrcamentoAtual),
+                pdfBase64
+            }
+        );
+
+        if (!resposta?.sucesso) {
+            throw new Error(
+                resposta?.mensagem ||
+                "O SacMais não confirmou o envio do orçamento."
+            );
+        }
+
+        await carregarOrcamentos();
+        fecharModalWhatsApp();
+        mostrarMensagem("Orçamento enviado com sucesso pelo WhatsApp, com o PDF anexado.");
+    } catch (erro) {
+        console.error(erro);
+        mostrarMensagem(
+            erro.message ||
+            "Não foi possível enviar o orçamento pela API do SacMais."
+        );
+    } finally {
+        if (botao) {
+            botao.disabled = false;
+            botao.innerHTML = htmlOriginal || '<i class="fa-brands fa-whatsapp"></i> Enviar agora pelo WhatsApp';
         }
     }
 }
