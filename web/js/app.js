@@ -97,3 +97,17 @@ document.addEventListener('DOMContentLoaded', () => {
         observador.observe(modal, { attributes: true, attributeFilter: ['class'] });
     });
 });
+
+// ============================================
+// Extensões específicas por página
+// ============================================
+document.addEventListener("DOMContentLoaded", () => {
+    if (!window.location.pathname.includes("produtos.html")) return;
+
+    if (document.querySelector('script[data-extensao="duplicar-produtos"]')) return;
+
+    const script = document.createElement("script");
+    script.src = "../js/produtos-duplicar.js";
+    script.dataset.extensao = "duplicar-produtos";
+    document.body.appendChild(script);
+});

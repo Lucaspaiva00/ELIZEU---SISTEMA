@@ -19,6 +19,53 @@ function dadosVariacao(v) {
     };
 }
 
+async function gerarCodigoAutomaticoTx(tx, empresaId) {
+    const produtos = await tx.produto.findMany({
+        where: { empresaId },
+        select: { codigo: true }
+    });
+
+    let maior = 0;
+
+    for (const produto of produtos) {
+        const match = /^P(\d+)$/i.exec(String(produto.codigo || "").trim());
+        if (match) maior = Math.max(maior, Number(match[1]) || 0);
+    }
+
+    let sequencia = maior + 1;
+
+    while (true) {
+        const codigo = `P${String(sequencia).padStart(6, "0")}`;
+        const existe = await tx.produto.findFirst({
+            where: { empresaId, codigo },
+            select: { id: true }
+        });
+
+        if (!existe) return codigo;
+        sequencia += 1;
+    }
+}
+
+async function gerarSkuDuplicadoTx(tx, skuOriginal, codigoNovo, indice) {
+    const original = String(skuOriginal || "").trim();
+    const base = original
+        ? `${original}-COPIA`
+        : `${codigoNovo}-V${String(indice + 1).padStart(2, "0")}`;
+
+    let tentativa = base;
+    let sequencia = 2;
+
+    while (await tx.variacaoProduto.findUnique({
+        where: { sku: tentativa },
+        select: { id: true }
+    })) {
+        tentativa = `${base}-${sequencia}`;
+        sequencia += 1;
+    }
+
+    return tentativa;
+}
+
 class ProdutoRepository {
     async criar(dados) {
         return prisma.$transaction(async (tx) => {
@@ -106,6 +153,90 @@ class ProdutoRepository {
             if (!existe) return codigo;
             sequencia += 1;
         }
+    }
+
+    async duplicar(id, empresaId) {
+        return prisma.$transaction(async (tx) => {
+            const original = await tx.produto.findFirst({
+                where: {
+                    id,
+                    empresaId,
+                    ativo: true
+                },
+                include: {
+                    variacoes: {
+                        where: { ativo: true },
+                        orderBy: { id: "asc" }
+                    }
+                }
+            });
+
+            if (!original) {
+                throw new Error("Produto não encontrado.");
+            }
+
+            const codigoNovo = await gerarCodigoAutomaticoTx(tx, empresaId);
+
+            const copia = await tx.produto.create({
+                data: {
+                    empresaId: original.empresaId,
+                    categoriaId: original.categoriaId,
+                    codigo: codigoNovo,
+                    nome: `${original.nome} - Cópia`,
+                    descricao: original.descricao,
+                    marca: original.marca,
+                    unidadeMedida: original.unidadeMedida,
+                    controlaEstoque: original.controlaEstoque,
+                    permiteVendaSemEstoque: original.permiteVendaSemEstoque,
+                    ncm: original.ncm,
+                    cfopPadrao: original.cfopPadrao,
+                    origemMercadoria: original.origemMercadoria,
+                    composicao: original.composicao || [],
+                    custoComposicao: original.custoComposicao,
+                    margemLucroPadrao: original.margemLucroPadrao,
+                    ativo: true
+                }
+            });
+
+            for (let indice = 0; indice < original.variacoes.length; indice += 1) {
+                const variacao = original.variacoes[indice];
+                const skuNovo = await gerarSkuDuplicadoTx(
+                    tx,
+                    variacao.sku,
+                    codigoNovo,
+                    indice
+                );
+
+                await tx.variacaoProduto.create({
+                    data: {
+                        produtoId: copia.id,
+                        sku: skuNovo,
+                        // Código de barras e GTIN identificam fisicamente o item.
+                        // Não duplicamos esses identificadores para evitar dois produtos
+                        // respondendo ao mesmo código em leitura/consulta de estoque.
+                        codigoBarras: null,
+                        gtin: null,
+                        descricao: variacao.descricao,
+                        saida: variacao.saida,
+                        tamanho: variacao.tamanho,
+                        imagemPrincipal: variacao.imagemPrincipal,
+                        localizacaoEstoque: variacao.localizacaoEstoque,
+                        peso: variacao.peso,
+                        precoCusto: variacao.precoCusto,
+                        precoVenda: variacao.precoVenda,
+                        // A cópia é um novo cadastro; não cria estoque fictício.
+                        estoqueAtual: 0,
+                        estoqueMinimo: variacao.estoqueMinimo,
+                        ativo: true
+                    }
+                });
+            }
+
+            return tx.produto.findUnique({
+                where: { id: copia.id },
+                include: { categoria: true, variacoes: true }
+            });
+        });
     }
 
     async atualizar(id, dados) {

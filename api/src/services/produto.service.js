@@ -119,6 +119,14 @@ class ProdutoService {
         return produto;
     }
 
+    async duplicar(id, empresaId) {
+        if (!Number.isInteger(id) || id <= 0) {
+            throw new Error("Produto inválido.");
+        }
+
+        return produtoRepository.duplicar(id, empresaId);
+    }
+
     async atualizar(id, dados) {
         const produtoAtual = await this.buscarPorId(id);
         const preparados = this.prepararDados(dados);

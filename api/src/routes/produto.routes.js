@@ -10,6 +10,8 @@ router.post("/", auth, produtoController.criar);
 
 router.get("/", auth, produtoController.listar);
 
+router.post("/:id/duplicar", auth, produtoController.duplicar);
+
 router.get("/:id", auth, produtoController.buscarPorId);
 
 router.put("/:id", auth, produtoController.atualizar);

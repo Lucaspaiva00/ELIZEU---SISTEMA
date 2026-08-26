@@ -75,6 +75,26 @@ class ProdutoController {
 
     }
 
+    async duplicar(req, res) {
+        try {
+            const produto = await produtoService.duplicar(
+                Number(req.params.id),
+                req.usuario.empresaId
+            );
+
+            return res.status(201).json({
+                sucesso: true,
+                mensagem: "Produto duplicado com sucesso.",
+                produto
+            });
+        } catch (error) {
+            return res.status(400).json({
+                sucesso: false,
+                mensagem: error.message
+            });
+        }
+    }
+
     async atualizar(req, res) {
 
         try {
