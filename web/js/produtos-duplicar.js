@@ -9,6 +9,11 @@ function obterIdProdutoDaLinha(linha) {
 }
 
 async function duplicarProduto(id, botao = null) {
+    if (typeof window.temPermissao === "function" && !window.temPermissao("produtos.duplicar")) {
+        mostrarMensagem("Seu usuário não possui permissão para duplicar produtos.");
+        return;
+    }
+
     const produto = Array.isArray(produtos)
         ? produtos.find((item) => Number(item.id) === Number(id))
         : null;
@@ -47,8 +52,6 @@ async function duplicarProduto(id, botao = null) {
             `Produto duplicado com sucesso como ${resposta.produto.codigo}. Revise o novo cadastro e salve as alterações desejadas.`
         );
 
-        // Abre imediatamente a cópia para o usuário alterar nome, tamanho,
-        // saída, preço ou qualquer outro campo antes de seguir trabalhando.
         if (typeof editarProduto === "function") {
             editarProduto(resposta.produto.id);
         }
@@ -67,6 +70,9 @@ async function duplicarProduto(id, botao = null) {
 }
 
 function instalarBotoesDuplicarProdutos() {
+    const podeDuplicar = typeof window.temPermissao !== "function" ||
+        window.temPermissao("produtos.duplicar");
+
     const tbody = document.getElementById("tabelaProdutos");
 
     tbody?.querySelectorAll("tr").forEach((linha) => {
@@ -82,8 +88,10 @@ function instalarBotoesDuplicarProdutos() {
         botao.type = "button";
         botao.className = "btn btn-light";
         botao.dataset.duplicarProduto = String(id);
+        botao.dataset.permission = "produtos.duplicar";
         botao.title = "Duplicar produto";
         botao.innerHTML = '<i class="fas fa-copy"></i>';
+        botao.hidden = !podeDuplicar;
         botao.addEventListener("click", () => duplicarProduto(id, botao));
 
         if (botaoEditar) {
@@ -104,6 +112,8 @@ function instalarBotoesDuplicarProdutos() {
         botao.type = "button";
         botao.className = "btn btn-light";
         botao.id = "btnDuplicarDetalhesProduto";
+        botao.dataset.permission = "produtos.duplicar";
+        botao.hidden = !podeDuplicar;
         botao.innerHTML = '<i class="fas fa-copy"></i> Duplicar Produto';
         botao.addEventListener("click", () => {
             if (produtoDetalhesId) {
@@ -116,6 +126,10 @@ function instalarBotoesDuplicarProdutos() {
         } else {
             footerDetalhes.appendChild(botao);
         }
+    }
+
+    if (typeof window.aplicarPermissoesAcoes === "function") {
+        window.aplicarPermissoesAcoes();
     }
 }
 

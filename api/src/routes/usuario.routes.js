@@ -1,12 +1,13 @@
 const express = require("express");
 const auth = require("../middlewares/auth.middleware");
-const { autorizarPerfis } = require("../middlewares/perfil.middleware");
+const { autorizar } = require("../middlewares/permissions.middleware");
 const controller = require("../controllers/usuario.controller");
 
 const router = express.Router();
-const somenteAdmin = autorizarPerfis("ADMIN");
+const gerenciarUsuarios = autorizar("usuarios.gerenciar");
 
-router.use(auth, somenteAdmin);
+router.use(auth, gerenciarUsuarios);
+router.get("/permissoes", controller.catalogoPermissoes);
 router.post("/", controller.criar);
 router.get("/", controller.listar);
 router.get("/:id", controller.buscarPorId);

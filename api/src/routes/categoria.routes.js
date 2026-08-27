@@ -1,18 +1,20 @@
 const express = require("express");
-
 const router = express.Router();
-
 const auth = require("../middlewares/auth.middleware");
+const { autorizar, autorizarQualquer } = require("../middlewares/permissions.middleware");
 const categoriaController = require("../controllers/categoria.controller");
 
-router.post("/", auth, categoriaController.criar);
+const consultarCategorias = autorizarQualquer(
+    "categorias.visualizar",
+    "produtos.visualizar",
+    "produtos.criar",
+    "produtos.editar"
+);
 
-router.get("/", auth, categoriaController.listar);
-
-router.get("/:id", auth, categoriaController.buscarPorId);
-
-router.put("/:id", auth, categoriaController.atualizar);
-
-router.delete("/:id", auth, categoriaController.excluir);
+router.post("/", auth, autorizar("categorias.gerenciar"), categoriaController.criar);
+router.get("/", auth, consultarCategorias, categoriaController.listar);
+router.get("/:id", auth, consultarCategorias, categoriaController.buscarPorId);
+router.put("/:id", auth, autorizar("categorias.gerenciar"), categoriaController.atualizar);
+router.delete("/:id", auth, autorizar("categorias.gerenciar"), categoriaController.excluir);
 
 module.exports = router;

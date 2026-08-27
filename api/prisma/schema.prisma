@@ -218,7 +218,7 @@ model Empresa {
   movimentacoesEstoque     MovimentacaoEstoque[]
   configuracaoFiscal       ConfiguracaoFiscal?
   certificadoDigital       CertificadoDigital?
-  notasFiscais              NotaFiscal[]
+  notasFiscais             NotaFiscal[]
 
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
@@ -230,19 +230,19 @@ model ConfiguracaoFiscal {
   empresaId Int     @unique
   empresa   Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
 
-  regimeTributario       RegimeTributario?
-  crt                     Int?
-  inscricaoMunicipal      String?
-  cnaePrincipal           String?
-  codigoMunicipio         String?
-  ambiente                AmbienteFiscal @default(HOMOLOGACAO)
-  serieNfe                Int            @default(1)
-  proximoNumeroNfe        Int            @default(1)
-  cfopPadrao              String?
-  naturezaOperacao        String?
-  emailFiscal             String?
-  informacoesComplementares String?      @db.Text
-  ativo                   Boolean        @default(false)
+  regimeTributario          RegimeTributario?
+  crt                       Int?
+  inscricaoMunicipal        String?
+  cnaePrincipal             String?
+  codigoMunicipio           String?
+  ambiente                  AmbienteFiscal    @default(HOMOLOGACAO)
+  serieNfe                  Int               @default(1)
+  proximoNumeroNfe          Int               @default(1)
+  cfopPadrao                String?
+  naturezaOperacao          String?
+  emailFiscal               String?
+  informacoesComplementares String?           @db.Text
+  ativo                     Boolean           @default(false)
 
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
@@ -257,13 +257,13 @@ model CertificadoDigital {
   empresa   Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
 
   nomeArquivo           String
-  conteudoCriptografado String   @db.Text
+  conteudoCriptografado String    @db.Text
   iv                    String
   authTag               String
   validade              DateTime?
-  ativo                 Boolean  @default(true)
-  enviadoEm             DateTime @default(now())
-  atualizadoEm          DateTime @updatedAt
+  ativo                 Boolean   @default(true)
+  enviadoEm             DateTime  @default(now())
+  atualizadoEm          DateTime  @updatedAt
 
   @@index([empresaId, ativo])
 }
@@ -283,6 +283,8 @@ model Usuario {
 
   ultimoLogin DateTime?
 
+  controleAcesso UsuarioControleAcesso?
+
   orcamentosCriados   Orcamento[]              @relation("OrcamentoCriadoPor")
   orcamentosAprovados Orcamento[]              @relation("OrcamentoAprovadoPor")
   vendasCriadas       Venda[]                  @relation("VendaCriadaPor")
@@ -293,6 +295,18 @@ model Usuario {
   atualizadoEm DateTime @updatedAt
 
   @@index([empresaId])
+}
+
+model UsuarioControleAcesso {
+  usuarioId Int     @id
+  usuario   Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  permissoes Json
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  @@index([usuarioId])
 }
 
 // =====================================================
@@ -424,7 +438,7 @@ model Servico {
   nome          String
   descricao     String?
   unidadeMedida UnidadeMedida @default(UN)
-  ativo          Boolean @default(true)
+  ativo         Boolean       @default(true)
 
   variacoes VariacaoServico[]
 
@@ -441,11 +455,11 @@ model VariacaoServico {
   servicoId Int
   servico   Servico @relation(fields: [servicoId], references: [id], onDelete: Cascade)
 
-  codigo       String @unique
-  descricao    String?
-  precoCusto   Decimal @default(0) @db.Decimal(12, 2)
-  precoVenda   Decimal @db.Decimal(12, 2)
-  ativo        Boolean @default(true)
+  codigo     String  @unique
+  descricao  String?
+  precoCusto Decimal @default(0) @db.Decimal(12, 2)
+  precoVenda Decimal @db.Decimal(12, 2)
+  ativo      Boolean @default(true)
 
   itensOrcamento   ItemOrcamento[]
   itensVenda       ItemVenda[]
@@ -471,9 +485,9 @@ model TabelaPreco {
   padrao           Boolean   @default(false)
   ativa            Boolean   @default(true)
 
-  itens      ItemTabelaPreco[]
+  itens        ItemTabelaPreco[]
   itensServico ItemTabelaPrecoServico[]
-  orcamentos Orcamento[]
+  orcamentos   Orcamento[]
 
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
@@ -553,7 +567,7 @@ model Cliente {
 
   // Integração SacMais
   sacmaisId             String?
-  origemCadastro        String?  @default("ERP")
+  origemCadastro        String?   @default("ERP")
   sincronizadoSacMaisEm DateTime?
 
   orcamentos    Orcamento[]
@@ -634,11 +648,11 @@ model ItemOrcamento {
   id Int @id @default(autoincrement())
 
   orcamentoId       Int
-  tipo               TipoItemComercial @default(PRODUTO)
-  variacaoProdutoId  Int?
-  variacaoServicoId  Int?
+  tipo              TipoItemComercial @default(PRODUTO)
+  variacaoProdutoId Int?
+  variacaoServicoId Int?
 
-  orcamento       Orcamento       @relation(fields: [orcamentoId], references: [id], onDelete: Cascade)
+  orcamento       Orcamento        @relation(fields: [orcamentoId], references: [id], onDelete: Cascade)
   variacaoProduto VariacaoProduto? @relation(fields: [variacaoProdutoId], references: [id])
   variacaoServico VariacaoServico? @relation(fields: [variacaoServicoId], references: [id])
 
@@ -718,11 +732,11 @@ model ItemVenda {
   id Int @id @default(autoincrement())
 
   vendaId           Int
-  tipo               TipoItemComercial @default(PRODUTO)
-  variacaoProdutoId  Int?
-  variacaoServicoId  Int?
+  tipo              TipoItemComercial @default(PRODUTO)
+  variacaoProdutoId Int?
+  variacaoServicoId Int?
 
-  venda           Venda           @relation(fields: [vendaId], references: [id], onDelete: Cascade)
+  venda           Venda            @relation(fields: [vendaId], references: [id], onDelete: Cascade)
   variacaoProduto VariacaoProduto? @relation(fields: [variacaoProdutoId], references: [id])
   variacaoServico VariacaoServico? @relation(fields: [variacaoServicoId], references: [id])
 
@@ -744,7 +758,6 @@ model ItemVenda {
   @@index([variacaoProdutoId])
   @@index([variacaoServicoId])
 }
-
 
 // =====================================================
 // NOTAS FISCAIS - NF-e
@@ -770,16 +783,16 @@ model NotaFiscal {
   protocolo   String?
 
   naturezaOperacao String?
-  dadosEmissao      Json?
+  dadosEmissao     Json?
 
-  xmlEnvio   String? @db.Text
-  xmlRetorno String? @db.Text
+  xmlEnvio     String? @db.Text
+  xmlRetorno   String? @db.Text
   motivoStatus String? @db.Text
 
-  preparadaEm  DateTime @default(now())
+  preparadaEm   DateTime  @default(now())
   transmitidaEm DateTime?
-  autorizadaEm DateTime?
-  canceladaEm  DateTime?
+  autorizadaEm  DateTime?
+  canceladaEm   DateTime?
 
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt

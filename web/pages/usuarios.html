@@ -6,6 +6,23 @@
     <title>Usuários | Elian Sigs</title>
     <link rel="stylesheet" href="../css/app.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <style>
+        .modal-usuario-acesso { width: min(980px, 96vw); max-width: 980px; }
+        .permissions-box { margin-top: 18px; border: 1px solid #e5e7eb; border-radius: 14px; overflow: hidden; background: #fff; }
+        .permissions-head { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 16px 18px; background: #f8fafc; border-bottom: 1px solid #e5e7eb; }
+        .permissions-head strong { display: block; font-size: 15px; }
+        .permissions-head small { display: block; color: #64748b; margin-top: 3px; }
+        .permissions-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; padding: 16px; max-height: 420px; overflow: auto; }
+        .permission-group { border: 1px solid #e5e7eb; border-radius: 12px; padding: 14px; }
+        .permission-group-head { margin-bottom: 10px; }
+        .permission-group-head strong { display: block; font-size: 14px; }
+        .permission-group-head small { color: #64748b; font-size: 12px; }
+        .permission-option { display: flex; gap: 9px; align-items: flex-start; padding: 7px 0; cursor: pointer; font-size: 13px; }
+        .permission-option input { margin-top: 2px; }
+        .permission-admin-info { grid-column: 1 / -1; padding: 18px; border-radius: 10px; background: #eff6ff; color: #1e40af; }
+        .permission-summary { margin-top: 10px; color: #64748b; font-size: 12px; }
+        @media (max-width: 760px) { .permissions-grid { grid-template-columns: 1fr; max-height: 360px; } .permissions-head { align-items: flex-start; flex-direction: column; } }
+    </style>
 </head>
 <body>
 <div class="wrapper">
@@ -17,7 +34,7 @@
                 <div>
                     <span class="page-eyebrow">ADMINISTRAÇÃO</span>
                     <h1 class="page-title">Gestão de usuários</h1>
-                    <p class="page-subtitle">Controle quem acessa o ERP e quais áreas cada pessoa pode utilizar.</p>
+                    <p class="page-subtitle">Controle quem acessa o ERP e exatamente quais áreas e ações cada pessoa pode utilizar.</p>
                 </div>
                 <button class="btn btn-primary" type="button" onclick="abrirModalUsuario()">
                     <i class="fas fa-user-plus"></i> Novo usuário
@@ -41,8 +58,8 @@
                 </div>
                 <div class="table-responsive">
                     <table class="table usuarios-table">
-                        <thead><tr><th>Usuário</th><th>Contato</th><th>Perfil</th><th>Último acesso</th><th>Status</th><th class="text-right">Ações</th></tr></thead>
-                        <tbody id="tabelaUsuarios"><tr><td colspan="6" class="usuarios-empty">Carregando usuários...</td></tr></tbody>
+                        <thead><tr><th>Usuário</th><th>Contato</th><th>Perfil</th><th>Permissões</th><th>Último acesso</th><th>Status</th><th class="text-right">Ações</th></tr></thead>
+                        <tbody id="tabelaUsuarios"><tr><td colspan="7" class="usuarios-empty">Carregando usuários...</td></tr></tbody>
                     </table>
                 </div>
             </div>
@@ -51,8 +68,8 @@
 </div>
 
 <div class="modal-overlay" id="modalUsuario">
-    <div class="modal modal-usuario">
-        <div class="modal-header"><div><h2 id="tituloModalUsuario">Novo usuário</h2><p>Defina os dados e o nível de acesso.</p></div><button class="modal-close" type="button" onclick="fecharModalUsuario()" aria-label="Fechar">&times;</button></div>
+    <div class="modal modal-usuario-acesso">
+        <div class="modal-header"><div><h2 id="tituloModalUsuario">Novo usuário</h2><p>Defina os dados, o perfil e as permissões individuais.</p></div><button class="modal-close" type="button" onclick="fecharModalUsuario()" aria-label="Fechar">&times;</button></div>
         <form id="formUsuario">
             <div class="modal-body">
                 <input type="hidden" id="usuarioId">
@@ -65,9 +82,26 @@
                     <div class="col"><div class="form-group"><label for="usuarioPerfil">Perfil de acesso *</label><select id="usuarioPerfil" class="form-control" required><option value="ADMIN">Administrador</option><option value="GERENTE">Gerente</option><option value="VENDEDOR">Vendedor</option><option value="FINANCEIRO">Financeiro</option><option value="ESTOQUE">Estoque</option><option value="FISCAL">Fiscal</option></select><small class="field-help" id="descricaoPerfil"></small></div></div>
                     <div class="col" id="grupoSenhaInicial"><div class="form-group"><label for="usuarioSenha">Senha inicial *</label><div class="password-field"><input id="usuarioSenha" class="form-control" type="password" minlength="6" autocomplete="new-password"><button type="button" onclick="alternarVisibilidade('usuarioSenha', this)" aria-label="Mostrar senha"><i class="fas fa-eye"></i></button></div><small class="field-help">Mínimo de 6 caracteres.</small></div></div>
                 </div>
-                <label class="switch-row"><input id="usuarioAtivo" type="checkbox" checked><span class="switch-control"></span><span><strong>Usuário ativo</strong><small>Permite entrar e utilizar o sistema.</small></span></label>
+
+                <div class="permissions-box">
+                    <div class="permissions-head">
+                        <div>
+                            <strong>Permissões deste usuário</strong>
+                            <small>O perfil define uma base. Você pode liberar ou retirar ações individualmente.</small>
+                        </div>
+                        <button type="button" class="btn btn-light" id="btnAplicarPadrao" onclick="aplicarPadraoPerfil()">
+                            <i class="fas fa-rotate-left"></i> Usar padrão do perfil
+                        </button>
+                    </div>
+                    <div id="permissoesUsuario" class="permissions-grid">
+                        <div class="usuarios-empty">Carregando permissões...</div>
+                    </div>
+                    <div class="permission-summary" id="resumoPermissoes" style="padding:0 16px 16px;"></div>
+                </div>
+
+                <label class="switch-row" style="margin-top:18px;"><input id="usuarioAtivo" type="checkbox" checked><span class="switch-control"></span><span><strong>Usuário ativo</strong><small>Quando bloqueado, o acesso é interrompido inclusive para sessões já abertas.</small></span></label>
             </div>
-            <div class="modal-footer"><button type="button" class="btn btn-light" onclick="fecharModalUsuario()">Cancelar</button><button type="submit" class="btn btn-primary"><i class="fas fa-check"></i> Salvar usuário</button></div>
+            <div class="modal-footer"><button type="button" class="btn btn-light" onclick="fecharModalUsuario()">Cancelar</button><button type="submit" class="btn btn-primary"><i class="fas fa-check"></i> Salvar usuário e acessos</button></div>
         </form>
     </div>
 </div>

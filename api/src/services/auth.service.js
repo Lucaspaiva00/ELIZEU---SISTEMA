@@ -1,5 +1,7 @@
 const usuarioRepository = require("../repositories/usuario.repository");
 const empresaRepository = require("../repositories/empresa.repository");
+const controleAcessoRepository = require("../repositories/controleAcesso.repository");
+const { resolverPermissoes } = require("../config/permissoes");
 
 const { gerarToken } = require("../utils/jwt");
 
@@ -9,9 +11,7 @@ const {
 } = require("../utils/bcrypt");
 
 class AuthService {
-
     async login(email, senha) {
-
         const usuario = await usuarioRepository.buscarPorEmail(email);
 
         if (!usuario) {
@@ -19,7 +19,7 @@ class AuthService {
         }
 
         if (!usuario.ativo) {
-            throw new Error("Usuário desativado.");
+            throw new Error("Seu acesso ao sistema está bloqueado.");
         }
 
         const senhaValida = await compararHash(senha, usuario.senha);
@@ -28,6 +28,9 @@ class AuthService {
             throw new Error("E-mail ou senha inválidos.");
         }
 
+        const personalizadas = await controleAcessoRepository.buscar(usuario.id);
+        const permissoes = resolverPermissoes(usuario.perfil, personalizadas);
+
         await usuarioRepository.registrarUltimoLogin(usuario.id);
 
         return {
@@ -35,14 +38,17 @@ class AuthService {
                 id: usuario.id,
                 nome: usuario.nome,
                 email: usuario.email,
+                telefone: usuario.telefone,
                 perfil: usuario.perfil,
-                empresaId: usuario.empresaId
+                empresaId: usuario.empresaId,
+                permissoes,
+                acessoPersonalizado: Array.isArray(personalizadas)
             },
             token: gerarToken(usuario)
         };
     }
-    async bootstrap(dados) {
 
+    async bootstrap(dados) {
         const quantidade = await empresaRepository.contar();
 
         if (quantidade > 0) {
@@ -60,27 +66,18 @@ class AuthService {
         const senha = await gerarHash(dados.senha);
 
         const usuario = await usuarioRepository.criar({
-
             empresaId: empresa.id,
-
             nome: dados.nome,
-
             email: dados.emailUsuario,
-
             senha,
-
             perfil: "ADMIN"
-
         });
 
         return {
             empresa,
             usuario
         };
-
     }
-
 }
-
 
 module.exports = new AuthService();
