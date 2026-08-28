@@ -2,11 +2,12 @@ const usuarioRepository = require("../repositories/usuario.repository");
 const controleAcessoRepository = require("../repositories/controleAcesso.repository");
 const { gerarHash } = require("../utils/bcrypt");
 const {
-    normalizarPermissoes,
     resolverPermissoes,
     permissoesPadraoPerfil,
     catalogoParaCliente,
-    PERFIS_PADRAO
+    PERFIS_PADRAO,
+    RESTRICOES_FIXAS_PERFIL,
+    aplicarRestricoesPerfil
 } = require("../config/permissoes");
 
 const PERFIS = ["ADMIN", "GERENTE", "VENDEDOR", "FINANCEIRO", "ESTOQUE", "FISCAL"];
@@ -66,7 +67,7 @@ class UsuarioService {
             return;
         }
 
-        const normalizadas = normalizarPermissoes(permissoes);
+        const normalizadas = aplicarRestricoesPerfil(perfil, permissoes);
         const padrao = permissoesPadraoPerfil(perfil);
         const iguaisAoPadrao =
             normalizadas.length === padrao.length &&
@@ -186,6 +187,12 @@ class UsuarioService {
                 Object.keys(PERFIS_PADRAO).map((perfil) => [
                     perfil,
                     permissoesPadraoPerfil(perfil)
+                ])
+            ),
+            restricoesPerfil: Object.fromEntries(
+                Object.entries(RESTRICOES_FIXAS_PERFIL).map(([perfil, permissoes]) => [
+                    perfil,
+                    [...permissoes]
                 ])
             )
         };

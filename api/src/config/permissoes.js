@@ -172,7 +172,6 @@ const PERFIS_PADRAO = {
         "clientes.visualizar",
         "clientes.criar",
         "clientes.editar",
-        "categorias.visualizar",
         "produtos.visualizar",
         "servicos.visualizar",
         "orcamentos.visualizar",
@@ -227,6 +226,17 @@ const PERFIS_PADRAO = {
         "vendas.visualizar",
         "fiscal.visualizar",
         "fiscal.emitir"
+    ]
+};
+
+// Restrições fixas definidas pelo cliente para cada perfil.
+// Mesmo em acesso personalizado, estas permissões não podem ser concedidas.
+const RESTRICOES_FIXAS_PERFIL = {
+    VENDEDOR: [
+        "categorias.visualizar",
+        "categorias.gerenciar",
+        "produtos.criar",
+        "servicos.gerenciar"
     ]
 };
 
@@ -295,8 +305,19 @@ function normalizarPermissoes(permissoes) {
     return [...normalizadas];
 }
 
+function aplicarRestricoesPerfil(perfil, permissoes) {
+    const normalizadas = normalizarPermissoes(permissoes);
+    const bloqueadas = new Set(RESTRICOES_FIXAS_PERFIL[perfil] || []);
+
+    if (!bloqueadas.size) {
+        return normalizadas;
+    }
+
+    return normalizadas.filter((permissao) => !bloqueadas.has(permissao));
+}
+
 function permissoesPadraoPerfil(perfil) {
-    return normalizarPermissoes(PERFIS_PADRAO[perfil] || []);
+    return aplicarRestricoesPerfil(perfil, PERFIS_PADRAO[perfil] || []);
 }
 
 function resolverPermissoes(perfil, personalizadas = null) {
@@ -305,7 +326,7 @@ function resolverPermissoes(perfil, personalizadas = null) {
     }
 
     if (Array.isArray(personalizadas)) {
-        return normalizarPermissoes(personalizadas);
+        return aplicarRestricoesPerfil(perfil, personalizadas);
     }
 
     return permissoesPadraoPerfil(perfil);
@@ -324,7 +345,9 @@ module.exports = {
     GRUPOS_PERMISSOES,
     TODAS_PERMISSOES,
     PERFIS_PADRAO,
+    RESTRICOES_FIXAS_PERFIL,
     normalizarPermissoes,
+    aplicarRestricoesPerfil,
     permissoesPadraoPerfil,
     resolverPermissoes,
     catalogoParaCliente

@@ -1,11 +1,12 @@
 let usuarios = [];
 let gruposPermissoes = [];
 let perfisPadrao = {};
+let restricoesPerfis = {};
 
 const PERFIS_USUARIO = {
     ADMIN: { nome: "Administrador", classe: "perfil-admin", descricao: "Acesso completo e permanente a todos os módulos e configurações." },
     GERENTE: { nome: "Gerente", classe: "perfil-gerente", descricao: "Gestão operacional, comercial, financeira e relatórios, sem administração de usuários/certificados por padrão." },
-    VENDEDOR: { nome: "Vendedor", classe: "perfil-vendedor", descricao: "Clientes, consulta de catálogo, orçamentos e acompanhamento de vendas." },
+    VENDEDOR: { nome: "Vendedor", classe: "perfil-vendedor", descricao: "Clientes, consulta de produtos e serviços, orçamentos e acompanhamento de vendas. Sem acesso a Categorias e sem cadastro de novos produtos ou serviços." },
     FINANCEIRO: { nome: "Financeiro", classe: "perfil-financeiro", descricao: "Contas, recebimentos, pagamentos, caixas, bancos e movimentações." },
     ESTOQUE: { nome: "Estoque", classe: "perfil-estoque", descricao: "Categorias, produtos, composição, preços e controle cadastral de estoque." },
     FISCAL: { nome: "Fiscal", classe: "perfil-fiscal", descricao: "Dados fiscais necessários, vendas faturadas e preparação/emissão de NF-e." }
@@ -36,6 +37,7 @@ async function carregarCatalogoPermissoes() {
 
     gruposPermissoes = resposta.grupos || [];
     perfisPadrao = resposta.perfisPadrao || {};
+    restricoesPerfis = resposta.restricoesPerfil || {};
     renderizarPermissoes([]);
 }
 
@@ -105,11 +107,20 @@ function todasPermissoesCatalogo() {
     );
 }
 
+function permissoesBloqueadasPerfil(perfil) {
+    return new Set(restricoesPerfis[perfil] || []);
+}
+
 function renderizarPermissoes(selecionadas = []) {
     const container = document.getElementById("permissoesUsuario");
     const perfil = document.getElementById("usuarioPerfil")?.value || "VENDEDOR";
     const administrador = perfil === "ADMIN";
-    const selecionadasSet = new Set(administrador ? todasPermissoesCatalogo() : selecionadas);
+    const bloqueadas = permissoesBloqueadasPerfil(perfil);
+    const selecionadasSet = new Set(
+        administrador
+            ? todasPermissoesCatalogo()
+            : selecionadas.filter((permissao) => !bloqueadas.has(permissao))
+    );
 
     if (!gruposPermissoes.length) {
         container.innerHTML = '<div class="usuarios-empty">Nenhuma permissão disponível.</div>';
@@ -123,12 +134,21 @@ function renderizarPermissoes(selecionadas = []) {
                 <strong><i class="fas fa-shield-halved"></i> Administrador possui acesso total.</strong>
                 <div style="margin-top:6px;">Por segurança, as permissões do perfil Administrador não podem ser reduzidas individualmente.</div>
             </div>
-            ${gruposPermissoes.map((grupo) => montarGrupoPermissoes(grupo, selecionadasSet, true)).join("")}
+            ${gruposPermissoes.map((grupo) => montarGrupoPermissoes(grupo, selecionadasSet, true, bloqueadas)).join("")}
         `;
         document.getElementById("btnAplicarPadrao").disabled = true;
     } else {
-        container.innerHTML = gruposPermissoes
-            .map((grupo) => montarGrupoPermissoes(grupo, selecionadasSet, false))
+        const avisoRestricoes = bloqueadas.size
+            ? `
+                <div class="permission-admin-info" style="margin-bottom:14px;">
+                    <strong><i class="fas fa-lock"></i> Restrições fixas do perfil ${escapar(PERFIS_USUARIO[perfil]?.nome || perfil)}</strong>
+                    <div style="margin-top:6px;">As opções marcadas como “bloqueada pelo perfil” não podem ser liberadas individualmente.</div>
+                </div>
+            `
+            : "";
+
+        container.innerHTML = avisoRestricoes + gruposPermissoes
+            .map((grupo) => montarGrupoPermissoes(grupo, selecionadasSet, false, bloqueadas))
             .join("");
         document.getElementById("btnAplicarPadrao").disabled = false;
     }
@@ -140,18 +160,26 @@ function renderizarPermissoes(selecionadas = []) {
     atualizarResumoPermissoes();
 }
 
-function montarGrupoPermissoes(grupo, selecionadasSet, desabilitado) {
-    const opcoes = (grupo.permissoes || []).map((item) => `
-        <label class="permission-option">
-            <input
-                type="checkbox"
-                data-permissao="${escapar(item.chave)}"
-                ${selecionadasSet.has(item.chave) ? "checked" : ""}
-                ${desabilitado ? "disabled" : ""}
-            >
-            <span>${escapar(item.nome)}</span>
-        </label>
-    `).join("");
+function montarGrupoPermissoes(grupo, selecionadasSet, desabilitado, bloqueadas = new Set()) {
+    const opcoes = (grupo.permissoes || []).map((item) => {
+        const bloqueadaPerfil = bloqueadas.has(item.chave);
+        const desabilitarOpcao = desabilitado || bloqueadaPerfil;
+
+        return `
+            <label class="permission-option" style="${bloqueadaPerfil ? "opacity:.65;" : ""}">
+                <input
+                    type="checkbox"
+                    data-permissao="${escapar(item.chave)}"
+                    ${selecionadasSet.has(item.chave) && !bloqueadaPerfil ? "checked" : ""}
+                    ${desabilitarOpcao ? "disabled" : ""}
+                >
+                <span>
+                    ${escapar(item.nome)}
+                    ${bloqueadaPerfil ? '<small style="display:block;color:#b45309;margin-top:2px;"><i class="fas fa-lock"></i> Bloqueada pelo perfil</small>' : ""}
+                </span>
+            </label>
+        `;
+    }).join("");
 
     return `
         <section class="permission-group">
@@ -171,9 +199,11 @@ function permissoesSelecionadas() {
         return todasPermissoesCatalogo();
     }
 
+    const bloqueadas = permissoesBloqueadasPerfil(perfil);
+
     return [...document.querySelectorAll('#permissoesUsuario input[data-permissao]:checked')]
         .map((campo) => campo.dataset.permissao)
-        .filter(Boolean);
+        .filter((permissao) => permissao && !bloqueadas.has(permissao));
 }
 
 function atualizarResumoPermissoes() {
