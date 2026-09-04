@@ -281,6 +281,7 @@ function aplicarPermissoesAcoes(usuario = usuarioAtualLocal()) {
     if (pagina === "empresas.html") {
         controlarFormulario("formEmpresa", "empresa.editar", usuario);
         controlarFormulario("formFiscal", "empresa.fiscal", usuario);
+        controlarFormulario("formFocus", "empresa.fiscal", usuario);
         controlarFormulario("formCertificado", "empresa.certificado", usuario);
 
         const remover = [...document.querySelectorAll("[onclick]")]

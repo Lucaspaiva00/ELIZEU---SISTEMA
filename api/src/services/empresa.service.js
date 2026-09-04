@@ -129,6 +129,13 @@ class EmpresaService {
             naturezaOperacao: textoOuNulo(dados.naturezaOperacao),
             emailFiscal: textoOuNulo(dados.emailFiscal),
             informacoesComplementares: textoOuNulo(dados.informacoesComplementares),
+            icmsSituacaoTributariaPadrao: textoOuNulo(dados.icmsSituacaoTributariaPadrao),
+            pisSituacaoTributariaPadrao: textoOuNulo(dados.pisSituacaoTributariaPadrao),
+            cofinsSituacaoTributariaPadrao: textoOuNulo(dados.cofinsSituacaoTributariaPadrao),
+            modalidadeFrete: Number.isInteger(Number(dados.modalidadeFrete)) ? Number(dados.modalidadeFrete) : 9,
+            presencaComprador: Number.isInteger(Number(dados.presencaComprador)) ? Number(dados.presencaComprador) : 9,
+            consumidorFinal: dados.consumidorFinal !== false,
+            emitirNfeAoFaturar: Boolean(dados.emitirNfeAoFaturar),
             ativo: Boolean(dados.ativo)
         });
     }

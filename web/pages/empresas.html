@@ -27,6 +27,7 @@
                 <button class="empresa-tab" data-tab="endereco"><i class="fas fa-location-dot"></i><span>Endereço</span></button>
                 <button class="empresa-tab" data-tab="fiscal"><i class="fas fa-receipt"></i><span>Configuração fiscal</span></button>
                 <button class="empresa-tab" data-tab="certificado"><i class="fas fa-shield-halved"></i><span>Certificado A1</span></button>
+                <button class="empresa-tab" data-tab="focus"><i class="fas fa-plug"></i><span>Focus NFe</span></button>
             </div>
 
             <form id="formEmpresa">
@@ -59,8 +60,19 @@
                 <div class="card mt-3"><div class="card-header"><div><h2 class="card-title">Ambiente e numeração</h2><p class="text-muted">Controle da sequência das NF-e.</p></div></div><div class="card-body">
                     <div class="row"><div class="col"><div class="form-group"><label>Ambiente</label><select id="ambiente" class="form-control"><option value="HOMOLOGACAO">Homologação</option><option value="PRODUCAO">Produção</option></select></div></div><div class="col"><div class="form-group"><label>Série NF-e</label><input id="serieNfe" type="number" min="1" max="999" class="form-control" value="1"></div></div><div class="col"><div class="form-group"><label>Próximo número NF-e</label><input id="proximoNumeroNfe" type="number" min="1" class="form-control" value="1"></div></div></div>
                     <div class="row"><div class="col"><div class="form-group"><label>CFOP padrão</label><input id="cfopPadrao" class="form-control" maxlength="4" placeholder="5102"></div></div><div class="col"><div class="form-group"><label>Natureza da operação</label><input id="naturezaOperacao" class="form-control" placeholder="Venda de mercadoria"></div></div><div class="col"><div class="form-group"><label>E-mail fiscal</label><input id="emailFiscal" type="email" class="form-control"></div></div></div>
+                    <div class="row">
+                        <div class="col"><div class="form-group"><label>CST / CSOSN padrão do ICMS *</label><input id="icmsSituacaoTributariaPadrao" class="form-control" maxlength="3" placeholder="Ex.: 102"><small class="field-help">Na NF-e de exemplo enviada, os itens aparecem com origem 0 + CSOSN 102. Confirme com o contador antes de produção.</small></div></div>
+                        <div class="col"><div class="form-group"><label>CST do PIS *</label><input id="pisSituacaoTributariaPadrao" class="form-control" maxlength="2" placeholder="Confirmar com contador"></div></div>
+                        <div class="col"><div class="form-group"><label>CST da COFINS *</label><input id="cofinsSituacaoTributariaPadrao" class="form-control" maxlength="2" placeholder="Confirmar com contador"></div></div>
+                    </div>
+                    <div class="row">
+                        <div class="col"><div class="form-group"><label>Modalidade do frete</label><select id="modalidadeFrete" class="form-control"><option value="9">9 — Sem frete</option><option value="0">0 — Emitente</option><option value="1">1 — Destinatário</option><option value="2">2 — Terceiros</option><option value="3">3 — Próprio emitente</option><option value="4">4 — Próprio destinatário</option></select></div></div>
+                        <div class="col"><div class="form-group"><label>Presença do comprador</label><select id="presencaComprador" class="form-control"><option value="0">0 — Não se aplica</option><option value="1">1 — Presencial</option><option value="2">2 — Internet</option><option value="3">3 — Teleatendimento</option><option value="9">9 — Não presencial / outros</option></select></div></div>
+                        <div class="col"><div class="form-group"><label>Consumidor final</label><select id="consumidorFinal" class="form-control"><option value="true">Sim</option><option value="false">Não</option></select></div></div>
+                    </div>
                     <div class="form-group"><label>Informações complementares padrão</label><textarea id="informacoesComplementares" class="form-control" rows="3"></textarea></div>
                     <label class="switch-row"><input id="fiscalAtivo" type="checkbox"><span class="switch-control"></span><span><strong>Configuração fiscal ativa</strong><small>Habilita o uso desses dados nas próximas etapas fiscais.</small></span></label>
+                    <label class="switch-row" style="margin-top:12px"><input id="emitirNfeAoFaturar" type="checkbox"><span class="switch-control"></span><span><strong>Emitir NF-e automaticamente ao faturar</strong><small>Recomendado somente depois de validar a homologação. Se desligado, a emissão continua pelo botão da venda.</small></span></label>
                 </div></div>
                 <div class="panel-actions"><button class="btn btn-primary" type="submit"><i class="fas fa-check"></i> Salvar configuração fiscal</button></div>
             </form>
@@ -74,6 +86,21 @@
                         <div class="panel-actions certificate-actions"><button class="btn btn-primary" type="submit"><i class="fas fa-shield-halved"></i> Armazenar certificado</button></div>
                     </form>
                 </div></div>
+            </div>
+
+            <div class="empresa-panel" data-panel="focus">
+                <div class="fiscal-alert"><i class="fas fa-circle-info"></i><div><strong>Integração oficial com a Focus NFe</strong><span>Salve primeiro o token de homologação e teste. O token nunca volta para o navegador depois de salvo.</span></div></div>
+                <form id="formFocus">
+                    <div class="card"><div class="card-header"><div><h2 class="card-title">Tokens da Focus NFe</h2><p class="text-muted">Homologação e produção ficam separados e criptografados no banco.</p></div><div id="focusBadge" class="badge badge-warning">Não configurado</div></div><div class="card-body">
+                        <div class="row">
+                            <div class="col"><div class="form-group"><label>Token Focus — Homologação</label><div class="password-field"><input id="tokenFocusHomologacao" type="password" class="form-control" autocomplete="new-password" placeholder="Cole o token de homologação"><button type="button" onclick="alternarSenhaCampo('tokenFocusHomologacao', this)"><i class="fas fa-eye"></i></button></div><small id="statusTokenHomologacao" class="field-help">Não configurado.</small></div><button class="btn btn-light" type="button" onclick="testarFocus('HOMOLOGACAO')"><i class="fas fa-vial"></i> Testar homologação</button></div>
+                            <div class="col"><div class="form-group"><label>Token Focus — Produção</label><div class="password-field"><input id="tokenFocusProducao" type="password" class="form-control" autocomplete="new-password" placeholder="Cole o token de produção"><button type="button" onclick="alternarSenhaCampo('tokenFocusProducao', this)"><i class="fas fa-eye"></i></button></div><small id="statusTokenProducao" class="field-help">Não configurado.</small></div><button class="btn btn-light" type="button" onclick="testarFocus('PRODUCAO')"><i class="fas fa-vial"></i> Testar produção</button></div>
+                        </div>
+                        <div style="margin-top:18px;padding:14px;border:1px solid #e5e7eb;border-radius:10px;background:#f8fafc;line-height:1.55;"><strong>Importante</strong><br>O certificado A1 também precisa estar habilitado para este CNPJ na Focus NFe. O certificado A1 não é enviado ao GitHub. Use a aba <strong>Certificado A1</strong> para guardá-lo criptografado no ERP e mantenha o mesmo CNPJ/certificado habilitado também na conta Focus NFe.</div>
+                        <label class="switch-row" style="margin-top:18px"><input id="focusAtivo" type="checkbox" checked><span class="switch-control"></span><span><strong>Integração Focus NFe ativa</strong><small>Permite transmissão de NF-e pelo ERP.</small></span></label>
+                    </div></div>
+                    <div class="panel-actions"><button class="btn btn-primary" type="submit"><i class="fas fa-lock"></i> Salvar tokens Focus NFe</button></div>
+                </form>
             </div>
         </section>
     </main>

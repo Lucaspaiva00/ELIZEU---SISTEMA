@@ -219,6 +219,7 @@ model Empresa {
   configuracaoFiscal       ConfiguracaoFiscal?
   certificadoDigital       CertificadoDigital?
   notasFiscais             NotaFiscal[]
+  integracaoFocusNfe       IntegracaoFocusNfe?
 
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
@@ -242,12 +243,48 @@ model ConfiguracaoFiscal {
   naturezaOperacao          String?
   emailFiscal               String?
   informacoesComplementares String?           @db.Text
-  ativo                     Boolean           @default(false)
+
+  // Padrões tributários usados pela integração Focus NFe.
+  // Devem ser confirmados pelo contador antes de produção.
+  icmsSituacaoTributariaPadrao   String?
+  pisSituacaoTributariaPadrao    String?
+  cofinsSituacaoTributariaPadrao String?
+  modalidadeFrete                Int     @default(9)
+  presencaComprador              Int     @default(9)
+  consumidorFinal                Boolean @default(true)
+  emitirNfeAoFaturar             Boolean @default(false)
+
+  ativo Boolean @default(false)
 
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
 
   @@index([empresaId, ambiente])
+}
+
+model IntegracaoFocusNfe {
+  id Int @id @default(autoincrement())
+
+  empresaId Int     @unique
+  empresa   Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  tokenHomologacaoCriptografado String? @db.Text
+  tokenHomologacaoIv            String?
+  tokenHomologacaoAuthTag       String?
+
+  tokenProducaoCriptografado String? @db.Text
+  tokenProducaoIv            String?
+  tokenProducaoAuthTag       String?
+
+  ativo Boolean @default(true)
+
+  ultimaValidacaoHomologacao DateTime?
+  ultimaValidacaoProducao    DateTime?
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  @@index([empresaId, ativo])
 }
 
 model CertificadoDigital {
@@ -788,6 +825,12 @@ model NotaFiscal {
   xmlEnvio     String? @db.Text
   xmlRetorno   String? @db.Text
   motivoStatus String? @db.Text
+
+  referenciaFocus String? @unique
+  statusFocus     String?
+  caminhoDanfe    String? @db.Text
+  caminhoXml      String? @db.Text
+  respostaFocus   Json?
 
   preparadaEm   DateTime  @default(now())
   transmitidaEm DateTime?

@@ -161,20 +161,22 @@ async function visualizarVenda(id) {
     const fiscalPendencias = document.getElementById("viewVendaFiscalPendencias");
 
     if (v.notaFiscal) {
+        const nfe = v.notaFiscal;
+        const detalhes = [];
+        detalhes.push(`NF-e modelo 55 • Série ${nfe.serie} • Nº ${nfe.numero}`);
+        detalhes.push(`Ambiente ${nfe.ambiente === "PRODUCAO" ? "Produção" : "Homologação"}`);
+        if (nfe.chaveAcesso) detalhes.push(`Chave: ${esc(nfe.chaveAcesso)}`);
+        if (nfe.protocolo) detalhes.push(`Protocolo: ${esc(nfe.protocolo)}`);
+
         fiscalStatus.innerHTML = `
             <strong>${esc(fiscal.texto)}</strong>
-            <div style="margin-top:6px;">
-                NF-e modelo 55 • Série ${v.notaFiscal.serie} • Nº ${v.notaFiscal.numero}
-                • Ambiente ${v.notaFiscal.ambiente === "PRODUCAO" ? "Produção" : "Homologação"}
-            </div>
-            ${v.notaFiscal.status === "PRONTA_TRANSMISSAO"
-                ? '<div class="text-muted" style="margin-top:6px;">Documento preparado. Falta conectar a transmissão/autorização da SEFAZ.</div>'
-                : ""}
+            <div style="margin-top:8px;line-height:1.65;">${detalhes.join("<br>")}</div>
+            ${nfe.motivoStatus ? `<div class="alert alert-warning" style="margin-top:10px;">${esc(nfe.motivoStatus)}</div>` : ""}
         `;
         fiscalPendencias.style.display = "none";
         fiscalPendencias.innerHTML = "";
     } else if (v.status === "FATURADA") {
-        fiscalStatus.innerHTML = '<strong>NF-e ainda não emitida.</strong>';
+        fiscalStatus.innerHTML = '<strong>NF-e ainda não emitida.</strong><div class="text-muted" style="margin-top:6px;">Ao emitir, o ERP valida cadastro, tributação e token Focus antes de transmitir.</div>';
         fiscalPendencias.style.display = "none";
         fiscalPendencias.innerHTML = "";
     } else {
@@ -183,8 +185,14 @@ async function visualizarVenda(id) {
         fiscalPendencias.innerHTML = "";
     }
 
+    const nfe = v.notaFiscal;
     document.getElementById("btnEmitirNfe").style.display =
-        v.status === "FATURADA" && !v.notaFiscal ? "inline-flex" : "none";
+        v.status === "FATURADA" && (!nfe || ["PRONTA_TRANSMISSAO", "REJEITADA", "ERRO"].includes(nfe.status)) ? "inline-flex" : "none";
+    document.getElementById("btnConsultarNfe").style.display =
+        nfe?.referenciaFocus && !["CANCELADA"].includes(nfe.status) ? "inline-flex" : "none";
+    document.getElementById("btnDanfeNfe").style.display = nfe?.caminhoDanfe ? "inline-flex" : "none";
+    document.getElementById("btnXmlNfe").style.display = nfe?.caminhoXml ? "inline-flex" : "none";
+    document.getElementById("btnCancelarNfe").style.display = nfe?.status === "AUTORIZADA" ? "inline-flex" : "none";
 
     document.getElementById("btnFaturarVenda").style.display = v.status === "CONFIRMADA" ? "inline-flex" : "none";
     document.getElementById("btnCancelarVenda").style.display = v.status === "CONFIRMADA" ? "inline-flex" : "none";
@@ -200,7 +208,7 @@ async function faturarVenda(id) {
     if (!confirm("Faturar esta venda? Isso fará a baixa de estoque, gerará as contas a receber e lançará os custos internos em Contas a Pagar.")) return;
     const r = await put(`/vendas/${id}/faturar`, {});
     if (!r?.sucesso) return mostrarMensagem(r?.mensagem || "Erro ao faturar venda.");
-    mostrarMensagem("Venda faturada. Contas a receber, custos internos em Contas a Pagar e estoque atualizados.");
+    mostrarMensagem(r.mensagem || "Venda faturada. Contas a receber, custos internos em Contas a Pagar e estoque atualizados.");
     await carregarVendas();
     if (vendaAtualId === id) await visualizarVenda(id);
 }
@@ -222,42 +230,68 @@ async function cancelarVendaAtual() {
 
 
 async function emitirNfe(id) {
-    const resposta = await post(`/vendas/${id}/nfe/preparar`, {});
+    if (!confirm("Emitir esta NF-e pela Focus NFe? Em homologação ela não possui valor fiscal. Em produção, confirme antes a numeração atual e os CST/CSOSN com o contador.")) return;
+
+    const resposta = await post(`/vendas/${id}/nfe/emitir`, {});
 
     if (!resposta?.sucesso) {
         const pendencias = resposta?.pendencias || [];
-
-        if (vendaAtualId === id) {
+        if (vendaAtualId === id && pendencias.length) {
             const area = document.getElementById("viewVendaFiscalPendencias");
             area.innerHTML = htmlPendenciasFiscal(pendencias);
             area.style.display = "block";
         }
-
         if (pendencias.length) {
-            const resumo = pendencias.slice(0, 5).map(p => `• ${p.mensagem}`).join("\n");
-            const restante = pendencias.length > 5 ? `\n• +${pendencias.length - 5} pendência(s)` : "";
-            mostrarMensagem(`NF-e não pode ser preparada ainda.\n${resumo}${restante}`);
-            return;
+            const resumo = pendencias.slice(0, 7).map(p => `• ${p.mensagem}`).join("\n");
+            const restante = pendencias.length > 7 ? `\n• +${pendencias.length - 7} pendência(s)` : "";
+            return mostrarMensagem(`NF-e bloqueada até corrigir:\n${resumo}${restante}`);
         }
-
-        return mostrarMensagem(resposta?.mensagem || "Erro ao preparar NF-e.");
+        return mostrarMensagem(resposta?.mensagem || "Erro ao emitir NF-e.");
     }
 
-    mostrarMensagem(
-        `NF-e nº ${resposta.notaFiscal.numero}, série ${resposta.notaFiscal.serie}, preparada em ${
-            resposta.notaFiscal.ambiente === "PRODUCAO" ? "produção" : "homologação"
-        }.`
-    );
+    const nfe = resposta.notaFiscal;
+    mostrarMensagem(nfe?.status === "AUTORIZADA"
+        ? `NF-e nº ${nfe.numero} autorizada pela SEFAZ.`
+        : `NF-e nº ${nfe?.numero || ""} enviada. Status: ${nfe?.status || "processando"}.`);
 
     await carregarVendas();
-
-    if (vendaAtualId === id) {
-        await visualizarVenda(id);
-    }
+    if (vendaAtualId === id) await visualizarVenda(id);
 }
 
-function emitirNfeAtual() {
-    if (vendaAtualId) {
-        emitirNfe(vendaAtualId);
-    }
+function emitirNfeAtual() { if (vendaAtualId) emitirNfe(vendaAtualId); }
+
+async function consultarNfe(id) {
+    const resposta = await post(`/vendas/${id}/nfe/consultar`, {});
+    if (!resposta?.sucesso) return mostrarMensagem(resposta?.mensagem || "Erro ao consultar NF-e.");
+    mostrarMensagem(`NF-e atualizada: ${resposta.notaFiscal?.status || "sem status"}.`);
+    await carregarVendas();
+    if (vendaAtualId === id) await visualizarVenda(id);
 }
+
+function consultarNfeAtual() { if (vendaAtualId) consultarNfe(vendaAtualId); }
+
+function notaAtual() { return vendas.find(item => item.id === vendaAtualId)?.notaFiscal || null; }
+function abrirDanfeAtual() {
+    const url = notaAtual()?.caminhoDanfe;
+    if (!url) return mostrarMensagem("DANFE ainda não disponível.");
+    window.open(url, "_blank", "noopener,noreferrer");
+}
+function abrirXmlAtual() {
+    const url = notaAtual()?.caminhoXml;
+    if (!url) return mostrarMensagem("XML ainda não disponível.");
+    window.open(url, "_blank", "noopener,noreferrer");
+}
+
+async function cancelarNfeAtual() {
+    if (!vendaAtualId) return;
+    const justificativa = prompt("Justificativa do cancelamento da NF-e (mínimo 15 caracteres):");
+    if (justificativa === null) return;
+    if (justificativa.trim().length < 15) return mostrarMensagem("A justificativa precisa ter pelo menos 15 caracteres.");
+    if (!confirm("Confirma o cancelamento desta NF-e autorizada?")) return;
+    const resposta = await post(`/vendas/${vendaAtualId}/nfe/cancelar`, { justificativa: justificativa.trim() });
+    if (!resposta?.sucesso) return mostrarMensagem(resposta?.mensagem || "Erro ao cancelar NF-e.");
+    mostrarMensagem(resposta.mensagem || "Solicitação de cancelamento enviada.");
+    await carregarVendas();
+    await visualizarVenda(vendaAtualId);
+}
+

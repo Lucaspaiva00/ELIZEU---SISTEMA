@@ -11,6 +11,9 @@ router.put("/:id/cancelar", auth, autorizar("vendas.cancelar"), controller.cance
 router.get("/:id/nfe", auth, autorizar("fiscal.visualizar"), nfeController.buscar);
 router.get("/:id/nfe/validar", auth, autorizar("fiscal.visualizar"), nfeController.validar);
 router.post("/:id/nfe/preparar", auth, autorizar("fiscal.emitir"), nfeController.preparar);
+router.post("/:id/nfe/emitir", auth, autorizar("fiscal.emitir"), nfeController.emitir);
+router.post("/:id/nfe/consultar", auth, autorizar("fiscal.visualizar"), nfeController.consultar);
+router.post("/:id/nfe/cancelar", auth, autorizar("fiscal.emitir"), nfeController.cancelar);
 router.get("/:id", auth, autorizar("vendas.visualizar"), controller.buscarPorId);
 
 module.exports = router;
