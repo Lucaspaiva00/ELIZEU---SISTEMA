@@ -66,6 +66,34 @@ class ServicoRepository {
         return prisma.servico.findFirst({ where: { codigo, empresaId } });
     }
 
+    async gerarCodigoAutomatico(empresaId) {
+        const servicos = await prisma.servico.findMany({
+            where: { empresaId },
+            select: { codigo: true }
+        });
+
+        let maior = 0;
+
+        for (const servico of servicos) {
+            const match = /^S(\d+)$/i.exec(String(servico.codigo || "").trim());
+            if (match) maior = Math.max(maior, Number(match[1]) || 0);
+        }
+
+        let sequencia = maior + 1;
+
+        while (true) {
+            const codigo = `S${String(sequencia).padStart(6, "0")}`;
+            const existe = await this.buscarPorCodigo(codigo, empresaId);
+            if (!existe) return codigo;
+            sequencia += 1;
+        }
+    }
+
+    buscarVariacaoPorCodigo(codigo) {
+        if (!codigo) return null;
+        return prisma.variacaoServico.findUnique({ where: { codigo } });
+    }
+
     async atualizar(id, dados) {
         return prisma.$transaction(async (tx) => {
             await tx.servico.update({

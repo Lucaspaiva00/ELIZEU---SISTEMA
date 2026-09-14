@@ -13,6 +13,9 @@ let whatsappOrcamentoAtual = null;
 let whatsappPdfBlob = null;
 let whatsappAberturaManualConcluida = false;
 
+let catalogoOrcamentoPrecisaAtualizar = false;
+let atualizandoCatalogoOrcamento = false;
+
 const modalOrcamento = document.getElementById("modalOrcamento");
 const modalSelecionarProduto = document.getElementById(
     "modalSelecionarProduto"
@@ -28,6 +31,24 @@ document.addEventListener("DOMContentLoaded", async () => {
         carregarServicos(),
         carregarOrcamentos()
     ]);
+});
+
+window.addEventListener("message", (evento) => {
+    if (evento.origin !== window.location.origin) return;
+    if (evento.data?.tipo !== "elian:catalogo-atualizado") return;
+
+    catalogoOrcamentoPrecisaAtualizar = true;
+    atualizarCatalogoOrcamento(true);
+});
+
+window.addEventListener("storage", (evento) => {
+    if (evento.key !== "elian:catalogo-atualizado") return;
+    catalogoOrcamentoPrecisaAtualizar = true;
+});
+
+window.addEventListener("focus", () => {
+    if (!catalogoOrcamentoPrecisaAtualizar) return;
+    atualizarCatalogoOrcamento(true);
 });
 
 function configurarEventos() {
@@ -47,6 +68,84 @@ function configurarEventos() {
     document.getElementById("tipoItem").addEventListener("change", alternarTipoItem);
     document.getElementById("servicoId").addEventListener("change", carregarVariacoesServico);
     document.getElementById("variacaoServicoId").addEventListener("change", preencherValorVariacaoServico);
+}
+
+function abrirCadastroAuxiliarOrcamento(tipo) {
+    const configuracoes = {
+        produto: {
+            pagina: "produtos.html?novo=1&origem=orcamento",
+            permissao: "produtos.criar",
+            nome: "produto"
+        },
+        servico: {
+            pagina: "servicos.html?novo=1&origem=orcamento",
+            permissao: "servicos.gerenciar",
+            nome: "serviço"
+        }
+    };
+
+    const configuracao = configuracoes[tipo];
+    if (!configuracao) return;
+
+    if (typeof window.temPermissao === "function" && !window.temPermissao(configuracao.permissao)) {
+        return mostrarMensagem(`Seu usuário não possui permissão para cadastrar ${configuracao.nome}.`);
+    }
+
+    const novaAba = window.open(configuracao.pagina, "_blank");
+
+    if (!novaAba) {
+        return mostrarMensagem("O navegador bloqueou a nova aba. Libere pop-ups para este sistema e tente novamente.");
+    }
+
+    catalogoOrcamentoPrecisaAtualizar = true;
+}
+
+async function atualizarCatalogoOrcamento(preservarSelecao = true) {
+    if (atualizandoCatalogoOrcamento) return;
+
+    atualizandoCatalogoOrcamento = true;
+
+    const produtoSelecionado = preservarSelecao
+        ? document.getElementById("produtoId")?.value
+        : "";
+    const variacaoProdutoSelecionada = preservarSelecao
+        ? document.getElementById("variacaoProdutoId")?.value
+        : "";
+    const servicoSelecionado = preservarSelecao
+        ? document.getElementById("servicoId")?.value
+        : "";
+    const variacaoServicoSelecionada = preservarSelecao
+        ? document.getElementById("variacaoServicoId")?.value
+        : "";
+
+    try {
+        await Promise.all([carregarProdutos(), carregarServicos()]);
+
+        if (produtoSelecionado && produtos.some((produto) => String(produto.id) === String(produtoSelecionado))) {
+            document.getElementById("produtoId").value = produtoSelecionado;
+            carregarVariacoesProduto();
+
+            if ([...document.getElementById("variacaoProdutoId").options].some((option) => String(option.value) === String(variacaoProdutoSelecionada))) {
+                document.getElementById("variacaoProdutoId").value = variacaoProdutoSelecionada;
+            }
+        }
+
+        if (servicoSelecionado && servicos.some((servico) => String(servico.id) === String(servicoSelecionado))) {
+            document.getElementById("servicoId").value = servicoSelecionado;
+            carregarVariacoesServico();
+
+            if ([...document.getElementById("variacaoServicoId").options].some((option) => String(option.value) === String(variacaoServicoSelecionada))) {
+                document.getElementById("variacaoServicoId").value = variacaoServicoSelecionada;
+            }
+        }
+
+        catalogoOrcamentoPrecisaAtualizar = false;
+    } catch (erro) {
+        console.error("Erro ao atualizar catálogo do orçamento:", erro);
+        mostrarMensagem("Não foi possível atualizar a lista de produtos e serviços.");
+    } finally {
+        atualizandoCatalogoOrcamento = false;
+    }
 }
 
 async function carregarServicos() {
@@ -2096,6 +2195,67 @@ async function gerarPdfOrcamento(id) {
         return textoSeguro(valor);
     };
 
+    const removerBairroDoEnderecoPdf = (endereco, bairro) => {
+        let texto = String(endereco ?? "").trim();
+        const nomeBairro = String(bairro ?? "").trim();
+
+        if (!texto || !nomeBairro) return texto;
+
+        const escaparRegex = (valor) =>
+            valor.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+        const bairroRegex = escaparRegex(nomeBairro).replace(/\s+/g, "\\s+");
+        const padroes = [
+            new RegExp(`\\s*[-,;/]\\s*${bairroRegex}\\s*$`, "i"),
+            new RegExp(`\\s+${bairroRegex}\\s*$`, "i")
+        ];
+
+        for (const padrao of padroes) {
+            texto = texto.replace(padrao, "").trim();
+        }
+
+        return texto.replace(/\s*[-,;/]\s*$/, "").trim();
+    };
+
+    const separarEnderecoBairroPdf = (endereco, bairro) => {
+        const bairroInformado = String(bairro ?? "").trim();
+        const enderecoOriginal = String(endereco ?? "").trim();
+
+        if (bairroInformado) {
+            return {
+                endereco: removerBairroDoEnderecoPdf(enderecoOriginal, bairroInformado),
+                bairro: bairroInformado
+            };
+        }
+
+        // Alguns cadastros antigos/importados gravaram o bairro no fim do
+        // próprio endereço. Quando existir um separador claro e o trecho final
+        // tiver formato típico de bairro, separamos apenas para o documento.
+        const correspondencia = enderecoOriginal.match(
+            /^(.*?)(?:\s+-\s+|,\s+)((?:SETOR|ST\.?|JARDIM|JD\.?|VILA|RESIDENCIAL|RES\.?|BAIRRO|PARQUE|PQ\.?|CONJUNTO|CONJ\.?|LOTEAMENTO|CH[ÁA]CARA)\b.+)$/i
+        );
+
+        if (correspondencia) {
+            return {
+                endereco: correspondencia[1].trim(),
+                bairro: correspondencia[2].trim()
+            };
+        }
+
+        return {
+            endereco: enderecoOriginal,
+            bairro: ""
+        };
+    };
+
+    const enderecoJaTemNumeroPdf = (endereco, numero) => {
+        const numeroTexto = String(numero ?? "").trim();
+        if (!endereco || !numeroTexto) return false;
+
+        const numeroRegex = numeroTexto.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        return new RegExp(`(^|\\D)${numeroRegex}(\\D|$)`).test(String(endereco));
+    };
+
     const dataBrPdf = (valor) => {
         if (!valor) return "-";
 
@@ -2205,12 +2365,25 @@ async function gerarPdfOrcamento(id) {
         .filter(Boolean)
         .join(" - ");
 
-    const enderecoCliente = [
+    const enderecoBairroCliente = separarEnderecoBairroPdf(
         cliente.endereco,
-        cliente.numero
+        cliente.bairro
+    );
+    const enderecoClienteBase = enderecoBairroCliente.endereco;
+    const bairroCliente = enderecoBairroCliente.bairro;
+
+    const enderecoCliente = [
+        enderecoClienteBase,
+        !enderecoJaTemNumeroPdf(enderecoClienteBase, cliente.numero)
+            ? cliente.numero
+            : null
     ]
         .filter(Boolean)
         .join(", ");
+
+    const telefoneCliente = formatarTelefonePdf(
+        cliente.celular || cliente.telefone
+    );
 
     const cidadeCliente = [
         cliente.cidade,
@@ -2873,6 +3046,16 @@ async function gerarPdfOrcamento(id) {
 
                     <div class="linha-info">
                         <span class="rotulo">
+                            Telefone:
+                        </span>
+
+                        <span>
+                            ${escapar(telefoneCliente)}
+                        </span>
+                    </div>
+
+                    <div class="linha-info">
+                        <span class="rotulo">
                             Email:
                         </span>
 
@@ -2904,7 +3087,7 @@ async function gerarPdfOrcamento(id) {
 
                         <span>
                             ${escapar(
-                                cliente.bairro
+                                bairroCliente
                             )}
                         </span>
                     </div>

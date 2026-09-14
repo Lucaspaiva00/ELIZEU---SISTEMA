@@ -257,11 +257,12 @@
 
                             <div class="form-group">
 
-                                <label>
-
-                                    Produto
-
-                                </label>
+                                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px;">
+                                    <label style="margin:0;">Produto</label>
+                                    <button type="button" class="btn btn-light btn-sm" data-permission="produtos.criar" onclick="abrirCadastroAuxiliarOrcamento('produto')" title="Cadastrar produto sem sair deste orçamento">
+                                        <i class="fas fa-arrow-up-right-from-square"></i> Novo produto em outra aba
+                                    </button>
+                                </div>
 
                                 <select id="produtoId" class="form-control">
 
@@ -288,7 +289,12 @@
                             <div id="camposServico" style="display:none">
 
                                 <div class="form-group">
-                                    <label>Serviço</label>
+                                    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px;">
+                                        <label style="margin:0;">Serviço</label>
+                                        <button type="button" class="btn btn-light btn-sm" data-permission="servicos.gerenciar" onclick="abrirCadastroAuxiliarOrcamento('servico')" title="Cadastrar serviço sem sair deste orçamento">
+                                            <i class="fas fa-arrow-up-right-from-square"></i> Novo serviço em outra aba
+                                        </button>
+                                    </div>
                                     <select id="servicoId" class="form-control"></select>
                                 </div>
 
@@ -297,6 +303,14 @@
                                     <select id="variacaoServicoId" class="form-control"></select>
                                 </div>
 
+                            </div>
+
+                            <div class="alert alert-info" style="margin:14px 0 16px;">
+                                <i class="fas fa-circle-info"></i>
+                                Se faltar um produto ou serviço, abra o cadastro em outra aba. Este orçamento continua aberto e a lista é atualizada quando você voltar.
+                                <button type="button" class="btn btn-light btn-sm" style="margin-left:8px;" onclick="atualizarCatalogoOrcamento(true)">
+                                    <i class="fas fa-rotate"></i> Atualizar lista
+                                </button>
                             </div>
 
                             <div class="row">

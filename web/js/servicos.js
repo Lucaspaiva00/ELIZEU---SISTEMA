@@ -7,12 +7,49 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("formServico").addEventListener("submit", salvarServico);
     document.getElementById("formCategoriaServico").addEventListener("submit", salvarCategoria);
     await Promise.all([carregarCategoriasServico(), carregarServicos()]);
+    abrirNovoServicoPorUrl();
 });
 
 function escapar(valor) {
     const div = document.createElement("div");
     div.textContent = valor ?? "";
     return div.innerHTML;
+}
+
+function abrirNovoServicoPorUrl() {
+    const parametros = new URLSearchParams(window.location.search);
+    if (parametros.get("novo") !== "1") return;
+
+    if (typeof window.temPermissao === "function" && !window.temPermissao("servicos.gerenciar")) {
+        return;
+    }
+
+    abrirModalServico();
+
+    const url = new URL(window.location.href);
+    url.searchParams.delete("novo");
+    window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
+}
+
+function notificarCatalogoAtualizado(tipo, registro = null) {
+    const mensagem = {
+        tipo: "elian:catalogo-atualizado",
+        cadastro: tipo,
+        id: registro?.id || null,
+        em: Date.now()
+    };
+
+    try {
+        if (window.opener && !window.opener.closed) {
+            window.opener.postMessage(mensagem, window.location.origin);
+        }
+    } catch (erro) {
+        console.warn("Não foi possível notificar a aba do orçamento.", erro);
+    }
+
+    try {
+        localStorage.setItem("elian:catalogo-atualizado", JSON.stringify(mensagem));
+    } catch (_) {}
 }
 
 async function carregarCategoriasServico() {
@@ -52,11 +89,26 @@ function filtrarServicos() {
     renderizarServicos(servicos.filter((servico) => [servico.codigo, servico.nome, servico.categoria?.nome].some((valor) => String(valor || "").toLowerCase().includes(termo))));
 }
 
+function alternarCodigoAutomaticoServico() {
+    const checkbox = document.getElementById("codigoAutomatico");
+    const campo = document.getElementById("codigo");
+    if (!checkbox || !campo) return;
+
+    campo.readOnly = checkbox.checked;
+    campo.placeholder = checkbox.checked
+        ? "Gerado automaticamente ao salvar"
+        : "Ex.: S000001";
+
+    if (checkbox.checked) campo.value = "";
+}
+
 function abrirModalServico() {
     servicoEditandoId = null;
     variacoesServico = [];
     document.getElementById("formServico").reset();
     document.getElementById("tituloModalServico").textContent = "Novo serviço";
+    document.getElementById("codigoAutomatico").checked = true;
+    alternarCodigoAutomaticoServico();
     adicionarVariacao();
     document.getElementById("modalServico").classList.add("active");
 }
@@ -72,8 +124,8 @@ function adicionarVariacao(dados = {}) {
 
 function renderizarVariacoes() {
     document.getElementById("tabelaVariacoes").innerHTML = variacoesServico.map((variacao, indice) => `<tr>
-        <td><input class="form-control" value="${escapar(variacao.codigo)}" oninput="alterarVariacao(${indice}, 'codigo', this.value)"></td>
-        <td><input class="form-control" value="${escapar(variacao.descricao)}" oninput="alterarVariacao(${indice}, 'descricao', this.value)"></td>
+        <td><input class="form-control" value="${escapar(variacao.codigo)}" placeholder="Automático" oninput="alterarVariacao(${indice}, 'codigo', this.value)"></td>
+        <td><input class="form-control" value="${escapar(variacao.descricao)}" placeholder="Ex.: Padrão" oninput="alterarVariacao(${indice}, 'descricao', this.value)"></td>
         <td><input class="form-control" type="number" min="0" step="0.01" value="${variacao.precoCusto}" oninput="alterarVariacao(${indice}, 'precoCusto', this.value)"></td>
         <td><input class="form-control" type="number" min="0" step="0.01" value="${variacao.precoVenda}" oninput="alterarVariacao(${indice}, 'precoVenda', this.value)"></td>
         <td><button type="button" class="btn btn-danger" onclick="removerVariacao(${indice})"><i class="fas fa-trash"></i></button></td>
@@ -92,23 +144,51 @@ function removerVariacao(indice) {
 
 async function salvarServico(evento) {
     evento.preventDefault();
+    const codigoAutomatico = document.getElementById("codigoAutomatico").checked;
     const dados = {
-        codigo: document.getElementById("codigo").value.trim(), nome: document.getElementById("nome").value.trim(),
-        categoriaId: Number(document.getElementById("categoriaId").value), unidadeMedida: document.getElementById("unidadeMedida").value,
-        descricao: document.getElementById("descricao").value.trim(), ativo: true, variacoes: variacoesServico
+        codigo: codigoAutomatico ? null : document.getElementById("codigo").value.trim(),
+        codigoAutomatico,
+        nome: document.getElementById("nome").value.trim(),
+        categoriaId: Number(document.getElementById("categoriaId").value),
+        unidadeMedida: document.getElementById("unidadeMedida").value,
+        descricao: document.getElementById("descricao").value.trim(),
+        ativo: true,
+        variacoes: variacoesServico.map((variacao) => ({
+            ...variacao,
+            codigo: String(variacao.codigo || "").trim(),
+            descricao: String(variacao.descricao || "").trim(),
+            precoCusto: Number(variacao.precoCusto || 0),
+            precoVenda: Number(variacao.precoVenda || 0)
+        }))
     };
+
+    if (!dados.codigoAutomatico && !dados.codigo) {
+        return mostrarMensagem("Informe o código do serviço ou marque a geração automática.");
+    }
+
+    if (!dados.nome) return mostrarMensagem("Informe o nome do serviço.");
+    if (!dados.categoriaId) return mostrarMensagem("Selecione uma categoria de serviço.");
+    if (dados.variacoes.some((variacao) => !variacao.descricao)) {
+        return mostrarMensagem("Informe a descrição de todas as variações. O código pode ficar vazio para ser gerado automaticamente.");
+    }
+
     const resposta = servicoEditandoId ? await put(`/servicos/${servicoEditandoId}`, dados) : await post("/servicos", dados);
     if (!resposta?.sucesso) return mostrarMensagem(resposta?.mensagem || "Erro ao salvar serviço.");
+
+    const salvo = resposta.servico;
     fecharModalServico();
     await carregarServicos();
-    mostrarMensagem("Serviço salvo com sucesso.");
+    notificarCatalogoAtualizado("servico", salvo);
+    mostrarMensagem(`Serviço ${salvo?.codigo ? salvo.codigo + " - " : ""}${salvo?.nome || ""} salvo com sucesso.`);
 }
 
 function editarServico(id) {
     const servico = servicos.find((item) => item.id === id);
     if (!servico) return;
     servicoEditandoId = id;
+    document.getElementById("codigoAutomatico").checked = false;
     document.getElementById("codigo").value = servico.codigo;
+    alternarCodigoAutomaticoServico();
     document.getElementById("nome").value = servico.nome;
     document.getElementById("categoriaId").value = servico.categoriaId;
     document.getElementById("unidadeMedida").value = servico.unidadeMedida;

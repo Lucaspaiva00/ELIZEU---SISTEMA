@@ -14,7 +14,44 @@ const formProduto = document.getElementById("formProduto");
 document.addEventListener("DOMContentLoaded", async () => {
     await carregarCategorias();
     await carregarProdutos();
+    abrirNovoProdutoPorUrl();
 });
+
+function abrirNovoProdutoPorUrl() {
+    const parametros = new URLSearchParams(window.location.search);
+    if (parametros.get("novo") !== "1") return;
+
+    if (typeof window.temPermissao === "function" && !window.temPermissao("produtos.criar")) {
+        return;
+    }
+
+    abrirModalProduto();
+
+    const url = new URL(window.location.href);
+    url.searchParams.delete("novo");
+    window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
+}
+
+function notificarCatalogoAtualizado(tipo, registro = null) {
+    const mensagem = {
+        tipo: "elian:catalogo-atualizado",
+        cadastro: tipo,
+        id: registro?.id || null,
+        em: Date.now()
+    };
+
+    try {
+        if (window.opener && !window.opener.closed) {
+            window.opener.postMessage(mensagem, window.location.origin);
+        }
+    } catch (erro) {
+        console.warn("Não foi possível notificar a aba do orçamento.", erro);
+    }
+
+    try {
+        localStorage.setItem("elian:catalogo-atualizado", JSON.stringify(mensagem));
+    } catch (_) {}
+}
 
 async function carregarCategorias() {
     try {
@@ -855,9 +892,12 @@ async function salvarProduto() {
             return;
         }
 
+        const produtoSalvo = resposta.produto;
+
         fecharModalProduto();
 
         await carregarProdutos();
+        notificarCatalogoAtualizado("produto", produtoSalvo);
 
         mostrarMensagem(
             estavaEditando
