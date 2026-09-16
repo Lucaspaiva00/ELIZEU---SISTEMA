@@ -57,7 +57,6 @@ const GRUPOS_PERMISSOES = [
             { chave: "orcamentos.visualizar", nome: "Visualizar orçamentos" },
             { chave: "orcamentos.criar", nome: "Criar orçamentos" },
             { chave: "orcamentos.editar", nome: "Editar orçamentos" },
-            { chave: "orcamentos.enviar", nome: "Marcar/enviar orçamento" },
             { chave: "orcamentos.aprovar", nome: "Aprovar orçamento e gerar venda" },
             { chave: "orcamentos.excluir", nome: "Excluir orçamento" },
             { chave: "vendas.visualizar", nome: "Visualizar vendas" },
@@ -141,7 +140,6 @@ const PERFIS_PADRAO = {
         "orcamentos.visualizar",
         "orcamentos.criar",
         "orcamentos.editar",
-        "orcamentos.enviar",
         "orcamentos.aprovar",
         "orcamentos.excluir",
         "vendas.visualizar",
@@ -177,7 +175,6 @@ const PERFIS_PADRAO = {
         "orcamentos.visualizar",
         "orcamentos.criar",
         "orcamentos.editar",
-        "orcamentos.enviar",
         "vendas.visualizar"
     ],
 
@@ -268,7 +265,6 @@ function normalizarPermissoes(permissoes) {
         "servicos.gerenciar": ["servicos.visualizar"],
         "orcamentos.criar": ["orcamentos.visualizar"],
         "orcamentos.editar": ["orcamentos.visualizar"],
-        "orcamentos.enviar": ["orcamentos.visualizar"],
         "orcamentos.aprovar": ["orcamentos.visualizar"],
         "orcamentos.excluir": ["orcamentos.visualizar"],
         "vendas.faturar": ["vendas.visualizar"],

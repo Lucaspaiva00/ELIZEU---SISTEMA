@@ -4,14 +4,11 @@ let produtos = [];
 let servicos = [];
 let itensOrcamento = [];
 let custosInternos = [];
+let itensPendentesSelecao = [];
 
 let orcamentoEditandoId = null;
 let orcamentoVisualizadoId = null;
 let orcamentoAprovandoId = null;
-
-let whatsappOrcamentoAtual = null;
-let whatsappPdfBlob = null;
-let whatsappAberturaManualConcluida = false;
 
 let catalogoOrcamentoPrecisaAtualizar = false;
 let atualizandoCatalogoOrcamento = false;
@@ -453,7 +450,6 @@ function renderizarTabelaOrcamentos(lista) {
             <td><div class="table-actions">
                 <button type="button" class="btn btn-light" onclick="visualizarOrcamento(${orcamento.id})" title="Visualizar"><i class="fas fa-eye"></i></button>
                 <button type="button" class="btn btn-light" onclick="gerarPdfOrcamento(${orcamento.id})" title="Gerar PDF"><i class="fas fa-file-pdf"></i></button>
-                <button type="button" class="btn btn-success" onclick="abrirEnvioWhatsApp(${orcamento.id}, this)" title="Enviar orçamento pelo WhatsApp"><i class="fa-brands fa-whatsapp"></i></button>
                 ${podeAprovar ? `<button type="button" class="btn btn-success" onclick="abrirModalAprovacao(${orcamento.id})" title="Aprovar e gerar venda"><i class="fas fa-check"></i></button>` : ""}
                 ${podeEditar ? `<button type="button" class="btn btn-warning" onclick="editarOrcamento(${orcamento.id})" title="Editar"><i class="fas fa-edit"></i></button>` : ""}
                 ${podeEditar ? `<button type="button" class="btn btn-danger" onclick="excluirOrcamento(${orcamento.id})" title="Excluir"><i class="fas fa-trash"></i></button>` : ""}
@@ -506,33 +502,143 @@ function abrirModalProduto() {
         mostrarMensagem(
             "Cadastre ao menos um produto ou serviço antes de criar o orçamento."
         );
-
         return;
     }
 
-    document.getElementById("produtoId").value = "";
-    document.getElementById("servicoId").value = "";
-    document.getElementById("tipoItem").value = produtos.length ? "PRODUTO" : "SERVICO";
-    alternarTipoItem();
-    document.getElementById("variacaoProdutoId").innerHTML = `
-        <option value="">
-            Selecione primeiro um produto
-        </option>
-    `;
-
-    document.getElementById("quantidade").value = 1;
-    document.getElementById("valorUnitario").value = "";
-
+    itensPendentesSelecao = [];
+    limparSelecaoItemOrcamento(true);
+    renderizarItensPendentesSelecao();
     modalSelecionarProduto.classList.add("active");
 }
 
 function fecharModalProduto() {
     modalSelecionarProduto.classList.remove("active");
+    itensPendentesSelecao = [];
+    limparSelecaoItemOrcamento(true);
+    renderizarItensPendentesSelecao();
+}
 
-    document.getElementById("produtoId").value = "";
-    document.getElementById("variacaoProdutoId").innerHTML = "";
-    document.getElementById("quantidade").value = 1;
-    document.getElementById("valorUnitario").value = "";
+function limparSelecaoItemOrcamento(redefinirTipo = false) {
+    const tipo = document.getElementById("tipoItem");
+    const produto = document.getElementById("produtoId");
+    const variacaoProduto = document.getElementById("variacaoProdutoId");
+    const servico = document.getElementById("servicoId");
+    const variacaoServico = document.getElementById("variacaoServicoId");
+    const quantidade = document.getElementById("quantidade");
+    const valorUnitario = document.getElementById("valorUnitario");
+
+    if (redefinirTipo && tipo) {
+        tipo.value = produtos.length ? "PRODUTO" : "SERVICO";
+    }
+
+    if (produto) produto.value = "";
+    if (servico) servico.value = "";
+    if (variacaoProduto) {
+        variacaoProduto.innerHTML = '<option value="">Selecione primeiro um produto</option>';
+    }
+    if (variacaoServico) {
+        variacaoServico.innerHTML = '<option value="">Selecione primeiro um serviço</option>';
+    }
+    if (quantidade) quantidade.value = 1;
+    if (valorUnitario) valorUnitario.value = "";
+
+    alternarTipoItem();
+}
+
+function renderizarItensPendentesSelecao() {
+    const tbody = document.getElementById("tabelaItensSelecionados");
+    const contador = document.getElementById("contadorItensSelecionados");
+    const botaoConfirmar = document.getElementById("btnConfirmarItensSelecionados");
+
+    if (!tbody) return;
+
+    if (contador) {
+        const totalUnidades = itensPendentesSelecao.reduce(
+            (soma, item) => soma + Number(item.quantidade || 0),
+            0
+        );
+        contador.textContent = `${itensPendentesSelecao.length} item(ns) selecionado(s) • ${totalUnidades} unidade(s)`;
+    }
+
+    if (botaoConfirmar) {
+        botaoConfirmar.disabled = !itensPendentesSelecao.length;
+        botaoConfirmar.innerHTML = `<i class="fas fa-check"></i> Confirmar ${itensPendentesSelecao.length || ""} item(ns)`;
+    }
+
+    if (!itensPendentesSelecao.length) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" class="text-center text-muted">
+                    Nenhum item selecionado ainda. Escolha um produto ou serviço acima e clique em <strong>Adicionar à seleção</strong>.
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    tbody.innerHTML = itensPendentesSelecao.map((item, index) => `
+        <tr>
+            <td>
+                <strong>${escaparHtml(item.produto)}</strong>
+                <small class="d-block text-muted">${item.tipo === "SERVICO" ? "Serviço" : "Material"}</small>
+            </td>
+            <td>${escaparHtml(item.descricao || item.sku || "-")}</td>
+            <td style="width:110px;">
+                <input
+                    type="number"
+                    min="0.5"
+                    step="0.5"
+                    class="form-control"
+                    value="${Number(item.quantidade)}"
+                    onchange="alterarItemPendenteSelecao(${index}, 'quantidade', this.value)">
+            </td>
+            <td style="width:140px;">
+                <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    class="form-control"
+                    value="${Number(item.valorUnitario).toFixed(2)}"
+                    onchange="alterarItemPendenteSelecao(${index}, 'valorUnitario', this.value)">
+            </td>
+            <td><strong>${moeda(item.total)}</strong></td>
+            <td style="width:70px;">
+                <button type="button" class="btn btn-danger" onclick="removerItemPendenteSelecao(${index})" title="Remover da seleção">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </td>
+        </tr>
+    `).join("");
+}
+
+function alterarItemPendenteSelecao(index, campo, valor) {
+    const item = itensPendentesSelecao[index];
+    if (!item) return;
+
+    const numero = Number(valor);
+    if (campo === "quantidade") {
+        if (!Number.isFinite(numero) || numero <= 0) {
+            renderizarItensPendentesSelecao();
+            return mostrarMensagem("Informe uma quantidade válida.");
+        }
+        item.quantidade = numero;
+    }
+
+    if (campo === "valorUnitario") {
+        if (!Number.isFinite(numero) || numero < 0) {
+            renderizarItensPendentesSelecao();
+            return mostrarMensagem("Informe um valor unitário válido.");
+        }
+        item.valorUnitario = numero;
+    }
+
+    item.total = Number(item.quantidade) * Number(item.valorUnitario);
+    renderizarItensPendentesSelecao();
+}
+
+function removerItemPendenteSelecao(index) {
+    itensPendentesSelecao.splice(index, 1);
+    renderizarItensPendentesSelecao();
 }
 
 function carregarVariacoesProduto() {
@@ -658,20 +764,19 @@ function filtrarOrcamentos() {
 }
 
 function adicionarItemOrcamento() {
-
     const tipo = document.getElementById("tipoItem").value;
     const quantidade = Number(document.getElementById("quantidade").value);
     const valorUnitario = Number(document.getElementById("valorUnitario").value);
 
-    if (quantidade <= 0) {
-        mostrarMensagem("Informe uma quantidade válida.");
-        return;
+    if (!Number.isFinite(quantidade) || quantidade <= 0) {
+        return mostrarMensagem("Informe uma quantidade válida.");
     }
 
     if (!Number.isFinite(valorUnitario) || valorUnitario < 0) {
-        mostrarMensagem("Informe um valor unitário válido.");
-        return;
+        return mostrarMensagem("Informe um valor unitário válido.");
     }
+
+    let itemSelecionado;
 
     if (tipo === "SERVICO") {
         const servicoId = Number(document.getElementById("servicoId").value);
@@ -680,131 +785,108 @@ function adicionarItemOrcamento() {
         const variacao = servico?.variacoes?.find((item) => item.id === variacaoId);
 
         if (!servico || !variacao) {
-            mostrarMensagem("Selecione o serviço e sua variação.");
-            return;
+            return mostrarMensagem("Selecione o serviço e sua variação.");
         }
 
-        const existente = itensOrcamento.find((item) => item.tipo === "SERVICO" && item.variacaoServicoId === variacaoId);
-        if (existente) {
-            existente.quantidade += quantidade;
-            existente.valorUnitario = valorUnitario;
-            existente.custoUnitario = Number(variacao.precoCusto || 0);
-            existente.total = existente.quantidade * valorUnitario;
-        } else {
-            itensOrcamento.push({
-                tipo: "SERVICO",
-                servicoId,
-                variacaoServicoId: variacao.id,
-                produto: servico.nome,
-                sku: variacao.codigo,
-                descricao: variacao.descricao || "Padrão",
-                quantidade,
-                valorUnitario,
-                custoUnitario: Number(variacao.precoCusto || 0),
-                total: quantidade * valorUnitario
-            });
+        itemSelecionado = {
+            tipo: "SERVICO",
+            servicoId,
+            variacaoServicoId: variacao.id,
+            produto: servico.nome,
+            sku: variacao.codigo,
+            descricao: variacao.descricao || "Padrão",
+            quantidade,
+            valorUnitario,
+            custoUnitario: Number(variacao.precoCusto || 0),
+            total: quantidade * valorUnitario
+        };
+    } else {
+        const produtoId = Number(document.getElementById("produtoId").value);
+        const variacaoId = Number(document.getElementById("variacaoProdutoId").value);
+
+        if (!produtoId) return mostrarMensagem("Selecione um produto.");
+        if (!variacaoId) return mostrarMensagem("Selecione uma variação.");
+
+        const produto = produtos.find((item) => item.id === produtoId);
+        const variacao = produto?.variacoes?.find((item) => item.id === variacaoId);
+
+        if (!produto || !variacao) {
+            return mostrarMensagem("Produto ou variação não encontrado. Atualize a lista e tente novamente.");
         }
 
-        fecharModalProduto();
-        renderizarItens();
-        calcularTotais();
-        return;
+        itemSelecionado = {
+            tipo: "PRODUTO",
+            produtoId,
+            variacaoProdutoId: variacao.id,
+            produto: produto.nome,
+            sku: variacao.sku,
+            descricao: [variacao.tamanho, variacao.saida].filter(Boolean).join(" | "),
+            quantidade,
+            valorUnitario,
+            custoUnitario: Number(variacao.precoCusto || 0),
+            total: quantidade * valorUnitario
+        };
     }
 
-    const produtoId = Number(
-        document.getElementById("produtoId").value
-    );
-
-    const variacaoId = Number(
-        document.getElementById("variacaoProdutoId").value
-    );
-
-    if (!produtoId) {
-
-        mostrarMensagem("Selecione um produto.");
-
-        return;
-
-    }
-
-    if (!variacaoId) {
-
-        mostrarMensagem("Selecione uma variação.");
-
-        return;
-
-    }
-
-    const produto = produtos.find(
-        p => p.id === produtoId
-    );
-
-    const variacao = produto.variacoes.find(
-        v => v.id === variacaoId
-    );
-
-    const existente = itensOrcamento.find(
-        item => item.tipo !== "SERVICO" && item.variacaoProdutoId === variacaoId
+    const existente = itensPendentesSelecao.find((item) =>
+        itemSelecionado.tipo === "SERVICO"
+            ? item.tipo === "SERVICO" && item.variacaoServicoId === itemSelecionado.variacaoServicoId
+            : item.tipo !== "SERVICO" && item.variacaoProdutoId === itemSelecionado.variacaoProdutoId
     );
 
     if (existente) {
-
-        existente.quantidade += quantidade;
-
-        existente.custoUnitario = Number(variacao.precoCusto || 0);
-
-        existente.total =
-            existente.quantidade *
-            existente.valorUnitario;
-
+        existente.quantidade = Number(existente.quantidade) + quantidade;
+        existente.valorUnitario = valorUnitario;
+        existente.custoUnitario = itemSelecionado.custoUnitario;
+        existente.total = existente.quantidade * existente.valorUnitario;
     } else {
-
-        itensOrcamento.push({
-
-            tipo: "PRODUTO",
-
-            produtoId,
-
-            variacaoProdutoId: variacao.id,
-
-            produto: produto.nome,
-
-            sku: variacao.sku,
-
-            descricao:
-
-                [
-
-                    variacao.tamanho,
-
-                    variacao.saida
-
-                ]
-
-                    .filter(Boolean)
-
-                    .join(" | "),
-
-            quantidade,
-
-            valorUnitario,
-
-            custoUnitario: Number(variacao.precoCusto || 0),
-
-            total:
-                quantidade *
-                valorUnitario
-
-        });
-
+        itensPendentesSelecao.push(itemSelecionado);
     }
 
-    fecharModalProduto();
+    renderizarItensPendentesSelecao();
+    limparSelecaoItemOrcamento(false);
 
+    const tipoSelect = document.getElementById("tipoItem");
+    if (tipoSelect) tipoSelect.value = tipo;
+    alternarTipoItem();
+}
+
+function confirmarItensSelecionados() {
+    if (!itensPendentesSelecao.length) {
+        return mostrarMensagem("Selecione pelo menos um produto ou serviço antes de confirmar.");
+    }
+
+    itensPendentesSelecao.forEach((novoItem) => {
+        const existente = itensOrcamento.find((item) =>
+            novoItem.tipo === "SERVICO"
+                ? item.tipo === "SERVICO" && item.variacaoServicoId === novoItem.variacaoServicoId
+                : item.tipo !== "SERVICO" && item.variacaoProdutoId === novoItem.variacaoProdutoId
+        );
+
+        if (existente) {
+            existente.quantidade = Number(existente.quantidade) + Number(novoItem.quantidade);
+            existente.valorUnitario = Number(novoItem.valorUnitario);
+            existente.custoUnitario = Number(novoItem.custoUnitario || 0);
+            existente.total = existente.quantidade * existente.valorUnitario;
+        } else {
+            itensOrcamento.push({ ...novoItem });
+        }
+    });
+
+    const totalAdicionados = itensPendentesSelecao.length;
+    itensPendentesSelecao = [];
+
+    modalSelecionarProduto.classList.remove("active");
+    limparSelecaoItemOrcamento(true);
+    renderizarItensPendentesSelecao();
     renderizarItens();
-
     calcularTotais();
 
+    mostrarMensagem(
+        totalAdicionados === 1
+            ? "1 item adicionado ao orçamento."
+            : `${totalAdicionados} itens adicionados ao orçamento.`
+    );
 }
 
 function renderizarItens() {
@@ -1670,11 +1752,6 @@ function gerarPdfOrcamentoVisualizado() {
     if (orcamentoVisualizadoId) gerarPdfOrcamento(orcamentoVisualizadoId);
 }
 
-function enviarWhatsAppOrcamentoVisualizado(botao) {
-    if (orcamentoVisualizadoId) {
-        abrirEnvioWhatsApp(orcamentoVisualizadoId, botao);
-    }
-}
 
 function abrirModalAprovacao(id) {
     orcamentoAprovandoId = id;
@@ -1718,386 +1795,6 @@ async function confirmarAprovacaoOrcamento() {
     } finally {
         botao.disabled = false;
         botao.innerHTML = '<i class="fas fa-check"></i> Aprovar e gerar venda';
-    }
-}
-
-function normalizarNumeroWhatsApp(valor) {
-    let digitos = String(valor ?? "").replace(/\D/g, "");
-
-    if (!digitos) return "";
-
-    while (digitos.startsWith("0")) {
-        digitos = digitos.slice(1);
-    }
-
-    if (digitos.length === 10 || digitos.length === 11) {
-        return `55${digitos}`;
-    }
-
-    if ((digitos.length === 12 || digitos.length === 13) && digitos.startsWith("55")) {
-        return digitos;
-    }
-
-    return digitos;
-}
-
-function mensagemPadraoWhatsApp(orcamento) {
-    const cliente = orcamento?.cliente || {};
-    const nomeCliente = String(cliente.nome || "").trim();
-    const primeiroNome = nomeCliente ? nomeCliente.split(/\s+/)[0] : "";
-    const saudacao = primeiroNome ? `Olá, ${primeiroNome}!` : "Olá!";
-    const numero = String(orcamento?.numero ?? "").padStart(5, "0");
-
-    return `${saudacao}\n\nSegue o orçamento nº ${numero} da Potência Padrões, no valor total de ${moeda(orcamento?.total || 0)}.\n\nQualquer dúvida, estamos à disposição.`;
-}
-
-function nomeArquivoPdfWhatsApp(orcamento) {
-    const numero = String(orcamento?.numero ?? orcamento?.id ?? "orcamento").padStart(5, "0");
-    return `ORCAMENTO-${numero}-POTENCIA-PADROES.pdf`;
-}
-
-function baixarArquivoBlob(blob, nomeArquivo) {
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = nomeArquivo;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 1500);
-}
-
-async function capturarHtmlPdfOrcamento(id) {
-    let htmlGerado = "";
-    const abrirJanelaOriginal = window.open;
-
-    const janelaFalsa = {
-        document: {
-            write(conteudo) {
-                htmlGerado += String(conteudo ?? "");
-            },
-            close() {}
-        },
-        focus() {},
-        print() {},
-        close() {}
-    };
-
-    window.open = () => janelaFalsa;
-
-    try {
-        await gerarPdfOrcamento(id);
-    } finally {
-        window.open = abrirJanelaOriginal;
-    }
-
-    if (!htmlGerado.trim()) {
-        throw new Error("Não foi possível montar o PDF do orçamento.");
-    }
-
-    return htmlGerado.replace(
-        /<script>[\s\S]*?window\.onload[\s\S]*?<\/script>/i,
-        ""
-    );
-}
-
-async function aguardarIframePdf(iframe) {
-    await new Promise((resolve) => {
-        let resolvido = false;
-
-        const finalizar = () => {
-            if (resolvido) return;
-            resolvido = true;
-            setTimeout(resolve, 250);
-        };
-
-        iframe.addEventListener("load", finalizar, { once: true });
-        setTimeout(finalizar, 1800);
-    });
-
-    const documento = iframe.contentDocument;
-    const imagens = Array.from(documento?.images || []);
-
-    await Promise.all(
-        imagens.map((imagem) => {
-            if (imagem.complete) return Promise.resolve();
-
-            return new Promise((resolve) => {
-                imagem.addEventListener("load", resolve, { once: true });
-                imagem.addEventListener("error", resolve, { once: true });
-                setTimeout(resolve, 1200);
-            });
-        })
-    );
-}
-
-async function gerarBlobPdfOrcamento(id) {
-    if (typeof window.html2canvas !== "function") {
-        throw new Error("Biblioteca de geração do PDF não carregou. Atualize a página e tente novamente.");
-    }
-
-    const JsPdf = window.jspdf?.jsPDF || window.jsPDF;
-
-    if (!JsPdf) {
-        throw new Error("Biblioteca de PDF não carregou. Atualize a página e tente novamente.");
-    }
-
-    const html = await capturarHtmlPdfOrcamento(id);
-    const iframe = document.createElement("iframe");
-
-    iframe.setAttribute("aria-hidden", "true");
-    iframe.style.position = "fixed";
-    iframe.style.left = "-12000px";
-    iframe.style.top = "0";
-    iframe.style.width = "900px";
-    iframe.style.height = "1400px";
-    iframe.style.border = "0";
-    iframe.style.opacity = "0";
-    iframe.style.pointerEvents = "none";
-
-    document.body.appendChild(iframe);
-    iframe.srcdoc = html;
-
-    try {
-        await aguardarIframePdf(iframe);
-
-        const documento = iframe.contentDocument;
-        const alvo = documento?.querySelector(".folha") || documento?.body;
-
-        if (!alvo) {
-            throw new Error("Não foi possível renderizar o orçamento para PDF.");
-        }
-
-        const canvas = await window.html2canvas(alvo, {
-            scale: 2,
-            useCORS: true,
-            backgroundColor: "#ffffff",
-            logging: false,
-            scrollX: 0,
-            scrollY: 0,
-            windowWidth: Math.max(alvo.scrollWidth, 900),
-            windowHeight: Math.max(alvo.scrollHeight, 1200)
-        });
-
-        const pdf = new JsPdf({
-            orientation: "portrait",
-            unit: "mm",
-            format: "a4",
-            compress: true
-        });
-
-        const margem = 8;
-        const larguraPagina = pdf.internal.pageSize.getWidth();
-        const alturaPagina = pdf.internal.pageSize.getHeight();
-        const larguraImagem = larguraPagina - (margem * 2);
-        const alturaImagem = (canvas.height * larguraImagem) / canvas.width;
-        const alturaUtil = alturaPagina - (margem * 2);
-        const imagem = canvas.toDataURL("image/jpeg", 0.96);
-
-        let alturaRestante = alturaImagem;
-        let posicaoY = margem;
-
-        pdf.addImage(
-            imagem,
-            "JPEG",
-            margem,
-            posicaoY,
-            larguraImagem,
-            alturaImagem,
-            undefined,
-            "FAST"
-        );
-
-        alturaRestante -= alturaUtil;
-
-        while (alturaRestante > 0.5) {
-            pdf.addPage();
-            posicaoY = margem - (alturaImagem - alturaRestante);
-
-            pdf.addImage(
-                imagem,
-                "JPEG",
-                margem,
-                posicaoY,
-                larguraImagem,
-                alturaImagem,
-                undefined,
-                "FAST"
-            );
-
-            alturaRestante -= alturaUtil;
-        }
-
-        return pdf.output("blob");
-    } finally {
-        iframe.remove();
-    }
-}
-
-function abrirModalWhatsApp() {
-    document.getElementById("modalEnviarWhatsApp")?.classList.add("active");
-}
-
-function atualizarEstadoConfirmacaoWhatsApp(habilitado) {
-    whatsappAberturaManualConcluida = Boolean(habilitado);
-
-    const botao = document.getElementById("btnConfirmarEnvioWhatsApp");
-    if (!botao) return;
-
-    botao.disabled = !whatsappAberturaManualConcluida;
-    botao.innerHTML = whatsappAberturaManualConcluida
-        ? '<i class="fas fa-check"></i> Confirmar envio'
-        : '<i class="fas fa-check"></i> Confirmar envio';
-}
-
-function fecharModalWhatsApp() {
-    document.getElementById("modalEnviarWhatsApp")?.classList.remove("active");
-    whatsappOrcamentoAtual = null;
-    whatsappPdfBlob = null;
-    atualizarEstadoConfirmacaoWhatsApp(false);
-}
-
-async function abrirEnvioWhatsApp(id, botao = null) {
-    const htmlOriginal = botao?.innerHTML;
-
-    try {
-        if (botao) {
-            botao.disabled = true;
-            botao.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-        }
-
-        const resposta = await get(`/orcamentos/${id}`);
-
-        if (!resposta?.sucesso || !resposta.orcamento) {
-            throw new Error(resposta?.mensagem || "Não foi possível carregar o orçamento.");
-        }
-
-        const orcamento = resposta.orcamento;
-        const cliente = orcamento.cliente || {};
-        const numero = normalizarNumeroWhatsApp(cliente.celular || cliente.telefone);
-
-        if (!numero || numero.length < 12) {
-            throw new Error("O cliente não possui um WhatsApp válido cadastrado. Cadastre o celular do cliente e tente novamente.");
-        }
-
-        whatsappOrcamentoAtual = orcamento;
-        whatsappPdfBlob = await gerarBlobPdfOrcamento(id);
-        atualizarEstadoConfirmacaoWhatsApp(false);
-
-        document.getElementById("whatsappCliente").value = cliente.nome || "Cliente";
-        document.getElementById("whatsappNumero").value = `+${numero}`;
-        document.getElementById("whatsappMensagem").value = mensagemPadraoWhatsApp(orcamento);
-        document.getElementById("whatsappArquivoNome").textContent = nomeArquivoPdfWhatsApp(orcamento);
-
-        abrirModalWhatsApp();
-    } catch (erro) {
-        console.error(erro);
-        mostrarMensagem(erro.message || "Erro ao preparar envio pelo WhatsApp.");
-    } finally {
-        if (botao) {
-            botao.disabled = false;
-            botao.innerHTML = htmlOriginal;
-        }
-    }
-}
-
-async function marcarOrcamentoEnviadoWhatsApp() {
-    if (!whatsappOrcamentoAtual?.id) {
-        throw new Error("Nenhum orçamento preparado para confirmação.");
-    }
-
-    const resposta = await put(`/orcamentos/${whatsappOrcamentoAtual.id}/enviado`, {
-        canal: "WHATSAPP"
-    });
-
-    if (!resposta?.sucesso) {
-        throw new Error(resposta?.mensagem || "Não foi possível atualizar o status do orçamento.");
-    }
-
-    await carregarOrcamentos();
-    return resposta.orcamento;
-}
-
-async function abrirWhatsAppWebComPdf() {
-    if (!whatsappOrcamentoAtual || !whatsappPdfBlob) {
-        return mostrarMensagem("Prepare o orçamento antes de enviar.");
-    }
-
-    const cliente = whatsappOrcamentoAtual.cliente || {};
-    const numero = normalizarNumeroWhatsApp(cliente.celular || cliente.telefone);
-    const mensagem = document.getElementById("whatsappMensagem").value.trim();
-    const nomeArquivo = nomeArquivoPdfWhatsApp(whatsappOrcamentoAtual);
-
-    if (!numero) {
-        return mostrarMensagem("O cliente não possui WhatsApp válido cadastrado.");
-    }
-
-    if (!mensagem) {
-        return mostrarMensagem("Informe a mensagem que será enviada ao cliente.");
-    }
-
-    baixarArquivoBlob(whatsappPdfBlob, nomeArquivo);
-
-    const url = `https://wa.me/${numero}?text=${encodeURIComponent(mensagem)}`;
-    const janela = window.open(url, "_blank");
-
-    if (!janela) {
-        return mostrarMensagem("Permita pop-ups para abrir o WhatsApp.");
-    }
-
-    atualizarEstadoConfirmacaoWhatsApp(true);
-    mostrarMensagem(
-        "PDF baixado e conversa aberta no WhatsApp. Anexe o PDF, envie ao cliente e depois clique em 'Confirmar envio' no sistema."
-    );
-}
-
-async function confirmarEnvioWhatsAppManual() {
-    if (!whatsappOrcamentoAtual?.id) {
-        return mostrarMensagem("Nenhum orçamento preparado para confirmação.");
-    }
-
-    if (!whatsappAberturaManualConcluida) {
-        return mostrarMensagem(
-            "Primeiro clique em 'Baixar PDF + abrir WhatsApp', envie o arquivo ao cliente e depois confirme o envio."
-        );
-    }
-
-    const botao = document.getElementById("btnConfirmarEnvioWhatsApp");
-    const htmlOriginal = botao?.innerHTML;
-
-    try {
-        if (botao) {
-            botao.disabled = true;
-            botao.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Confirmando...';
-        }
-
-        await marcarOrcamentoEnviadoWhatsApp();
-        fecharModalWhatsApp();
-        mostrarMensagem("Envio confirmado. O orçamento foi marcado como Enviado.");
-    } catch (erro) {
-        console.error(erro);
-        mostrarMensagem(erro.message || "Não foi possível confirmar o envio do orçamento.");
-    } finally {
-        if (botao && document.getElementById("modalEnviarWhatsApp")?.classList.contains("active")) {
-            botao.disabled = !whatsappAberturaManualConcluida;
-            botao.innerHTML = htmlOriginal || '<i class="fas fa-check"></i> Confirmar envio';
-        }
-    }
-}
-
-async function copiarMensagemWhatsApp() {
-    const campo = document.getElementById("whatsappMensagem");
-    const texto = campo?.value || "";
-
-    if (!texto.trim()) return;
-
-    try {
-        await navigator.clipboard.writeText(texto);
-        mostrarMensagem("Mensagem copiada.");
-    } catch {
-        campo.select();
-        document.execCommand("copy");
-        mostrarMensagem("Mensagem copiada.");
     }
 }
 

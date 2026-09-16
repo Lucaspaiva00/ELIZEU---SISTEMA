@@ -201,7 +201,6 @@ function regrasAcoesPagina(pagina) {
             ["editarOrcamento(", "orcamentos.editar"],
             ["excluirOrcamento(", "orcamentos.excluir"],
             ["abrirModalAprovacao(", "orcamentos.aprovar"],
-            ["abrirEnvioWhatsApp(", "orcamentos.enviar"]
         ],
         "vendas.html": [
             ["faturarVenda(", "vendas.faturar"],
