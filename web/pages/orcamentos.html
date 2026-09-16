@@ -222,140 +222,134 @@
 
                 <div class="modal-overlay" id="modalSelecionarProduto">
 
-                    <div class="modal modal-lg">
+                    <div class="modal modal-xl">
 
                         <div class="modal-header">
-
-                            <h2>
-
-                                Selecionar produtos e serviços
-
-                            </h2>
+                            <div>
+                                <h2>Selecionar produtos e serviços</h2>
+                                <p class="modal-section-help">
+                                    Marque vários itens de uma vez e confirme somente no final.
+                                </p>
+                            </div>
 
                             <button class="modal-close" onclick="fecharModalProduto()">
-
                                 &times;
-
                             </button>
-
                         </div>
 
                         <div class="modal-body">
 
-                            <div class="form-group">
+                            <div class="modal-section-card">
+                                <div class="modal-section-head">
+                                    <div>
+                                        <h3>Catálogo</h3>
+                                        <p id="contadorCatalogoOrcamento">0 opção(ões) disponível(is)</p>
+                                    </div>
 
-                                <label>Tipo do item</label>
+                                    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                                        <button
+                                            type="button"
+                                            class="btn btn-light btn-sm"
+                                            data-permission="produtos.criar"
+                                            onclick="abrirCadastroAuxiliarOrcamento('produto')"
+                                            title="Cadastrar produto sem sair deste orçamento">
+                                            <i class="fas fa-arrow-up-right-from-square"></i>
+                                            Novo produto
+                                        </button>
 
-                                <select id="tipoItem" class="form-control">
-                                    <option value="PRODUTO">Material / produto</option>
-                                    <option value="SERVICO">Serviço</option>
-                                </select>
+                                        <button
+                                            type="button"
+                                            class="btn btn-light btn-sm"
+                                            data-permission="servicos.gerenciar"
+                                            onclick="abrirCadastroAuxiliarOrcamento('servico')"
+                                            title="Cadastrar serviço sem sair deste orçamento">
+                                            <i class="fas fa-arrow-up-right-from-square"></i>
+                                            Novo serviço
+                                        </button>
 
-                            </div>
-
-                            <div id="camposProduto">
-
-                            <div class="form-group">
-
-                                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px;">
-                                    <label style="margin:0;">Produto</label>
-                                    <button type="button" class="btn btn-light btn-sm" data-permission="produtos.criar" onclick="abrirCadastroAuxiliarOrcamento('produto')" title="Cadastrar produto sem sair deste orçamento">
-                                        <i class="fas fa-arrow-up-right-from-square"></i> Novo produto em outra aba
-                                    </button>
-                                </div>
-
-                                <select id="produtoId" class="form-control">
-
-                                </select>
-
-                            </div>
-
-                            <div class="form-group">
-
-                                <label>
-
-                                    Variação
-
-                                </label>
-
-                                <select id="variacaoProdutoId" class="form-control">
-
-                                </select>
-
-                            </div>
-
-                            </div>
-
-                            <div id="camposServico" style="display:none">
-
-                                <div class="form-group">
-                                    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px;">
-                                        <label style="margin:0;">Serviço</label>
-                                        <button type="button" class="btn btn-light btn-sm" data-permission="servicos.gerenciar" onclick="abrirCadastroAuxiliarOrcamento('servico')" title="Cadastrar serviço sem sair deste orçamento">
-                                            <i class="fas fa-arrow-up-right-from-square"></i> Novo serviço em outra aba
+                                        <button
+                                            type="button"
+                                            class="btn btn-light btn-sm"
+                                            onclick="atualizarCatalogoOrcamento()">
+                                            <i class="fas fa-rotate"></i>
+                                            Atualizar lista
                                         </button>
                                     </div>
-                                    <select id="servicoId" class="form-control"></select>
                                 </div>
 
-                                <div class="form-group">
-                                    <label>Variação do serviço</label>
-                                    <select id="variacaoServicoId" class="form-control"></select>
-                                </div>
-
-                            </div>
-
-                            <div class="alert alert-info" style="margin:14px 0 16px;">
-                                <i class="fas fa-circle-info"></i>
-                                Se faltar um produto ou serviço, abra o cadastro em outra aba. Este orçamento continua aberto e a lista é atualizada quando você voltar.
-                                <button type="button" class="btn btn-light btn-sm" style="margin-left:8px;" onclick="atualizarCatalogoOrcamento(true)">
-                                    <i class="fas fa-rotate"></i> Atualizar lista
-                                </button>
-                            </div>
-
-                            <div class="row">
-
-                                <div class="col">
-
-                                    <div class="form-group">
-
-                                        <label>
-
-                                            Quantidade
-
-                                        </label>
-
-                                        <input id="quantidade" class="form-control" type="number" min="0.5" step="0.5" value="1">
-
+                                <div class="row" style="align-items:end;">
+                                    <div class="col">
+                                        <div class="form-group">
+                                            <label>Pesquisar item</label>
+                                            <input
+                                                id="pesquisaCatalogoOrcamento"
+                                                class="form-control"
+                                                placeholder="Digite nome, código, tamanho, saída ou serviço...">
+                                        </div>
                                     </div>
 
-                                </div>
-
-                                <div class="col">
-
-                                    <div class="form-group">
-
-                                        <label>
-
-                                            Valor Unitário
-
-                                        </label>
-
-                                        <input id="valorUnitario" class="form-control" type="number" min="0" step="0.01">
-
+                                    <div class="col-3">
+                                        <div class="form-group">
+                                            <label>Mostrar</label>
+                                            <select id="filtroTipoCatalogoOrcamento" class="form-control">
+                                                <option value="TODOS">Produtos e serviços</option>
+                                                <option value="PRODUTO">Somente produtos</option>
+                                                <option value="SERVICO">Somente serviços</option>
+                                            </select>
+                                        </div>
                                     </div>
-
                                 </div>
 
+                                <div
+                                    class="alert alert-info"
+                                    style="margin:4px 0 14px;">
+                                    <i class="fas fa-circle-info"></i>
+                                    Marque quantos itens precisar. Você também pode ajustar
+                                    quantidade e valor antes de confirmar.
+                                </div>
+
+                                <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+                                    <input
+                                        id="selecionarTodosCatalogoOrcamento"
+                                        type="checkbox"
+                                        onchange="alternarTodosCatalogoOrcamento(this.checked)">
+                                    <label
+                                        for="selecionarTodosCatalogoOrcamento"
+                                        style="margin:0;cursor:pointer;">
+                                        Selecionar todos os itens exibidos
+                                    </label>
+                                </div>
+
+                                <div
+                                    class="table-responsive"
+                                    style="max-height:430px;overflow:auto;border:1px solid #e9ecef;border-radius:10px;">
+                                    <table class="table" style="margin-bottom:0;">
+                                        <thead style="position:sticky;top:0;background:#fff;z-index:2;">
+                                            <tr>
+                                                <th width="46"></th>
+                                                <th>Produto / serviço</th>
+                                                <th>Variação</th>
+                                                <th>Código</th>
+                                                <th width="110">Qtd.</th>
+                                                <th width="140">Unitário</th>
+                                                <th width="130">Total</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="catalogoItensOrcamento"></tbody>
+                                    </table>
+                                </div>
                             </div>
 
                             <div class="modal-section-card" style="margin-top:18px;">
                                 <div class="modal-section-head">
                                     <div>
-                                        <h3>Itens selecionados</h3>
-                                        <p id="contadorItensSelecionados">0 item(ns) selecionado(s)</p>
+                                        <h3>Selecionados</h3>
+                                        <p id="contadorItensSelecionados">
+                                            0 item(ns) selecionado(s)
+                                        </p>
                                     </div>
                                 </div>
+
                                 <div class="table-responsive">
                                     <table class="table">
                                         <thead>
@@ -365,7 +359,7 @@
                                                 <th>Qtd.</th>
                                                 <th>Unitário</th>
                                                 <th>Total</th>
-                                                <th></th>
+                                                <th width="70"></th>
                                             </tr>
                                         </thead>
                                         <tbody id="tabelaItensSelecionados"></tbody>
@@ -374,24 +368,24 @@
                             </div>
 
                         </div>
+
                         <div class="modal-footer">
-
-                            <button type="button" class="btn btn-light" onclick="fecharModalProduto()">
-
+                            <button
+                                type="button"
+                                class="btn btn-light"
+                                onclick="fecharModalProduto()">
                                 Cancelar
-
                             </button>
 
-                            <button type="button" class="btn btn-light" onclick="adicionarItemOrcamento()">
-                                <i class="fas fa-plus"></i>
-                                Adicionar à seleção
-                            </button>
-
-                            <button type="button" class="btn btn-success" id="btnConfirmarItensSelecionados" onclick="confirmarItensSelecionados()" disabled>
+                            <button
+                                type="button"
+                                class="btn btn-success"
+                                id="btnConfirmarItensSelecionados"
+                                onclick="confirmarItensSelecionados()"
+                                disabled>
                                 <i class="fas fa-check"></i>
                                 Confirmar itens
                             </button>
-
                         </div>
 
                     </div>

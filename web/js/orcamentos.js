@@ -35,7 +35,7 @@ window.addEventListener("message", (evento) => {
     if (evento.data?.tipo !== "elian:catalogo-atualizado") return;
 
     catalogoOrcamentoPrecisaAtualizar = true;
-    atualizarCatalogoOrcamento(true);
+    atualizarCatalogoOrcamento();
 });
 
 window.addEventListener("storage", (evento) => {
@@ -45,26 +45,15 @@ window.addEventListener("storage", (evento) => {
 
 window.addEventListener("focus", () => {
     if (!catalogoOrcamentoPrecisaAtualizar) return;
-    atualizarCatalogoOrcamento(true);
+    atualizarCatalogoOrcamento();
 });
 
 function configurarEventos() {
-    const produtoSelect = document.getElementById("produtoId");
-    const variacaoSelect = document.getElementById(
-        "variacaoProdutoId"
-    );
+    const pesquisaCatalogo = document.getElementById("pesquisaCatalogoOrcamento");
+    const filtroCatalogo = document.getElementById("filtroTipoCatalogoOrcamento");
 
-    produtoSelect.addEventListener("change", () => {
-        carregarVariacoesProduto();
-    });
-
-    variacaoSelect.addEventListener("change", () => {
-        preencherValorVariacao();
-    });
-
-    document.getElementById("tipoItem").addEventListener("change", alternarTipoItem);
-    document.getElementById("servicoId").addEventListener("change", carregarVariacoesServico);
-    document.getElementById("variacaoServicoId").addEventListener("change", preencherValorVariacaoServico);
+    pesquisaCatalogo?.addEventListener("input", renderizarCatalogoItensOrcamento);
+    filtroCatalogo?.addEventListener("change", renderizarCatalogoItensOrcamento);
 }
 
 function abrirCadastroAuxiliarOrcamento(tipo) {
@@ -97,46 +86,16 @@ function abrirCadastroAuxiliarOrcamento(tipo) {
     catalogoOrcamentoPrecisaAtualizar = true;
 }
 
-async function atualizarCatalogoOrcamento(preservarSelecao = true) {
+async function atualizarCatalogoOrcamento() {
     if (atualizandoCatalogoOrcamento) return;
 
     atualizandoCatalogoOrcamento = true;
 
-    const produtoSelecionado = preservarSelecao
-        ? document.getElementById("produtoId")?.value
-        : "";
-    const variacaoProdutoSelecionada = preservarSelecao
-        ? document.getElementById("variacaoProdutoId")?.value
-        : "";
-    const servicoSelecionado = preservarSelecao
-        ? document.getElementById("servicoId")?.value
-        : "";
-    const variacaoServicoSelecionada = preservarSelecao
-        ? document.getElementById("variacaoServicoId")?.value
-        : "";
-
     try {
         await Promise.all([carregarProdutos(), carregarServicos()]);
-
-        if (produtoSelecionado && produtos.some((produto) => String(produto.id) === String(produtoSelecionado))) {
-            document.getElementById("produtoId").value = produtoSelecionado;
-            carregarVariacoesProduto();
-
-            if ([...document.getElementById("variacaoProdutoId").options].some((option) => String(option.value) === String(variacaoProdutoSelecionada))) {
-                document.getElementById("variacaoProdutoId").value = variacaoProdutoSelecionada;
-            }
-        }
-
-        if (servicoSelecionado && servicos.some((servico) => String(servico.id) === String(servicoSelecionado))) {
-            document.getElementById("servicoId").value = servicoSelecionado;
-            carregarVariacoesServico();
-
-            if ([...document.getElementById("variacaoServicoId").options].some((option) => String(option.value) === String(variacaoServicoSelecionada))) {
-                document.getElementById("variacaoServicoId").value = variacaoServicoSelecionada;
-            }
-        }
-
         catalogoOrcamentoPrecisaAtualizar = false;
+        renderizarCatalogoItensOrcamento();
+        renderizarItensPendentesSelecao();
     } catch (erro) {
         console.error("Erro ao atualizar catálogo do orçamento:", erro);
         mostrarMensagem("Não foi possível atualizar a lista de produtos e serviços.");
@@ -150,42 +109,10 @@ async function carregarServicos() {
         const resposta = await get("/servicos");
         if (!resposta?.sucesso) return;
         servicos = resposta.servicos || [];
-        const select = document.getElementById("servicoId");
-        select.innerHTML = '<option value="">Selecione um serviço</option>';
-        servicos.filter((servico) => servico.ativo).forEach((servico) => {
-            const option = document.createElement("option");
-            option.value = servico.id;
-            option.textContent = `${servico.codigo} - ${servico.nome}`;
-            select.appendChild(option);
-        });
+        renderizarCatalogoItensOrcamento();
     } catch (erro) {
         console.error(erro);
     }
-}
-
-function alternarTipoItem() {
-    const tipo = document.getElementById("tipoItem").value;
-    document.getElementById("camposProduto").style.display = tipo === "PRODUTO" ? "block" : "none";
-    document.getElementById("camposServico").style.display = tipo === "SERVICO" ? "block" : "none";
-    document.getElementById("valorUnitario").value = "";
-}
-
-function carregarVariacoesServico() {
-    const servico = servicos.find((item) => item.id === Number(document.getElementById("servicoId").value));
-    const select = document.getElementById("variacaoServicoId");
-    select.innerHTML = '<option value="">Selecione uma variação</option>';
-    (servico?.variacoes || []).filter((variacao) => variacao.ativo).forEach((variacao) => {
-        const option = document.createElement("option");
-        option.value = variacao.id;
-        option.textContent = `${variacao.codigo} - ${variacao.descricao || "Padrão"} | ${moeda(variacao.precoVenda)}`;
-        select.appendChild(option);
-    });
-}
-
-function preencherValorVariacaoServico() {
-    const servico = servicos.find((item) => item.id === Number(document.getElementById("servicoId").value));
-    const variacao = servico?.variacoes?.find((item) => item.id === Number(document.getElementById("variacaoServicoId").value));
-    document.getElementById("valorUnitario").value = variacao ? Number(variacao.precoVenda).toFixed(2) : "";
 }
 
 async function carregarClientes() {
@@ -351,46 +278,15 @@ async function carregarProdutos() {
                 resposta?.mensagem ||
                 "Erro ao carregar produtos."
             );
-
             return;
         }
 
         produtos = resposta.produtos || [];
-
-        preencherSelectProdutos();
+        renderizarCatalogoItensOrcamento();
     } catch (erro) {
         console.error(erro);
         mostrarMensagem("Erro ao carregar produtos.");
     }
-}
-
-function preencherSelectProdutos() {
-    const select = document.getElementById("produtoId");
-
-    select.innerHTML = `
-        <option value="">
-            Selecione um produto
-        </option>
-    `;
-
-    [...produtos]
-        .sort((a, b) =>
-            String(a.nome || "").localeCompare(
-                String(b.nome || ""),
-                "pt-BR",
-                { sensitivity: "base" }
-            )
-        )
-        .forEach((produto) => {
-            const option = document.createElement("option");
-
-            option.value = produto.id;
-            // No orçamento o cliente pediu somente o nome do produto,
-            // em ordem alfabética.
-            option.textContent = produto.nome || "Produto sem nome";
-
-            select.appendChild(option);
-        });
 }
 
 async function carregarOrcamentos() {
@@ -506,51 +402,395 @@ function abrirModalProduto() {
     }
 
     itensPendentesSelecao = [];
-    limparSelecaoItemOrcamento(true);
+
+    const pesquisa = document.getElementById("pesquisaCatalogoOrcamento");
+    const filtro = document.getElementById("filtroTipoCatalogoOrcamento");
+    const selecionarTodos = document.getElementById("selecionarTodosCatalogoOrcamento");
+
+    if (pesquisa) pesquisa.value = "";
+    if (filtro) filtro.value = "TODOS";
+    if (selecionarTodos) selecionarTodos.checked = false;
+
+    renderizarCatalogoItensOrcamento();
     renderizarItensPendentesSelecao();
+
     modalSelecionarProduto.classList.add("active");
 }
 
 function fecharModalProduto() {
     modalSelecionarProduto.classList.remove("active");
     itensPendentesSelecao = [];
-    limparSelecaoItemOrcamento(true);
+
+    const selecionarTodos = document.getElementById("selecionarTodosCatalogoOrcamento");
+    if (selecionarTodos) selecionarTodos.checked = false;
+
     renderizarItensPendentesSelecao();
 }
 
-function limparSelecaoItemOrcamento(redefinirTipo = false) {
-    const tipo = document.getElementById("tipoItem");
-    const produto = document.getElementById("produtoId");
-    const variacaoProduto = document.getElementById("variacaoProdutoId");
-    const servico = document.getElementById("servicoId");
-    const variacaoServico = document.getElementById("variacaoServicoId");
-    const quantidade = document.getElementById("quantidade");
-    const valorUnitario = document.getElementById("valorUnitario");
+function chaveCatalogoItem(tipo, variacaoId) {
+    return `${tipo}:${Number(variacaoId)}`;
+}
 
-    if (redefinirTipo && tipo) {
-        tipo.value = produtos.length ? "PRODUTO" : "SERVICO";
+function listarOpcoesCatalogoOrcamento() {
+    const opcoes = [];
+
+    produtos
+        .filter((produto) => produto?.ativo !== false)
+        .forEach((produto) => {
+            (produto.variacoes || [])
+                .filter((variacao) => variacao?.ativo !== false)
+                .forEach((variacao) => {
+                    opcoes.push({
+                        chave: chaveCatalogoItem("PRODUTO", variacao.id),
+                        tipo: "PRODUTO",
+                        produtoId: produto.id,
+                        variacaoProdutoId: variacao.id,
+                        produto: produto.nome || "Produto sem nome",
+                        codigo: variacao.sku || produto.codigo || "",
+                        sku: variacao.sku || "",
+                        descricao: [variacao.tamanho, variacao.saida]
+                            .filter(Boolean)
+                            .join(" | ") || "Padrão",
+                        quantidade: 1,
+                        valorUnitario: Number(variacao.precoVenda || 0),
+                        custoUnitario: Number(variacao.precoCusto || 0)
+                    });
+                });
+        });
+
+    servicos
+        .filter((servico) => servico?.ativo !== false)
+        .forEach((servico) => {
+            (servico.variacoes || [])
+                .filter((variacao) => variacao?.ativo !== false)
+                .forEach((variacao) => {
+                    opcoes.push({
+                        chave: chaveCatalogoItem("SERVICO", variacao.id),
+                        tipo: "SERVICO",
+                        servicoId: servico.id,
+                        variacaoServicoId: variacao.id,
+                        produto: servico.nome || "Serviço sem nome",
+                        codigo: variacao.codigo || servico.codigo || "",
+                        sku: variacao.codigo || "",
+                        descricao: variacao.descricao || "Padrão",
+                        quantidade: 1,
+                        valorUnitario: Number(variacao.precoVenda || 0),
+                        custoUnitario: Number(variacao.precoCusto || 0)
+                    });
+                });
+        });
+
+    return opcoes.sort((a, b) => {
+        const porNome = String(a.produto).localeCompare(
+            String(b.produto),
+            "pt-BR",
+            { sensitivity: "base" }
+        );
+
+        if (porNome !== 0) return porNome;
+
+        return String(a.descricao || "").localeCompare(
+            String(b.descricao || ""),
+            "pt-BR",
+            { sensitivity: "base" }
+        );
+    });
+}
+
+function obterOpcoesCatalogoFiltradas() {
+    const pesquisa = String(
+        document.getElementById("pesquisaCatalogoOrcamento")?.value || ""
+    )
+        .trim()
+        .toLowerCase();
+
+    const filtro = document.getElementById("filtroTipoCatalogoOrcamento")?.value || "TODOS";
+
+    return listarOpcoesCatalogoOrcamento().filter((opcao) => {
+        if (filtro !== "TODOS" && opcao.tipo !== filtro) return false;
+
+        if (!pesquisa) return true;
+
+        const texto = [
+            opcao.produto,
+            opcao.descricao,
+            opcao.codigo,
+            opcao.tipo === "SERVICO" ? "serviço servico" : "produto material"
+        ]
+            .join(" ")
+            .toLowerCase();
+
+        return texto.includes(pesquisa);
+    });
+}
+
+function itemPendentePorChave(chave) {
+    return itensPendentesSelecao.find(
+        (item) => chaveCatalogoItem(
+            item.tipo,
+            item.tipo === "SERVICO"
+                ? item.variacaoServicoId
+                : item.variacaoProdutoId
+        ) === chave
+    );
+}
+
+function escaparAtributoCatalogo(valor) {
+    return escaparHtml(String(valor ?? "")).replace(/"/g, "&quot;");
+}
+
+function renderizarCatalogoItensOrcamento() {
+    const tbody = document.getElementById("catalogoItensOrcamento");
+    const contador = document.getElementById("contadorCatalogoOrcamento");
+
+    if (!tbody) return;
+
+    const opcoes = obterOpcoesCatalogoFiltradas();
+
+    if (contador) {
+        contador.textContent = `${opcoes.length} opção(ões) disponível(is)`;
     }
 
-    if (produto) produto.value = "";
-    if (servico) servico.value = "";
-    if (variacaoProduto) {
-        variacaoProduto.innerHTML = '<option value="">Selecione primeiro um produto</option>';
+    if (!opcoes.length) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="7" class="text-center text-muted">
+                    Nenhum produto ou serviço encontrado para este filtro.
+                </td>
+            </tr>
+        `;
+        return;
     }
-    if (variacaoServico) {
-        variacaoServico.innerHTML = '<option value="">Selecione primeiro um serviço</option>';
-    }
-    if (quantidade) quantidade.value = 1;
-    if (valorUnitario) valorUnitario.value = "";
 
-    alternarTipoItem();
+    tbody.innerHTML = opcoes.map((opcao) => {
+        const selecionado = itemPendentePorChave(opcao.chave);
+        const quantidade = Number(selecionado?.quantidade ?? 1);
+        const valorUnitario = Number(
+            selecionado?.valorUnitario ?? opcao.valorUnitario ?? 0
+        );
+
+        return `
+            <tr data-catalogo-item="${escaparAtributoCatalogo(opcao.chave)}">
+                <td style="width:46px;text-align:center;">
+                    <input
+                        type="checkbox"
+                        aria-label="Selecionar ${escaparAtributoCatalogo(opcao.produto)}"
+                        ${selecionado ? "checked" : ""}
+                        onchange="alternarSelecaoCatalogoOrcamento('${opcao.tipo}', ${opcao.tipo === "SERVICO" ? opcao.variacaoServicoId : opcao.variacaoProdutoId}, this.checked)">
+                </td>
+                <td>
+                    <strong>${escaparHtml(opcao.produto)}</strong>
+                    <small class="d-block text-muted">${opcao.tipo === "SERVICO" ? "Serviço" : "Produto"}</small>
+                </td>
+                <td>${escaparHtml(opcao.descricao || "Padrão")}</td>
+                <td>${escaparHtml(opcao.codigo || "-")}</td>
+                <td style="width:110px;">
+                    <input
+                        type="number"
+                        min="0.5"
+                        step="0.5"
+                        class="form-control"
+                        data-catalogo-quantidade="${escaparAtributoCatalogo(opcao.chave)}"
+                        value="${quantidade}"
+                        onchange="alterarCampoCatalogoOrcamento('${opcao.chave}', 'quantidade', this.value)">
+                </td>
+                <td style="width:140px;">
+                    <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        class="form-control"
+                        data-catalogo-valor="${escaparAtributoCatalogo(opcao.chave)}"
+                        value="${valorUnitario.toFixed(2)}"
+                        onchange="alterarCampoCatalogoOrcamento('${opcao.chave}', 'valorUnitario', this.value)">
+                </td>
+                <td style="width:130px;"><strong>${moeda(quantidade * valorUnitario)}</strong></td>
+            </tr>
+        `;
+    }).join("");
+
+    atualizarCheckboxSelecionarTodosCatalogo();
+}
+
+function lerCamposLinhaCatalogo(chave, opcao) {
+    const quantidadeInput = document.querySelector(
+        `[data-catalogo-quantidade="${CSS.escape(chave)}"]`
+    );
+    const valorInput = document.querySelector(
+        `[data-catalogo-valor="${CSS.escape(chave)}"]`
+    );
+
+    const quantidade = Number(quantidadeInput?.value ?? 1);
+    const valorUnitario = Number(valorInput?.value ?? opcao.valorUnitario ?? 0);
+
+    return {
+        quantidade: Number.isFinite(quantidade) && quantidade > 0 ? quantidade : 1,
+        valorUnitario: Number.isFinite(valorUnitario) && valorUnitario >= 0
+            ? valorUnitario
+            : Number(opcao.valorUnitario || 0)
+    };
+}
+
+function transformarOpcaoCatalogoEmItem(opcao, quantidade, valorUnitario) {
+    return {
+        tipo: opcao.tipo,
+        ...(opcao.tipo === "SERVICO"
+            ? {
+                servicoId: opcao.servicoId,
+                variacaoServicoId: opcao.variacaoServicoId
+            }
+            : {
+                produtoId: opcao.produtoId,
+                variacaoProdutoId: opcao.variacaoProdutoId
+            }),
+        produto: opcao.produto,
+        sku: opcao.sku,
+        descricao: opcao.descricao,
+        quantidade,
+        valorUnitario,
+        custoUnitario: Number(opcao.custoUnitario || 0),
+        total: quantidade * valorUnitario
+    };
+}
+
+function alternarSelecaoCatalogoOrcamento(tipo, variacaoId, marcado) {
+    const chave = chaveCatalogoItem(tipo, variacaoId);
+    const opcao = listarOpcoesCatalogoOrcamento().find(
+        (item) => item.chave === chave
+    );
+
+    if (!opcao) return;
+
+    const indiceExistente = itensPendentesSelecao.findIndex(
+        (item) => chaveCatalogoItem(
+            item.tipo,
+            item.tipo === "SERVICO"
+                ? item.variacaoServicoId
+                : item.variacaoProdutoId
+        ) === chave
+    );
+
+    if (!marcado) {
+        if (indiceExistente >= 0) itensPendentesSelecao.splice(indiceExistente, 1);
+        renderizarItensPendentesSelecao();
+        atualizarCheckboxSelecionarTodosCatalogo();
+        return;
+    }
+
+    const { quantidade, valorUnitario } = lerCamposLinhaCatalogo(chave, opcao);
+    const novoItem = transformarOpcaoCatalogoEmItem(
+        opcao,
+        quantidade,
+        valorUnitario
+    );
+
+    if (indiceExistente >= 0) {
+        itensPendentesSelecao[indiceExistente] = novoItem;
+    } else {
+        itensPendentesSelecao.push(novoItem);
+    }
+
+    renderizarItensPendentesSelecao();
+    atualizarCheckboxSelecionarTodosCatalogo();
+}
+
+function alterarCampoCatalogoOrcamento(chave, campo, valor) {
+    const item = itemPendentePorChave(chave);
+    if (!item) {
+        renderizarCatalogoItensOrcamento();
+        return;
+    }
+
+    const numero = Number(valor);
+
+    if (campo === "quantidade") {
+        if (!Number.isFinite(numero) || numero <= 0) {
+            mostrarMensagem("Informe uma quantidade válida.");
+            renderizarCatalogoItensOrcamento();
+            return;
+        }
+        item.quantidade = numero;
+    }
+
+    if (campo === "valorUnitario") {
+        if (!Number.isFinite(numero) || numero < 0) {
+            mostrarMensagem("Informe um valor unitário válido.");
+            renderizarCatalogoItensOrcamento();
+            return;
+        }
+        item.valorUnitario = numero;
+    }
+
+    item.total = Number(item.quantidade) * Number(item.valorUnitario);
+
+    renderizarItensPendentesSelecao();
+    renderizarCatalogoItensOrcamento();
+}
+
+function alternarTodosCatalogoOrcamento(marcado) {
+    const opcoes = obterOpcoesCatalogoFiltradas();
+
+    opcoes.forEach((opcao) => {
+        const existente = itemPendentePorChave(opcao.chave);
+
+        if (!marcado) {
+            if (!existente) return;
+
+            itensPendentesSelecao = itensPendentesSelecao.filter(
+                (item) => chaveCatalogoItem(
+                    item.tipo,
+                    item.tipo === "SERVICO"
+                        ? item.variacaoServicoId
+                        : item.variacaoProdutoId
+                ) !== opcao.chave
+            );
+            return;
+        }
+
+        if (existente) return;
+
+        const { quantidade, valorUnitario } = lerCamposLinhaCatalogo(
+            opcao.chave,
+            opcao
+        );
+
+        itensPendentesSelecao.push(
+            transformarOpcaoCatalogoEmItem(
+                opcao,
+                quantidade,
+                valorUnitario
+            )
+        );
+    });
+
+    renderizarCatalogoItensOrcamento();
+    renderizarItensPendentesSelecao();
+}
+
+function atualizarCheckboxSelecionarTodosCatalogo() {
+    const checkbox = document.getElementById("selecionarTodosCatalogoOrcamento");
+    if (!checkbox) return;
+
+    const opcoes = obterOpcoesCatalogoFiltradas();
+
+    if (!opcoes.length) {
+        checkbox.checked = false;
+        checkbox.indeterminate = false;
+        return;
+    }
+
+    const selecionados = opcoes.filter(
+        (opcao) => Boolean(itemPendentePorChave(opcao.chave))
+    ).length;
+
+    checkbox.checked = selecionados === opcoes.length;
+    checkbox.indeterminate = selecionados > 0 && selecionados < opcoes.length;
 }
 
 function renderizarItensPendentesSelecao() {
     const tbody = document.getElementById("tabelaItensSelecionados");
     const contador = document.getElementById("contadorItensSelecionados");
     const botaoConfirmar = document.getElementById("btnConfirmarItensSelecionados");
-
-    if (!tbody) return;
 
     if (contador) {
         const totalUnidades = itensPendentesSelecao.reduce(
@@ -565,11 +805,14 @@ function renderizarItensPendentesSelecao() {
         botaoConfirmar.innerHTML = `<i class="fas fa-check"></i> Confirmar ${itensPendentesSelecao.length || ""} item(ns)`;
     }
 
+    if (!tbody) return;
+
     if (!itensPendentesSelecao.length) {
         tbody.innerHTML = `
             <tr>
                 <td colspan="6" class="text-center text-muted">
-                    Nenhum item selecionado ainda. Escolha um produto ou serviço acima e clique em <strong>Adicionar à seleção</strong>.
+                    Marque os produtos e serviços desejados na lista acima.
+                    Você pode selecionar vários antes de confirmar.
                 </td>
             </tr>
         `;
@@ -580,30 +823,18 @@ function renderizarItensPendentesSelecao() {
         <tr>
             <td>
                 <strong>${escaparHtml(item.produto)}</strong>
-                <small class="d-block text-muted">${item.tipo === "SERVICO" ? "Serviço" : "Material"}</small>
+                <small class="d-block text-muted">${item.tipo === "SERVICO" ? "Serviço" : "Produto"}</small>
             </td>
             <td>${escaparHtml(item.descricao || item.sku || "-")}</td>
-            <td style="width:110px;">
-                <input
-                    type="number"
-                    min="0.5"
-                    step="0.5"
-                    class="form-control"
-                    value="${Number(item.quantidade)}"
-                    onchange="alterarItemPendenteSelecao(${index}, 'quantidade', this.value)">
-            </td>
-            <td style="width:140px;">
-                <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    class="form-control"
-                    value="${Number(item.valorUnitario).toFixed(2)}"
-                    onchange="alterarItemPendenteSelecao(${index}, 'valorUnitario', this.value)">
-            </td>
+            <td>${Number(item.quantidade)}</td>
+            <td>${moeda(item.valorUnitario)}</td>
             <td><strong>${moeda(item.total)}</strong></td>
             <td style="width:70px;">
-                <button type="button" class="btn btn-danger" onclick="removerItemPendenteSelecao(${index})" title="Remover da seleção">
+                <button
+                    type="button"
+                    class="btn btn-danger"
+                    onclick="removerItemPendenteSelecao(${index})"
+                    title="Remover da seleção">
                     <i class="fas fa-trash"></i>
                 </button>
             </td>
@@ -611,121 +842,54 @@ function renderizarItensPendentesSelecao() {
     `).join("");
 }
 
-function alterarItemPendenteSelecao(index, campo, valor) {
-    const item = itensPendentesSelecao[index];
-    if (!item) return;
-
-    const numero = Number(valor);
-    if (campo === "quantidade") {
-        if (!Number.isFinite(numero) || numero <= 0) {
-            renderizarItensPendentesSelecao();
-            return mostrarMensagem("Informe uma quantidade válida.");
-        }
-        item.quantidade = numero;
-    }
-
-    if (campo === "valorUnitario") {
-        if (!Number.isFinite(numero) || numero < 0) {
-            renderizarItensPendentesSelecao();
-            return mostrarMensagem("Informe um valor unitário válido.");
-        }
-        item.valorUnitario = numero;
-    }
-
-    item.total = Number(item.quantidade) * Number(item.valorUnitario);
-    renderizarItensPendentesSelecao();
-}
-
 function removerItemPendenteSelecao(index) {
     itensPendentesSelecao.splice(index, 1);
     renderizarItensPendentesSelecao();
+    renderizarCatalogoItensOrcamento();
 }
 
-function carregarVariacoesProduto() {
-
-    const produtoId = Number(
-        document.getElementById("produtoId").value
-    );
-
-    const select = document.getElementById(
-        "variacaoProdutoId"
-    );
-
-    select.innerHTML = "";
-
-    const produto = produtos.find(
-        p => Number(p.id) === produtoId
-    );
-
-    console.log("Produto:", produto);
-
-    if (!produto) {
-
-        select.innerHTML = `
-            <option value="">
-                Produto não encontrado
-            </option>
-        `;
-
-        return;
-
+function confirmarItensSelecionados() {
+    if (!itensPendentesSelecao.length) {
+        return mostrarMensagem(
+            "Selecione pelo menos um produto ou serviço antes de confirmar."
+        );
     }
 
-    console.log("Variações:", produto.variacoes);
+    itensPendentesSelecao.forEach((novoItem) => {
+        const existente = itensOrcamento.find((item) =>
+            novoItem.tipo === "SERVICO"
+                ? item.tipo === "SERVICO" &&
+                    item.variacaoServicoId === novoItem.variacaoServicoId
+                : item.tipo !== "SERVICO" &&
+                    item.variacaoProdutoId === novoItem.variacaoProdutoId
+        );
 
-    if (!produto.variacoes || !produto.variacoes.length) {
-
-        select.innerHTML = `
-            <option value="">
-                Produto sem variações
-            </option>
-        `;
-
-        return;
-
-    }
-
-    select.innerHTML = `
-        <option value="">
-            Selecione uma variação
-        </option>
-    `;
-
-    produto.variacoes.forEach(v => {
-
-        const option = document.createElement("option");
-
-        option.value = v.id;
-
-        option.textContent =
-            `${v.sku} | ${v.tamanho || "-"} | ${v.saida || "-"} | ${moeda(v.precoVenda)}`;
-
-        select.appendChild(option);
-
+        if (existente) {
+            existente.quantidade =
+                Number(existente.quantidade) +
+                Number(novoItem.quantidade);
+            existente.valorUnitario = Number(novoItem.valorUnitario);
+            existente.custoUnitario = Number(novoItem.custoUnitario || 0);
+            existente.total =
+                existente.quantidade * existente.valorUnitario;
+        } else {
+            itensOrcamento.push({ ...novoItem });
+        }
     });
 
-}
-function preencherValorVariacao() {
-    const produtoId = Number(
-        document.getElementById("produtoId").value
-    );
+    const totalAdicionados = itensPendentesSelecao.length;
+    itensPendentesSelecao = [];
 
-    const variacaoId = Number(
-        document.getElementById("variacaoProdutoId").value
-    );
+    modalSelecionarProduto.classList.remove("active");
+    renderizarItensPendentesSelecao();
+    renderizarItens();
+    calcularTotais();
 
-    const produto = produtos.find(
-        (item) => item.id === produtoId
+    mostrarMensagem(
+        totalAdicionados === 1
+            ? "1 item adicionado ao orçamento."
+            : `${totalAdicionados} itens adicionados ao orçamento.`
     );
-
-    const variacao = produto?.variacoes?.find(
-        (item) => item.id === variacaoId
-    );
-
-    document.getElementById("valorUnitario").value =
-        variacao
-            ? Number(variacao.precoVenda).toFixed(2)
-            : "";
 }
 
 function filtrarOrcamentos() {
@@ -761,132 +925,6 @@ function filtrarOrcamentos() {
     });
 
     renderizarTabelaOrcamentos(filtrados);
-}
-
-function adicionarItemOrcamento() {
-    const tipo = document.getElementById("tipoItem").value;
-    const quantidade = Number(document.getElementById("quantidade").value);
-    const valorUnitario = Number(document.getElementById("valorUnitario").value);
-
-    if (!Number.isFinite(quantidade) || quantidade <= 0) {
-        return mostrarMensagem("Informe uma quantidade válida.");
-    }
-
-    if (!Number.isFinite(valorUnitario) || valorUnitario < 0) {
-        return mostrarMensagem("Informe um valor unitário válido.");
-    }
-
-    let itemSelecionado;
-
-    if (tipo === "SERVICO") {
-        const servicoId = Number(document.getElementById("servicoId").value);
-        const variacaoId = Number(document.getElementById("variacaoServicoId").value);
-        const servico = servicos.find((item) => item.id === servicoId);
-        const variacao = servico?.variacoes?.find((item) => item.id === variacaoId);
-
-        if (!servico || !variacao) {
-            return mostrarMensagem("Selecione o serviço e sua variação.");
-        }
-
-        itemSelecionado = {
-            tipo: "SERVICO",
-            servicoId,
-            variacaoServicoId: variacao.id,
-            produto: servico.nome,
-            sku: variacao.codigo,
-            descricao: variacao.descricao || "Padrão",
-            quantidade,
-            valorUnitario,
-            custoUnitario: Number(variacao.precoCusto || 0),
-            total: quantidade * valorUnitario
-        };
-    } else {
-        const produtoId = Number(document.getElementById("produtoId").value);
-        const variacaoId = Number(document.getElementById("variacaoProdutoId").value);
-
-        if (!produtoId) return mostrarMensagem("Selecione um produto.");
-        if (!variacaoId) return mostrarMensagem("Selecione uma variação.");
-
-        const produto = produtos.find((item) => item.id === produtoId);
-        const variacao = produto?.variacoes?.find((item) => item.id === variacaoId);
-
-        if (!produto || !variacao) {
-            return mostrarMensagem("Produto ou variação não encontrado. Atualize a lista e tente novamente.");
-        }
-
-        itemSelecionado = {
-            tipo: "PRODUTO",
-            produtoId,
-            variacaoProdutoId: variacao.id,
-            produto: produto.nome,
-            sku: variacao.sku,
-            descricao: [variacao.tamanho, variacao.saida].filter(Boolean).join(" | "),
-            quantidade,
-            valorUnitario,
-            custoUnitario: Number(variacao.precoCusto || 0),
-            total: quantidade * valorUnitario
-        };
-    }
-
-    const existente = itensPendentesSelecao.find((item) =>
-        itemSelecionado.tipo === "SERVICO"
-            ? item.tipo === "SERVICO" && item.variacaoServicoId === itemSelecionado.variacaoServicoId
-            : item.tipo !== "SERVICO" && item.variacaoProdutoId === itemSelecionado.variacaoProdutoId
-    );
-
-    if (existente) {
-        existente.quantidade = Number(existente.quantidade) + quantidade;
-        existente.valorUnitario = valorUnitario;
-        existente.custoUnitario = itemSelecionado.custoUnitario;
-        existente.total = existente.quantidade * existente.valorUnitario;
-    } else {
-        itensPendentesSelecao.push(itemSelecionado);
-    }
-
-    renderizarItensPendentesSelecao();
-    limparSelecaoItemOrcamento(false);
-
-    const tipoSelect = document.getElementById("tipoItem");
-    if (tipoSelect) tipoSelect.value = tipo;
-    alternarTipoItem();
-}
-
-function confirmarItensSelecionados() {
-    if (!itensPendentesSelecao.length) {
-        return mostrarMensagem("Selecione pelo menos um produto ou serviço antes de confirmar.");
-    }
-
-    itensPendentesSelecao.forEach((novoItem) => {
-        const existente = itensOrcamento.find((item) =>
-            novoItem.tipo === "SERVICO"
-                ? item.tipo === "SERVICO" && item.variacaoServicoId === novoItem.variacaoServicoId
-                : item.tipo !== "SERVICO" && item.variacaoProdutoId === novoItem.variacaoProdutoId
-        );
-
-        if (existente) {
-            existente.quantidade = Number(existente.quantidade) + Number(novoItem.quantidade);
-            existente.valorUnitario = Number(novoItem.valorUnitario);
-            existente.custoUnitario = Number(novoItem.custoUnitario || 0);
-            existente.total = existente.quantidade * existente.valorUnitario;
-        } else {
-            itensOrcamento.push({ ...novoItem });
-        }
-    });
-
-    const totalAdicionados = itensPendentesSelecao.length;
-    itensPendentesSelecao = [];
-
-    modalSelecionarProduto.classList.remove("active");
-    limparSelecaoItemOrcamento(true);
-    renderizarItensPendentesSelecao();
-    renderizarItens();
-    calcularTotais();
-
-    mostrarMensagem(
-        totalAdicionados === 1
-            ? "1 item adicionado ao orçamento."
-            : `${totalAdicionados} itens adicionados ao orçamento.`
-    );
 }
 
 function renderizarItens() {
