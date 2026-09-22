@@ -44,6 +44,7 @@ const GRUPOS_PERMISSOES = [
             { chave: "produtos.criar", nome: "Cadastrar produtos" },
             { chave: "produtos.editar", nome: "Editar produtos" },
             { chave: "produtos.duplicar", nome: "Duplicar produtos" },
+            { chave: "produtos.movimentar_estoque", nome: "Movimentar estoque principal" },
             { chave: "produtos.excluir", nome: "Excluir/inativar produtos" },
             { chave: "servicos.visualizar", nome: "Visualizar serviços" },
             { chave: "servicos.gerenciar", nome: "Gerenciar serviços e categorias" }
@@ -134,6 +135,7 @@ const PERFIS_PADRAO = {
         "produtos.criar",
         "produtos.editar",
         "produtos.duplicar",
+        "produtos.movimentar_estoque",
         "produtos.excluir",
         "servicos.visualizar",
         "servicos.gerenciar",
@@ -210,6 +212,7 @@ const PERFIS_PADRAO = {
         "produtos.criar",
         "produtos.editar",
         "produtos.duplicar",
+        "produtos.movimentar_estoque",
         "produtos.excluir",
         "vendas.visualizar"
     ],
@@ -261,6 +264,7 @@ function normalizarPermissoes(permissoes) {
         "produtos.criar": ["produtos.visualizar"],
         "produtos.editar": ["produtos.visualizar"],
         "produtos.duplicar": ["produtos.visualizar"],
+        "produtos.movimentar_estoque": ["produtos.visualizar"],
         "produtos.excluir": ["produtos.visualizar"],
         "servicos.gerenciar": ["servicos.visualizar"],
         "orcamentos.criar": ["orcamentos.visualizar"],

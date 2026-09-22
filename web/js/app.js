@@ -187,6 +187,8 @@ function regrasAcoesPagina(pagina) {
         ],
         "produtos.html": [
             ["abrirModalProduto()", "produtos.criar"],
+            ["abrirModalEstoquePrincipal(", "produtos.movimentar_estoque"],
+            ["salvarMovimentacaoEstoquePrincipal", "produtos.movimentar_estoque"],
             ["editarProduto(", "produtos.editar"],
             ["excluirProduto(", "produtos.excluir"]
         ],

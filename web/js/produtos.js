@@ -2,6 +2,7 @@ let produtos = [];
 let categorias = [];
 let produtoEditandoId = null;
 let produtoDetalhesId = null;
+let produtoEstoquePrincipalId = null;
 let variacoes = [];
 let composicao = [];
 
@@ -10,6 +11,7 @@ const modalDetalhesProduto = document.getElementById(
     "modalDetalhesProduto"
 );
 const formProduto = document.getElementById("formProduto");
+const modalEstoquePrincipal = document.getElementById("modalEstoquePrincipal");
 
 document.addEventListener("DOMContentLoaded", async () => {
     await carregarCategorias();
@@ -124,7 +126,7 @@ function renderizarTabela(lista) {
     if (!lista.length) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="6" class="text-center">
+                <td colspan="7" class="text-center">
                     Nenhum produto cadastrado.
                 </td>
             </tr>
@@ -174,6 +176,12 @@ function renderizarTabela(lista) {
             </td>
 
             <td>
+                <span class="badge ${Number(produto.estoqueAtual || 0) <= Number(produto.estoqueMinimo || 0) ? "badge-warning" : "badge-success"}">
+                    ${numero(produto.estoqueAtual || 0)} ${escaparHtml(produto.unidadeMedida || "UN")}
+                </span>
+            </td>
+
+            <td>
 
                 <div class="table-actions">
 
@@ -184,6 +192,17 @@ function renderizarTabela(lista) {
                         title="Visualizar produto">
 
                         <i class="fas fa-eye"></i>
+
+                    </button>
+
+                    <button
+                        type="button"
+                        class="btn btn-success"
+                        data-permission="produtos.movimentar_estoque"
+                        onclick="abrirModalEstoquePrincipal(${produto.id})"
+                        title="Movimentar estoque principal">
+
+                        <i class="fas fa-boxes-stacked"></i>
 
                     </button>
 
@@ -230,6 +249,10 @@ function abrirModalProduto() {
     document.getElementById(
         "permiteVendaSemEstoque"
     ).checked = false;
+    preencherCampoProduto("estoqueAtualPrincipal", 0);
+    preencherCampoProduto("estoqueMinimoPrincipal", 0);
+    const botaoEstoqueNovo = document.getElementById("btnMovimentarEstoqueProdutoEdicao");
+    if (botaoEstoqueNovo) botaoEstoqueNovo.style.display = "none";
     preencherCampoProduto("margemLucroPadrao", 0);
 
     document.querySelector(
@@ -943,6 +966,7 @@ function obterDadosFormulario() {
             document.getElementById(
                 "permiteVendaSemEstoque"
             ).checked,
+        estoqueMinimo: Number(document.getElementById("estoqueMinimoPrincipal")?.value || 0),
         ncm:
             valorCampoProduto("ncm") || null,
         cfopPadrao:
@@ -1027,6 +1051,10 @@ function validarProduto(produto) {
 
     if (!Number.isFinite(produto.margemLucroPadrao) || produto.margemLucroPadrao < 0 || produto.margemLucroPadrao >= 100) {
         throw new Error("A margem desejada deve estar entre 0% e 99,99%.");
+    }
+
+    if (!Number.isFinite(produto.estoqueMinimo) || produto.estoqueMinimo < 0) {
+        throw new Error("Informe um estoque mínimo válido para o material principal.");
     }
 
     produto.composicao.forEach((item, index) => {
@@ -1148,6 +1176,16 @@ function editarProduto(id) {
     ).checked = Boolean(
         produto.permiteVendaSemEstoque
     );
+
+    preencherCampoProduto("estoqueAtualPrincipal", numeroInput(produto.estoqueAtual));
+    preencherCampoProduto("estoqueMinimoPrincipal", numeroInput(produto.estoqueMinimo));
+    const botaoEstoqueEdicao = document.getElementById("btnMovimentarEstoqueProdutoEdicao");
+    if (botaoEstoqueEdicao) {
+        botaoEstoqueEdicao.style.display = "inline-flex";
+        botaoEstoqueEdicao.hidden = typeof window.temPermissao === "function"
+            ? !window.temPermissao("produtos.movimentar_estoque")
+            : false;
+    }
 
     composicao = Array.isArray(produto.composicao)
         ? produto.composicao.map((item) => {
@@ -1300,6 +1338,15 @@ function visualizarProduto(id) {
         </span>
     `;
 
+    definirTexto("detalheEstoquePrincipal", numero(produto.estoqueAtual || 0));
+    definirTexto("detalheEstoqueMinimoPrincipal", numero(produto.estoqueMinimo || 0));
+    definirTexto("detalheUnidadeEstoquePrincipal", produto.unidadeMedida || "UN");
+
+    const botaoMovimentarDetalhes = document.getElementById("btnMovimentarEstoqueDetalhes");
+    if (botaoMovimentarDetalhes) {
+        botaoMovimentarDetalhes.onclick = () => abrirModalEstoquePrincipal(produto.id);
+    }
+
     const quantidade =
         produto.variacoes?.length || 0;
 
@@ -1450,6 +1497,183 @@ function renderizarDetalhesVariacoes(lista) {
 
         tbody.appendChild(linha);
     });
+}
+
+function produtoEstoquePrincipalAtual() {
+    return produtos.find((produto) => produto.id === produtoEstoquePrincipalId) || null;
+}
+
+function atualizarResumoEstoquePrincipal(produto) {
+    if (!produto) return;
+
+    definirTexto("estoquePrincipalProdutoNome", `${produto.codigo || ""} - ${produto.nome || "Produto"}`.replace(/^\s*-\s*/, ""));
+    definirTexto("estoquePrincipalSaldoAtual", numero(produto.estoqueAtual || 0));
+    definirTexto("estoquePrincipalSaldoMinimo", numero(produto.estoqueMinimo || 0));
+    definirTexto("estoquePrincipalUnidade", produto.unidadeMedida || "UN");
+
+    if (produtoEditandoId === produto.id) {
+        preencherCampoProduto("estoqueAtualPrincipal", numeroInput(produto.estoqueAtual));
+    }
+
+    if (produtoDetalhesId === produto.id) {
+        definirTexto("detalheEstoquePrincipal", numero(produto.estoqueAtual || 0));
+        definirTexto("detalheEstoqueMinimoPrincipal", numero(produto.estoqueMinimo || 0));
+        definirTexto("detalheUnidadeEstoquePrincipal", produto.unidadeMedida || "UN");
+    }
+}
+
+async function abrirModalEstoquePrincipal(id) {
+    const produto = produtos.find((item) => item.id === Number(id));
+    if (!produto) {
+        mostrarMensagem("Produto não encontrado.");
+        return;
+    }
+
+    if (typeof window.temPermissao === "function" && !window.temPermissao("produtos.movimentar_estoque")) {
+        mostrarMensagem("Seu usuário não possui permissão para movimentar o estoque principal.");
+        return;
+    }
+
+    if (produto.controlaEstoque === false) {
+        mostrarMensagem("Ative o controle de estoque deste produto antes de registrar entradas ou ajustes.");
+        return;
+    }
+
+    produtoEstoquePrincipalId = produto.id;
+    document.getElementById("estoquePrincipalOperacao").value = "ENTRADA";
+    document.getElementById("estoquePrincipalQuantidade").value = "";
+    document.getElementById("estoquePrincipalNovoSaldo").value = "";
+    document.getElementById("estoquePrincipalObservacoes").value = "";
+    alternarOperacaoEstoquePrincipal();
+    atualizarResumoEstoquePrincipal(produto);
+    modalEstoquePrincipal.classList.add("active");
+    await carregarMovimentacoesEstoquePrincipal();
+}
+
+function fecharModalEstoquePrincipal() {
+    modalEstoquePrincipal?.classList.remove("active");
+    produtoEstoquePrincipalId = null;
+}
+
+function alternarOperacaoEstoquePrincipal() {
+    const operacao = document.getElementById("estoquePrincipalOperacao")?.value || "ENTRADA";
+    const entrada = document.getElementById("campoEntradaEstoquePrincipal");
+    const ajuste = document.getElementById("campoAjusteEstoquePrincipal");
+    if (entrada) entrada.style.display = operacao === "ENTRADA" ? "block" : "none";
+    if (ajuste) ajuste.style.display = operacao === "AJUSTE" ? "block" : "none";
+}
+
+function nomeTipoMovimentacaoEstoquePrincipal(tipo) {
+    const mapa = {
+        ENTRADA: "Entrada",
+        AJUSTE_ENTRADA: "Ajuste +",
+        AJUSTE_SAIDA: "Ajuste -",
+        SAIDA: "Saída"
+    };
+    return mapa[tipo] || tipo || "-";
+}
+
+function dataHoraEstoquePrincipal(valor) {
+    if (!valor) return "-";
+    const dataMovimento = new Date(valor);
+    if (Number.isNaN(dataMovimento.getTime())) return "-";
+    return dataMovimento.toLocaleString("pt-BR");
+}
+
+async function carregarMovimentacoesEstoquePrincipal() {
+    if (!produtoEstoquePrincipalId) return;
+
+    const tbody = document.getElementById("tabelaMovimentacoesEstoquePrincipal");
+    if (tbody) tbody.innerHTML = '<tr><td colspan="7" class="text-center">Carregando...</td></tr>';
+
+    try {
+        const resposta = await get(`/produtos/${produtoEstoquePrincipalId}/estoque-principal/movimentacoes?limite=50`);
+        if (!resposta?.sucesso) {
+            throw new Error(resposta?.mensagem || "Erro ao carregar histórico de estoque.");
+        }
+
+        const movimentacoes = resposta.movimentacoes || [];
+        if (!tbody) return;
+
+        if (!movimentacoes.length) {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center">Nenhuma movimentação registrada.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = movimentacoes.map((movimento) => `
+            <tr>
+                <td>${escaparHtml(dataHoraEstoquePrincipal(movimento.dataMovimentacao))}</td>
+                <td>${escaparHtml(nomeTipoMovimentacaoEstoquePrincipal(movimento.tipo))}</td>
+                <td>${numero(movimento.quantidade || 0)}</td>
+                <td>${numero(movimento.saldoAnterior || 0)}</td>
+                <td><strong>${numero(movimento.saldoPosterior || 0)}</strong></td>
+                <td>${escaparHtml(movimento.responsavel?.nome || "-")}</td>
+                <td>${escaparHtml(movimento.observacoes || "-")}</td>
+            </tr>
+        `).join("");
+    } catch (erro) {
+        console.error(erro);
+        if (tbody) tbody.innerHTML = `<tr><td colspan="7" class="text-center">${escaparHtml(erro.message || "Erro ao carregar histórico.")}</td></tr>`;
+    }
+}
+
+async function salvarMovimentacaoEstoquePrincipal() {
+    if (!produtoEstoquePrincipalId) return;
+
+    const operacao = document.getElementById("estoquePrincipalOperacao").value;
+    const observacoes = document.getElementById("estoquePrincipalObservacoes").value.trim();
+    const botao = document.getElementById("btnSalvarMovimentacaoEstoquePrincipal");
+
+    let rota;
+    let dados;
+
+    if (operacao === "AJUSTE") {
+        const novoSaldo = Number(document.getElementById("estoquePrincipalNovoSaldo").value);
+        if (!Number.isFinite(novoSaldo) || novoSaldo < 0) {
+            mostrarMensagem("Informe um novo saldo válido.");
+            return;
+        }
+        if (!observacoes) {
+            mostrarMensagem("Informe o motivo do ajuste de estoque.");
+            return;
+        }
+        rota = `/produtos/${produtoEstoquePrincipalId}/estoque-principal/ajuste`;
+        dados = { novoSaldo, observacoes };
+    } else {
+        const quantidade = Number(document.getElementById("estoquePrincipalQuantidade").value);
+        if (!Number.isFinite(quantidade) || quantidade <= 0) {
+            mostrarMensagem("Informe a quantidade que está entrando no estoque.");
+            return;
+        }
+        rota = `/produtos/${produtoEstoquePrincipalId}/estoque-principal/entrada`;
+        dados = { quantidade, observacoes };
+    }
+
+    try {
+        botao.disabled = true;
+        botao.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Registrando...';
+
+        const resposta = await post(rota, dados);
+        if (!resposta?.sucesso) {
+            throw new Error(resposta?.mensagem || "Não foi possível registrar a movimentação.");
+        }
+
+        const id = produtoEstoquePrincipalId;
+        await carregarProdutos();
+        const atualizado = produtos.find((produto) => produto.id === id);
+        atualizarResumoEstoquePrincipal(atualizado);
+        document.getElementById("estoquePrincipalQuantidade").value = "";
+        document.getElementById("estoquePrincipalNovoSaldo").value = "";
+        document.getElementById("estoquePrincipalObservacoes").value = "";
+        await carregarMovimentacoesEstoquePrincipal();
+        mostrarMensagem(resposta.mensagem || "Movimentação registrada com sucesso.");
+    } catch (erro) {
+        console.error(erro);
+        mostrarMensagem(erro.message || "Erro ao registrar movimentação de estoque.");
+    } finally {
+        botao.disabled = false;
+        botao.innerHTML = '<i class="fas fa-check"></i> Registrar movimentação';
+    }
 }
 
 function fecharDetalhesProduto() {
@@ -1608,8 +1832,19 @@ modalDetalhesProduto.addEventListener(
     }
 );
 
+modalEstoquePrincipal?.addEventListener("click", (event) => {
+    if (event.target === modalEstoquePrincipal) {
+        fecharModalEstoquePrincipal();
+    }
+});
+
 document.addEventListener("keydown", (event) => {
     if (event.key !== "Escape") {
+        return;
+    }
+
+    if (modalEstoquePrincipal?.classList.contains("active")) {
+        fecharModalEstoquePrincipal();
         return;
     }
 

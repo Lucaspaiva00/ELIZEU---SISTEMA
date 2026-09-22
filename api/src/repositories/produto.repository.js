@@ -80,6 +80,8 @@ class ProdutoRepository {
                     unidadeMedida: dados.unidadeMedida,
                     controlaEstoque: dados.controlaEstoque,
                     permiteVendaSemEstoque: dados.permiteVendaSemEstoque,
+                    estoqueAtual: 0,
+                    estoqueMinimo: dados.estoqueMinimo ?? 0,
                     ncm: dados.ncm,
                     cfopPadrao: dados.cfopPadrao,
                     origemMercadoria: dados.origemMercadoria,
@@ -188,6 +190,8 @@ class ProdutoRepository {
                     unidadeMedida: original.unidadeMedida,
                     controlaEstoque: original.controlaEstoque,
                     permiteVendaSemEstoque: original.permiteVendaSemEstoque,
+                    estoqueAtual: 0,
+                    estoqueMinimo: original.estoqueMinimo,
                     ncm: original.ncm,
                     cfopPadrao: original.cfopPadrao,
                     origemMercadoria: original.origemMercadoria,
@@ -252,6 +256,7 @@ class ProdutoRepository {
                     unidadeMedida: dados.unidadeMedida,
                     controlaEstoque: dados.controlaEstoque,
                     permiteVendaSemEstoque: dados.permiteVendaSemEstoque,
+                    estoqueMinimo: dados.estoqueMinimo ?? 0,
                     ncm: dados.ncm,
                     cfopPadrao: dados.cfopPadrao,
                     origemMercadoria: dados.origemMercadoria,
@@ -330,9 +335,131 @@ class ProdutoRepository {
         });
     }
 
+    async buscarPorIdEmpresa(id, empresaId) {
+        return prisma.produto.findFirst({
+            where: { id, empresaId, ativo: true },
+            include: { categoria: true, variacoes: true }
+        });
+    }
+
+    async listarMovimentacoesEstoquePrincipal(produtoId, empresaId, limite = 50) {
+        return prisma.movimentacaoEstoqueProduto.findMany({
+            where: { produtoId, empresaId },
+            include: {
+                responsavel: {
+                    select: { id: true, nome: true }
+                }
+            },
+            orderBy: [
+                { dataMovimentacao: "desc" },
+                { id: "desc" }
+            ],
+            take: Math.min(Math.max(Number(limite) || 50, 1), 200)
+        });
+    }
+
+    async adicionarEntradaEstoquePrincipal(produtoId, empresaId, responsavelId, quantidade, observacoes) {
+        return prisma.$transaction(async (tx) => {
+            const produto = await tx.produto.findFirst({
+                where: { id: produtoId, empresaId, ativo: true }
+            });
+
+            if (!produto) throw new Error("Produto não encontrado.");
+            if (!produto.controlaEstoque) throw new Error("Este produto está com o controle de estoque desativado.");
+
+            const atualizado = await tx.produto.update({
+                where: { id: produtoId },
+                data: { estoqueAtual: { increment: quantidade } }
+            });
+
+            const saldoPosterior = Number(atualizado.estoqueAtual || 0);
+            const saldoAnterior = saldoPosterior - quantidade;
+
+            const movimentacao = await tx.movimentacaoEstoqueProduto.create({
+                data: {
+                    empresaId,
+                    produtoId,
+                    responsavelId: responsavelId || null,
+                    tipo: "ENTRADA",
+                    origem: "AJUSTE_MANUAL",
+                    quantidade,
+                    saldoAnterior,
+                    saldoPosterior,
+                    observacoes: observacoes || null
+                },
+                include: {
+                    responsavel: { select: { id: true, nome: true } }
+                }
+            });
+
+            return { produto: atualizado, movimentacao };
+        });
+    }
+
+    async ajustarEstoquePrincipal(produtoId, empresaId, responsavelId, novoSaldo, observacoes) {
+        return prisma.$transaction(async (tx) => {
+            const produto = await tx.produto.findFirst({
+                where: { id: produtoId, empresaId, ativo: true }
+            });
+
+            if (!produto) throw new Error("Produto não encontrado.");
+            if (!produto.controlaEstoque) throw new Error("Este produto está com o controle de estoque desativado.");
+
+            const saldoAnterior = Number(produto.estoqueAtual || 0);
+            const diferenca = novoSaldo - saldoAnterior;
+
+            if (Math.abs(diferenca) < 0.000001) {
+                throw new Error("O novo saldo é igual ao estoque atual.");
+            }
+
+            const atualizado = await tx.produto.update({
+                where: { id: produtoId },
+                data: { estoqueAtual: novoSaldo }
+            });
+
+            const movimentacao = await tx.movimentacaoEstoqueProduto.create({
+                data: {
+                    empresaId,
+                    produtoId,
+                    responsavelId: responsavelId || null,
+                    tipo: diferenca > 0 ? "AJUSTE_ENTRADA" : "AJUSTE_SAIDA",
+                    origem: "AJUSTE_MANUAL",
+                    quantidade: Math.abs(diferenca),
+                    saldoAnterior,
+                    saldoPosterior: novoSaldo,
+                    observacoes: observacoes || null
+                },
+                include: {
+                    responsavel: { select: { id: true, nome: true } }
+                }
+            });
+
+            return { produto: atualizado, movimentacao };
+        });
+    }
+
     async excluir(id) {
         const produto = await this.buscarPorId(id);
         if (!produto) throw new Error("Produto não encontrado.");
+
+        const movimentosEstoquePrincipal = await prisma.movimentacaoEstoqueProduto.count({
+            where: { produtoId: id }
+        });
+
+        if (movimentosEstoquePrincipal > 0) {
+            return prisma.produto.update({
+                where: { id },
+                data: {
+                    ativo: false,
+                    variacoes: {
+                        updateMany: {
+                            where: {},
+                            data: { ativo: false }
+                        }
+                    }
+                }
+            });
+        }
 
         const variacaoIds = produto.variacoes.map((v) => v.id);
 

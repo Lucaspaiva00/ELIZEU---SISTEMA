@@ -90,12 +90,19 @@ class ProdutoService {
             throw new Error("A margem desejada deve estar entre 0% e 99,99%.");
         }
 
+        const estoqueMinimo = Number(dados.estoqueMinimo ?? 0);
+
+        if (!Number.isFinite(estoqueMinimo) || estoqueMinimo < 0) {
+            throw new Error("O estoque mínimo do material principal é inválido.");
+        }
+
         return {
             ...dados,
             descricao: String(dados.descricao || "").trim() || null,
             composicao,
             custoComposicao,
-            margemLucroPadrao
+            margemLucroPadrao,
+            estoqueMinimo
         };
     }
 
@@ -138,6 +145,70 @@ class ProdutoService {
         }
 
         return produtoRepository.atualizar(id, { ...preparados, codigo });
+    }
+
+    async buscarPorIdEmpresa(id, empresaId) {
+        const produto = await produtoRepository.buscarPorIdEmpresa(id, empresaId);
+        if (!produto) throw new Error("Produto não encontrado.");
+        return produto;
+    }
+
+    async listarMovimentacoesEstoquePrincipal(id, empresaId, limite) {
+        await this.buscarPorIdEmpresa(id, empresaId);
+        return produtoRepository.listarMovimentacoesEstoquePrincipal(id, empresaId, limite);
+    }
+
+    async adicionarEntradaEstoquePrincipal(id, dados) {
+        const produto = await this.buscarPorIdEmpresa(id, dados.empresaId);
+        if (!produto.controlaEstoque) {
+            throw new Error("Ative o controle de estoque deste produto antes de lançar uma entrada.");
+        }
+
+        const quantidade = Number(dados.quantidade);
+        if (!Number.isFinite(quantidade) || quantidade <= 0) {
+            throw new Error("Informe uma quantidade de entrada maior que zero.");
+        }
+
+        const observacoes = String(dados.observacoes || "").trim();
+        if (observacoes.length > 500) {
+            throw new Error("A observação deve ter no máximo 500 caracteres.");
+        }
+
+        return produtoRepository.adicionarEntradaEstoquePrincipal(
+            id,
+            dados.empresaId,
+            dados.responsavelId,
+            quantidade,
+            observacoes || null
+        );
+    }
+
+    async ajustarEstoquePrincipal(id, dados) {
+        const produto = await this.buscarPorIdEmpresa(id, dados.empresaId);
+        if (!produto.controlaEstoque) {
+            throw new Error("Ative o controle de estoque deste produto antes de fazer um ajuste.");
+        }
+
+        const novoSaldo = Number(dados.novoSaldo);
+        if (!Number.isFinite(novoSaldo) || novoSaldo < 0) {
+            throw new Error("Informe um novo saldo válido, igual ou maior que zero.");
+        }
+
+        const observacoes = String(dados.observacoes || "").trim();
+        if (!observacoes) {
+            throw new Error("Informe o motivo do ajuste de estoque.");
+        }
+        if (observacoes.length > 500) {
+            throw new Error("A observação deve ter no máximo 500 caracteres.");
+        }
+
+        return produtoRepository.ajustarEstoquePrincipal(
+            id,
+            dados.empresaId,
+            dados.responsavelId,
+            novoSaldo,
+            observacoes
+        );
     }
 
     async excluir(id) {

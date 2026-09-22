@@ -94,7 +94,9 @@
 
                                         <th>Variações</th>
 
-                                        <th width="130">
+                                        <th>Estoque principal</th>
+
+                                        <th width="180">
 
                                             Ações
 
@@ -178,6 +180,16 @@
                                             <div class="form-group"><label>Origem da mercadoria</label><select id="origemMercadoria" class="form-control"><option value="">Selecione</option><option value="0">0 - Nacional</option><option value="1">1 - Estrangeira, importação direta</option><option value="2">2 - Estrangeira, adquirida no mercado interno</option><option value="3">3 - Nacional, conteúdo de importação superior a 40%</option><option value="4">4 - Nacional, produção conforme processos básicos</option><option value="5">5 - Nacional, conteúdo de importação até 40%</option><option value="6">6 - Estrangeira, importação direta sem similar nacional</option><option value="7">7 - Estrangeira, mercado interno sem similar nacional</option><option value="8">8 - Nacional, conteúdo de importação superior a 70%</option></select></div>
                                         </div>
                                         <div class="row"><div class="col"><label><input id="controlaEstoque" type="checkbox" checked> Controlar estoque</label></div><div class="col"><label><input id="permiteVendaSemEstoque" type="checkbox"> Permitir venda sem estoque</label></div></div>
+                                        <div class="modal-section-card" style="margin-top:18px;background:#f8fafc;">
+                                            <div class="modal-section-head">
+                                                <div><h3>Estoque do material principal</h3><p>Controle independente das variações. Entradas e ajustes ficam registrados no histórico.</p></div>
+                                                <button type="button" id="btnMovimentarEstoqueProdutoEdicao" class="btn btn-success" data-permission="produtos.movimentar_estoque" onclick="abrirModalEstoquePrincipal(produtoEditandoId)" style="display:none;"><i class="fas fa-boxes-stacked"></i> Movimentar estoque</button>
+                                            </div>
+                                            <div class="row">
+                                                <div class="col"><div class="form-group"><label>Estoque atual do material</label><input id="estoqueAtualPrincipal" class="form-control" value="0" readonly><small class="text-muted">Não é alterado diretamente. Use “Movimentar estoque”.</small></div></div>
+                                                <div class="col"><div class="form-group"><label>Estoque mínimo do material</label><input id="estoqueMinimoPrincipal" class="form-control" type="number" min="0" step="0.001" value="0"></div></div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </section>
                             </form>
@@ -201,6 +213,14 @@
                                     <div class="row"><div class="col"><div class="form-group"><label>Categoria</label><div id="detalheCategoria" class="form-control"></div></div></div><div class="col"><div class="form-group"><label>Marca</label><div id="detalheMarca" class="form-control"></div></div></div><div class="col"><div class="form-group"><label>Unidade</label><div id="detalheUnidade" class="form-control"></div></div></div></div>
                                     <div class="form-group"><label>Descrição</label><div id="detalheDescricao" class="form-control" style="height:auto;min-height:70px;padding-top:12px;"></div></div>
                                     <div class="row"><div class="col"><div class="form-group"><label>NCM</label><div id="detalheNcm" class="form-control"></div></div></div><div class="col"><div class="form-group"><label>CFOP</label><div id="detalheCfop" class="form-control"></div></div></div><div class="col"><div class="form-group"><label>Status</label><div id="detalheStatus"></div></div></div></div>
+                                    <div class="modal-section-card" style="margin-top:16px;background:#f8fafc;">
+                                        <div class="modal-section-head"><div><h3>Estoque principal do material</h3><p>Saldo independente das variações do produto.</p></div><button type="button" class="btn btn-success" id="btnMovimentarEstoqueDetalhes" data-permission="produtos.movimentar_estoque"><i class="fas fa-boxes-stacked"></i> Entrada / ajuste</button></div>
+                                        <div class="modal-fields-3">
+                                            <div class="modal-kpi"><small>Estoque atual</small><h3 id="detalheEstoquePrincipal">0</h3></div>
+                                            <div class="modal-kpi"><small>Estoque mínimo</small><h3 id="detalheEstoqueMinimoPrincipal">0</h3></div>
+                                            <div class="modal-kpi"><small>Unidade</small><h3 id="detalheUnidadeEstoquePrincipal">UN</h3></div>
+                                        </div>
+                                    </div>
                                 </div>
                             </section>
                             <section class="modal-tab-panel" data-modal-panel="composicao">
@@ -219,6 +239,59 @@
                             </section>
                         </div>
                         <div class="modal-footer"><button type="button" class="btn btn-light" onclick="fecharDetalhesProduto()">Fechar</button><button type="button" class="btn btn-warning" id="btnEditarDetalhesProduto"><i class="fas fa-edit"></i> Editar Produto</button></div>
+                    </div>
+                </div>
+
+                <div class="modal-overlay" id="modalEstoquePrincipal">
+                    <div class="modal modal-lg">
+                        <div class="modal-header">
+                            <div><h2>Estoque principal do material</h2><p class="modal-section-help" id="estoquePrincipalProdutoNome">Produto</p></div>
+                            <button type="button" class="modal-close" onclick="fecharModalEstoquePrincipal()">&times;</button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="modal-fields-3" style="margin-bottom:18px;">
+                                <div class="modal-kpi"><small>Estoque atual</small><h3 id="estoquePrincipalSaldoAtual">0</h3></div>
+                                <div class="modal-kpi"><small>Estoque mínimo</small><h3 id="estoquePrincipalSaldoMinimo">0</h3></div>
+                                <div class="modal-kpi"><small>Unidade</small><h3 id="estoquePrincipalUnidade">UN</h3></div>
+                            </div>
+
+                            <div class="modal-section-card">
+                                <div class="modal-section-head"><div><h3>Nova movimentação</h3><p>Entrada adiciona quantidade ao saldo. Ajuste define o saldo físico contado.</p></div></div>
+                                <div class="form-group">
+                                    <label>Operação</label>
+                                    <select id="estoquePrincipalOperacao" class="form-control" onchange="alternarOperacaoEstoquePrincipal()">
+                                        <option value="ENTRADA">Entrada de material</option>
+                                        <option value="AJUSTE">Ajuste de estoque</option>
+                                    </select>
+                                </div>
+                                <div id="campoEntradaEstoquePrincipal" class="form-group">
+                                    <label>Quantidade a adicionar</label>
+                                    <input id="estoquePrincipalQuantidade" class="form-control" type="number" min="0.001" step="0.001" placeholder="Ex.: 50">
+                                </div>
+                                <div id="campoAjusteEstoquePrincipal" class="form-group" style="display:none;">
+                                    <label>Novo saldo físico</label>
+                                    <input id="estoquePrincipalNovoSaldo" class="form-control" type="number" min="0" step="0.001" placeholder="Ex.: 125">
+                                    <small class="text-muted">Use após contagem física. O sistema registra a diferença como ajuste de entrada ou saída.</small>
+                                </div>
+                                <div class="form-group">
+                                    <label>Motivo / observação</label>
+                                    <textarea id="estoquePrincipalObservacoes" class="form-control" rows="2" maxlength="500" placeholder="Ex.: Compra de material - NF 123"></textarea>
+                                    <small class="text-muted">Obrigatório para ajustes. Opcional para entradas.</small>
+                                </div>
+                                <div class="d-flex justify-end"><button type="button" class="btn btn-success" id="btnSalvarMovimentacaoEstoquePrincipal" onclick="salvarMovimentacaoEstoquePrincipal()"><i class="fas fa-check"></i> Registrar movimentação</button></div>
+                            </div>
+
+                            <div class="modal-section-card" style="margin-top:18px;">
+                                <div class="modal-section-head"><div><h3>Histórico</h3><p>Últimas movimentações do estoque principal deste material.</p></div></div>
+                                <div class="table-responsive">
+                                    <table class="table">
+                                        <thead><tr><th>Data</th><th>Tipo</th><th>Qtd.</th><th>Anterior</th><th>Posterior</th><th>Responsável</th><th>Observação</th></tr></thead>
+                                        <tbody id="tabelaMovimentacoesEstoquePrincipal"><tr><td colspan="7" class="text-center">Carregando...</td></tr></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer"><button type="button" class="btn btn-light" onclick="fecharModalEstoquePrincipal()">Fechar</button></div>
                     </div>
                 </div>
 

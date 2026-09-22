@@ -216,6 +216,7 @@ model Empresa {
   contasPagar              ContaPagar[]
   movimentacoesFinanceiras MovimentacaoFinanceira[]
   movimentacoesEstoque     MovimentacaoEstoque[]
+  movimentacoesEstoqueProduto MovimentacaoEstoqueProduto[]
   configuracaoFiscal       ConfiguracaoFiscal?
   certificadoDigital       CertificadoDigital?
   notasFiscais             NotaFiscal[]
@@ -249,18 +250,19 @@ model ConfiguracaoFiscal {
   icmsSituacaoTributariaPadrao   String?
   pisSituacaoTributariaPadrao    String?
   cofinsSituacaoTributariaPadrao String?
-  modalidadeFrete                Int     @default(9)
-  presencaComprador              Int     @default(9)
-  consumidorFinal                Boolean @default(true)
-  emitirNfeAoFaturar             Boolean @default(false)
+  modalidadeFrete                Int      @default(9)
+  presencaComprador              Int      @default(9)
+  consumidorFinal                Boolean  @default(true)
+  emitirNfeAoFaturar             Boolean  @default(false)
 
-  ativo Boolean @default(false)
+  ativo                     Boolean           @default(false)
 
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
 
   @@index([empresaId, ambiente])
 }
+
 
 model IntegracaoFocusNfe {
   id Int @id @default(autoincrement())
@@ -327,6 +329,7 @@ model Usuario {
   vendasCriadas       Venda[]                  @relation("VendaCriadaPor")
   movimentacoes       MovimentacaoFinanceira[] @relation("MovimentacaoCriadaPor")
   movimentosEstoque   MovimentacaoEstoque[]    @relation("MovimentoEstoqueResponsavel")
+  movimentosEstoqueProduto MovimentacaoEstoqueProduto[] @relation("MovimentoEstoqueProdutoResponsavel")
 
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
@@ -386,6 +389,8 @@ model Produto {
   unidadeMedida          UnidadeMedida @default(UN)
   controlaEstoque        Boolean       @default(true)
   permiteVendaSemEstoque Boolean       @default(false)
+  estoqueAtual           Decimal       @default(0) @db.Decimal(12, 3)
+  estoqueMinimo          Decimal       @default(0) @db.Decimal(12, 3)
 
   ncm              String?
   cfopPadrao       String?
@@ -399,6 +404,7 @@ model Produto {
   margemLucroPadrao Decimal @default(0) @db.Decimal(7, 3)
 
   variacoes VariacaoProduto[]
+  movimentacoesEstoque MovimentacaoEstoqueProduto[]
 
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
@@ -1120,3 +1126,35 @@ model MovimentacaoEstoque {
   @@index([variacaoProdutoId, dataMovimentacao])
   @@index([vendaId])
 }
+
+// =====================================================
+// MOVIMENTACOES DO ESTOQUE PRINCIPAL DO PRODUTO
+// =====================================================
+
+model MovimentacaoEstoqueProduto {
+  id Int @id @default(autoincrement())
+
+  empresaId Int
+  empresa   Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  produtoId Int
+  produto   Produto @relation(fields: [produtoId], references: [id], onDelete: Cascade)
+
+  responsavelId Int?
+  responsavel   Usuario? @relation("MovimentoEstoqueProdutoResponsavel", fields: [responsavelId], references: [id], onDelete: SetNull)
+
+  tipo   TipoMovimentacaoEstoque
+  origem OrigemMovimentacaoEstoque @default(AJUSTE_MANUAL)
+
+  quantidade       Decimal  @db.Decimal(12, 3)
+  saldoAnterior    Decimal  @db.Decimal(12, 3)
+  saldoPosterior   Decimal  @db.Decimal(12, 3)
+  dataMovimentacao DateTime @default(now())
+  observacoes      String?
+
+  criadoEm DateTime @default(now())
+
+  @@index([empresaId, dataMovimentacao])
+  @@index([produtoId, dataMovimentacao])
+}
+

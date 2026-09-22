@@ -123,6 +123,62 @@ class ProdutoController {
 
     }
 
+    async listarMovimentacoesEstoquePrincipal(req, res) {
+        try {
+            const movimentacoes = await produtoService.listarMovimentacoesEstoquePrincipal(
+                Number(req.params.id),
+                req.usuario.empresaId,
+                req.query.limite
+            );
+
+            return res.json({ sucesso: true, movimentacoes });
+        } catch (error) {
+            return res.status(400).json({ sucesso: false, mensagem: error.message });
+        }
+    }
+
+    async adicionarEntradaEstoquePrincipal(req, res) {
+        try {
+            const resultado = await produtoService.adicionarEntradaEstoquePrincipal(
+                Number(req.params.id),
+                {
+                    ...req.body,
+                    empresaId: req.usuario.empresaId,
+                    responsavelId: req.usuario.id
+                }
+            );
+
+            return res.json({
+                sucesso: true,
+                mensagem: "Entrada registrada no estoque principal.",
+                ...resultado
+            });
+        } catch (error) {
+            return res.status(400).json({ sucesso: false, mensagem: error.message });
+        }
+    }
+
+    async ajustarEstoquePrincipal(req, res) {
+        try {
+            const resultado = await produtoService.ajustarEstoquePrincipal(
+                Number(req.params.id),
+                {
+                    ...req.body,
+                    empresaId: req.usuario.empresaId,
+                    responsavelId: req.usuario.id
+                }
+            );
+
+            return res.json({
+                sucesso: true,
+                mensagem: "Estoque principal ajustado com sucesso.",
+                ...resultado
+            });
+        } catch (error) {
+            return res.status(400).json({ sucesso: false, mensagem: error.message });
+        }
+    }
+
     async excluir(req, res) {
 
         try {
