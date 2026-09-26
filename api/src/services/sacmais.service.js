@@ -163,9 +163,11 @@ function mapearContato(payload) {
         )
     ));
 
-    if (!nome) {
-        throw new Error("Contato SacMais sem nome.");
-    }
+    // Alguns contatos chegam no webhook antes de o operador registrar o nome.
+    // Não perdemos o lead por isso; o ERP permite completar o cadastro depois.
+    const nomeUtilizavel = nome && /[A-Za-zÀ-ÿ]/.test(nome)
+        ? nome
+        : "Contato SacMais";
 
     if (!documento && !telefoneId) {
         throw new Error("Contato SacMais sem CPF/CNPJ e sem telefone.");
@@ -191,7 +193,7 @@ function mapearContato(payload) {
 
     return {
         sacmaisId: texto(primeiro(contato.id, contato.uuid, contato.contactId, contato.contact_id, telefoneId)),
-        nome: texto(nome),
+        nome: texto(nomeUtilizavel),
         // O placeholder técnico só existe porque cpfCnpj é obrigatório no banco.
         // Assim que o SacMais enviar CPF/CNPJ real, a sincronização substitui este valor.
         cpfCnpj: documento || `SACMAIS-${telefoneId}`,
@@ -272,6 +274,43 @@ async function localizarCliente(empresaId, dados) {
     });
 }
 
+// A importação recorrente não deve apagar bairro/cidade, endereços ou
+// observações corrigidos manualmente no ERP quando a SacMais retornar null.
+function atualizarSomenteDadosAusentes(existente, dados) {
+    const atualizacao = {
+        sincronizadoSacMaisEm: new Date(),
+        ativo: existente.ativo
+    };
+    if (!existente.sacmaisId && dados.sacmaisId) {
+        atualizacao.sacmaisId = dados.sacmaisId;
+    }
+    // Não converte clientes originalmente manuais em cadastros sob controle da SacMais.
+    if (!existente.origemCadastro) atualizacao.origemCadastro = "SACMAIS";
+
+    const vazio = (valor) => valor == null || String(valor).trim() === "";
+    const apelido = (nome) => !nome || String(nome).trim().toLowerCase() === "contato sacmais";
+    if (apelido(existente.nome) && !apelido(dados.nome)) atualizacao.nome = dados.nome;
+
+    const documentoReal = (valor) => /^(\d{11}|\d{14})$/.test(somenteDigitos(valor) || "");
+    if (!documentoReal(existente.cpfCnpj) && documentoReal(dados.cpfCnpj)) {
+        atualizacao.cpfCnpj = dados.cpfCnpj;
+        atualizacao.tipoPessoa = dados.tipoPessoa;
+    }
+
+    // Dados inicialmente incompletos podem ser enriquecidos. Campos que
+    // o Elizeu já completou são preservados mesmo após novas sincronizações.
+    const preencher = [
+        "telefone", "celular", "email", "cep", "endereco", "numero",
+        "complemento", "bairro", "cidade", "estado", "observacoes"
+    ];
+    for (const campo of preencher) {
+        if (vazio(existente[campo]) && !vazio(dados[campo])) {
+            atualizacao[campo] = dados[campo];
+        }
+    }
+    return atualizacao;
+}
+
 async function salvarContato(empresaId, payload) {
     const dados = mapearContato(payload);
     const existente = await localizarCliente(empresaId, dados);
@@ -287,12 +326,7 @@ async function salvarContato(empresaId, payload) {
             acao: "atualizado",
             cliente: await prisma.cliente.update({
                 where: { id: existente.id },
-                data: {
-                    ...data,
-                    // Se o usuário inativou o cliente manualmente para preservar
-                    // histórico, uma nova importação do SacMais não deve reativá-lo.
-                    ativo: existente.ativo
-                }
+                data: atualizarSomenteDadosAusentes(existente, dados)
             })
         };
     }
@@ -590,5 +624,6 @@ module.exports = {
     importarContatoPorNumero,
     importarHistoricoPagina,
     validarWebhook,
-    mapearContato
+    mapearContato,
+    atualizarSomenteDadosAusentes
 };

@@ -161,25 +161,18 @@ async function buscarCep() {
 
         }
 
-        preencherCampo(
-            "endereco",
-            endereco.logradouro || ""
-        );
-
-        preencherCampo(
-            "bairro",
-            endereco.bairro || ""
-        );
-
-        preencherCampo(
-            "cidade",
-            endereco.localidade || ""
-        );
-
-        preencherCampo(
-            "estado",
-            endereco.uf || ""
-        );
+        // Não apaga endereços corrigidos manualmente quando o operador
+        // digita um CEP ou quando a consulta chega após outra edição.
+        const completarSeVazio = (id, valor) => {
+            const campo = document.getElementById(id);
+            if (campo && !String(campo.value || "").trim() && valor) {
+                preencherCampo(id, valor);
+            }
+        };
+        completarSeVazio("endereco", endereco.logradouro);
+        completarSeVazio("bairro", endereco.bairro);
+        completarSeVazio("cidade", endereco.localidade);
+        completarSeVazio("estado", endereco.uf);
 
     } catch (erro) {
 
