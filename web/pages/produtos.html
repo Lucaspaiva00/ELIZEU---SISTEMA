@@ -182,7 +182,7 @@
                                         <div class="row"><div class="col"><label><input id="controlaEstoque" type="checkbox" checked> Controlar estoque</label></div><div class="col"><label><input id="permiteVendaSemEstoque" type="checkbox"> Permitir venda sem estoque</label></div></div>
                                         <div class="modal-section-card" style="margin-top:18px;background:#f8fafc;">
                                             <div class="modal-section-head">
-                                                <div><h3>Estoque do material principal</h3><p>Controle independente das variações. Entradas e ajustes ficam registrados no histórico.</p></div>
+                                                <div><h3>Estoque do material principal</h3><p>Saldo geral do material. Entradas, ajustes e vendas faturadas ficam registrados no histórico.</p></div>
                                                 <button type="button" id="btnMovimentarEstoqueProdutoEdicao" class="btn btn-success" data-permission="produtos.movimentar_estoque" onclick="abrirModalEstoquePrincipal(produtoEditandoId)" style="display:none;"><i class="fas fa-boxes-stacked"></i> Movimentar estoque</button>
                                             </div>
                                             <div class="row">
@@ -214,7 +214,7 @@
                                     <div class="form-group"><label>Descrição</label><div id="detalheDescricao" class="form-control" style="height:auto;min-height:70px;padding-top:12px;"></div></div>
                                     <div class="row"><div class="col"><div class="form-group"><label>NCM</label><div id="detalheNcm" class="form-control"></div></div></div><div class="col"><div class="form-group"><label>CFOP</label><div id="detalheCfop" class="form-control"></div></div></div><div class="col"><div class="form-group"><label>Status</label><div id="detalheStatus"></div></div></div></div>
                                     <div class="modal-section-card" style="margin-top:16px;background:#f8fafc;">
-                                        <div class="modal-section-head"><div><h3>Estoque principal do material</h3><p>Saldo independente das variações do produto.</p></div><button type="button" class="btn btn-success" id="btnMovimentarEstoqueDetalhes" data-permission="produtos.movimentar_estoque"><i class="fas fa-boxes-stacked"></i> Entrada / ajuste</button></div>
+                                        <div class="modal-section-head"><div><h3>Estoque principal do material</h3><p>Saldo geral do material; o faturamento de qualquer variação também reduz este estoque.</p></div><button type="button" class="btn btn-success" id="btnMovimentarEstoqueDetalhes" data-permission="produtos.movimentar_estoque"><i class="fas fa-boxes-stacked"></i> Entrada / ajuste</button></div>
                                         <div class="modal-fields-3">
                                             <div class="modal-kpi"><small>Estoque atual</small><h3 id="detalheEstoquePrincipal">0</h3></div>
                                             <div class="modal-kpi"><small>Estoque mínimo</small><h3 id="detalheEstoqueMinimoPrincipal">0</h3></div>

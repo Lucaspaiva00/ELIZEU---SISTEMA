@@ -323,6 +323,59 @@ class VendaRepository {
                             : `Baixa de estoque no faturamento da venda nº ${venda.numero}.`
                     }
                 });
+
+                // O estoque principal representa o saldo geral do material/produto.
+                // Toda saída faturada de qualquer variação também reduz este saldo,
+                // mantendo o histórico principal coerente com as vendas.
+                const produtoAtual = await tx.produto.findUnique({
+                    where: { id: produto.id },
+                    select: {
+                        id: true,
+                        estoqueAtual: true,
+                        estoqueMinimo: true,
+                        permiteVendaSemEstoque: true
+                    }
+                });
+
+                if (!produtoAtual) {
+                    throw new Error(`Produto do item ${item.descricao} não encontrado.`);
+                }
+
+                const saldoPrincipalAnterior = new Prisma.Decimal(
+                    produtoAtual.estoqueAtual || 0
+                );
+                const saldoPrincipalPosterior = saldoPrincipalAnterior.minus(
+                    quantidade
+                );
+
+                await tx.produto.update({
+                    where: { id: produtoAtual.id },
+                    data: {
+                        estoqueAtual: {
+                            decrement: quantidade
+                        }
+                    }
+                });
+
+                const principalSemSaldo = saldoPrincipalAnterior.lessThan(
+                    quantidade
+                );
+
+                await tx.movimentacaoEstoqueProduto.create({
+                    data: {
+                        empresaId: dados.empresaId,
+                        produtoId: produtoAtual.id,
+                        responsavelId: dados.usuarioId,
+                        tipo: "SAIDA",
+                        origem: "VENDA",
+                        quantidade,
+                        saldoAnterior: saldoPrincipalAnterior,
+                        saldoPosterior: saldoPrincipalPosterior,
+                        observacoes: principalSemSaldo
+                            ? `Baixa automática do estoque principal no faturamento da venda nº ${venda.numero}, item ${item.sku || item.descricao}. Saldo principal ficou negativo por insuficiência de estoque.`
+                            : `Baixa automática do estoque principal no faturamento da venda nº ${venda.numero}, item ${item.sku || item.descricao}.`
+                    }
+                });
             }
 
             const contasExistentes = await tx.contaReceber.count({
