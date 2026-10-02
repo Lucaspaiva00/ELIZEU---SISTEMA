@@ -595,6 +595,88 @@ async function importarHistoricoPagina(empresaId, pagina = 1, limite = 50) {
     };
 }
 
+
+function assinaturaTicketsRecentes(tickets) {
+    return (tickets || [])
+        .slice(0, 25)
+        .map((ticket) => [
+            primeiro(ticket?.id, ticket?.uuid, ticket?.ticketId, ticket?.ticket_id, numeroContatoDoTicket(ticket)),
+            primeiro(
+                ticket?.updatedAt,
+                ticket?.updated_at,
+                ticket?.lastMessageAt,
+                ticket?.last_message_at,
+                ticket?.lastUpdate,
+                ticket?.last_update,
+                ticket?.status
+            )
+        ].filter(Boolean).join("@"))
+        .filter(Boolean)
+        .join("|");
+}
+
+async function sincronizarRecentes(empresaId, limite = 25, assinaturaAnterior = null) {
+    const empresaIdNum = Number(empresaId);
+    if (!Number.isInteger(empresaIdNum) || empresaIdNum <= 0) {
+        throw new Error("Empresa inválida para sincronização automática do SacMais.");
+    }
+
+    const limiteNum = Math.min(50, Math.max(5, Number(limite) || 25));
+    const { tickets, path } = await buscarPaginaTickets(1, limiteNum);
+    const assinatura = assinaturaTicketsRecentes(tickets);
+
+    if (assinaturaAnterior && assinatura && assinatura === assinaturaAnterior) {
+        return {
+            endpointUsado: path,
+            ticketsRecebidos: tickets.length,
+            contatosEncontrados: 0,
+            criados: 0,
+            atualizados: 0,
+            ignorados: 0,
+            erros: [],
+            assinatura,
+            semAlteracoes: true
+        };
+    }
+
+    const numeros = [...new Set(
+        tickets.map(numeroContatoDoTicket).filter(Boolean)
+    )];
+
+    let criados = 0;
+    let atualizados = 0;
+    let ignorados = 0;
+    const erros = [];
+
+    await processarEmLotes(numeros, 4, async (numero) => {
+        try {
+            const contato = await buscarContatoPorNumero(numero);
+            const resultado = await salvarContato(empresaIdNum, contato);
+
+            if (resultado.acao === "criado") criados++;
+            else if (resultado.acao === "atualizado") atualizados++;
+        } catch (erro) {
+            ignorados++;
+            erros.push({
+                numero,
+                erro: erro.message
+            });
+        }
+    });
+
+    return {
+        endpointUsado: path,
+        ticketsRecebidos: tickets.length,
+        contatosEncontrados: numeros.length,
+        criados,
+        atualizados,
+        ignorados,
+        erros: erros.slice(0, 10),
+        assinatura,
+        semAlteracoes: false
+    };
+}
+
 function tokenWebhookRecebido(req) {
     const authorization = texto(req.headers.authorization);
     const bearer = authorization?.toLowerCase().startsWith("bearer ")
@@ -623,6 +705,7 @@ module.exports = {
     buscarContatoPorNumero,
     importarContatoPorNumero,
     importarHistoricoPagina,
+    sincronizarRecentes,
     validarWebhook,
     mapearContato,
     atualizarSomenteDadosAusentes

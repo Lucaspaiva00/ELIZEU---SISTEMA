@@ -2,6 +2,7 @@ require("dotenv").config();
 
 const app = require("./app");
 const controleAcessoRepository = require("./repositories/controleAcesso.repository");
+const sacmaisAutoSyncService = require("./services/sacmaisAutoSync.service");
 
 const PORT = process.env.PORT || 3000;
 
@@ -14,6 +15,9 @@ async function iniciarServidor() {
         app.listen(PORT, () => {
             console.log(`🚀 Servidor rodando na porta ${PORT}`);
             console.log("🔐 Controle de acesso por usuário ativo.");
+            sacmaisAutoSyncService.iniciar().catch((erro) => {
+                console.error("[SacMais auto] Não foi possível iniciar:", erro);
+            });
         });
     } catch (error) {
         console.error("[Inicialização] Não foi possível preparar o controle de acesso:", error);

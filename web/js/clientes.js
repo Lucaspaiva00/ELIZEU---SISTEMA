@@ -2,6 +2,7 @@ let clientes = [];
 let clienteEditandoId = null;
 let paginaAtualClientes = 1;
 const clientesPorPagina = 20;
+let atualizacaoAutomaticaClientesTimer = null;
 
 const modalCliente = document.getElementById("modalCliente");
 const formCliente = document.getElementById("formCliente");
@@ -9,7 +10,21 @@ const formCliente = document.getElementById("formCliente");
 document.addEventListener("DOMContentLoaded", () => {
     carregarClientes();
     configurarEventosFormulario();
+    iniciarAtualizacaoAutomaticaClientes();
 });
+
+function iniciarAtualizacaoAutomaticaClientes() {
+    if (atualizacaoAutomaticaClientesTimer) {
+        clearInterval(atualizacaoAutomaticaClientesTimer);
+    }
+
+    atualizacaoAutomaticaClientesTimer = setInterval(() => {
+        if (document.hidden) return;
+        if (modalCliente?.classList.contains("active")) return;
+
+        carregarClientes({ silencioso: true });
+    }, 10000);
+}
 
 
 async function importarHistoricoSacMais() {
@@ -81,12 +96,16 @@ async function importarHistoricoSacMais() {
     }
 }
 
-async function carregarClientes() {
+async function carregarClientes(opcoes = {}) {
+    const silencioso = Boolean(opcoes.silencioso);
+
     try {
         const resposta = await get("/clientes");
 
         if (!resposta || !resposta.sucesso) {
-            mostrarMensagem(resposta?.mensagem || "Erro ao carregar clientes.");
+            if (!silencioso) {
+                mostrarMensagem(resposta?.mensagem || "Erro ao carregar clientes.");
+            }
             return;
         }
 
@@ -94,7 +113,9 @@ async function carregarClientes() {
         renderizarTabela(clientes);
     } catch (erro) {
         console.error(erro);
-        mostrarMensagem("Erro ao carregar clientes.");
+        if (!silencioso) {
+            mostrarMensagem("Erro ao carregar clientes.");
+        }
     }
 }
 
