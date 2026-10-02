@@ -310,9 +310,13 @@ function configurarCepProfissionalClientes() {
         campoCep.style.boxShadow = "0 0 0 3px rgba(220, 38, 38, .10)";
     };
 
-    const preencher = (id, valor) => {
+    const preencher = (id, valor, sobrescrever = false) => {
         const campo = document.getElementById(id);
-        if (campo) campo.value = valor ?? "";
+        if (!campo || valor == null || valor === "") return;
+
+        if (sobrescrever || !String(campo.value || "").trim()) {
+            campo.value = valor;
+        }
     };
 
     const normalizarCepNoCampo = () => {
@@ -329,12 +333,12 @@ function configurarCepProfissionalClientes() {
         return digitos;
     };
 
-    const consultarCep = async (forcar = false) => {
+    const consultarCep = async (forcar = false, sobrescrever = false) => {
         const cep = normalizarCepNoCampo();
 
-        if (cep.length !== 8) return;
-        if (!forcar && cep === ultimoCepConsultado) return;
-        if (consultaEmAndamento && cep === ultimoCepConsultado) return;
+        if (cep.length !== 8) return false;
+        if (!forcar && cep === ultimoCepConsultado) return true;
+        if (consultaEmAndamento && cep === ultimoCepConsultado) return true;
 
         ultimoCepConsultado = cep;
         consultaEmAndamento = true;
@@ -371,16 +375,18 @@ function configurarCepProfissionalClientes() {
                     }
                 );
 
-                return;
+                return false;
             }
 
-            preencher("endereco", endereco.logradouro || "");
-            preencher("bairro", endereco.bairro || "");
-            preencher("cidade", endereco.localidade || "");
-            preencher("estado", endereco.uf || "");
+            preencher("endereco", endereco.logradouro || "", sobrescrever);
+            preencher("bairro", endereco.bairro || "", sobrescrever);
+            preencher("cidade", endereco.localidade || "", sobrescrever);
+            preencher("estado", endereco.uf || "", sobrescrever);
             limparEstadoVisual();
+
+            return true;
         } catch (erro) {
-            if (erro?.name === "AbortError") return;
+            if (erro?.name === "AbortError") return false;
 
             console.error("[CEP] Falha na consulta:", erro);
             marcarInvalido();
@@ -394,14 +400,33 @@ function configurarCepProfissionalClientes() {
                     aoFechar: () => campoCep.focus({ preventScroll: true })
                 }
             );
+
+            return false;
         } finally {
             consultaEmAndamento = false;
         }
     };
 
-    // Captura os eventos antes do listener antigo de clientes.js.
-    // Isso elimina a dupla chamada (input + blur) sem exigir alteração
-    // no restante do módulo de clientes.
+    window.consultarCepCliente = (opcoes = {}) =>
+        consultarCep(
+            Boolean(opcoes.forcar),
+            Boolean(opcoes.sobrescrever)
+        );
+
+    window.completarEnderecoPeloCep = async () => {
+        const sucesso = await window.consultarCepCliente({
+            forcar: true,
+            sobrescrever: false
+        });
+
+        if (sucesso) {
+            mostrarMensagem(
+                "Endereço conferido pelo CEP. Revise os dados e salve o cliente."
+            );
+        }
+    };
+
+    // Esta é a única rotina responsável pelos eventos automáticos de CEP.
     campoCep.addEventListener(
         "input",
         (evento) => {

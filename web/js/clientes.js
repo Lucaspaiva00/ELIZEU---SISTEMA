@@ -120,89 +120,17 @@ async function carregarClientes(opcoes = {}) {
 }
 
 function configurarEventosFormulario() {
-
-    const campoCep = document.getElementById("cep");
-
-    campoCep.addEventListener("blur", buscarCep);
-
-    campoCep.addEventListener("input", (e) => {
-
-        const cep = e.target.value.replace(/\D/g, "");
-
-        if (cep.length === 8) {
-
-            buscarCep();
-
-        }
-
-    });
-
     const campoCnpj = document.getElementById("cpfCnpj");
 
     campoCnpj.addEventListener("blur", buscarCnpj);
 
     campoCnpj.addEventListener("input", (e) => {
-
         const cnpj = e.target.value.replace(/\D/g, "");
 
         if (cnpj.length === 14) {
-
             buscarCnpj();
-
         }
-
     });
-
-}
-
-async function buscarCep() {
-
-    const cep = document
-        .getElementById("cep")
-        .value
-        .replace(/\D/g, "");
-
-    if (cep.length !== 8) {
-        return;
-    }
-
-    try {
-
-        const resposta = await fetch(
-            `https://viacep.com.br/ws/${cep}/json/`
-        );
-
-        const endereco = await resposta.json();
-
-        if (endereco.erro) {
-
-            mostrarMensagem("CEP não encontrado.");
-
-            return;
-
-        }
-
-        // Não apaga endereços corrigidos manualmente quando o operador
-        // digita um CEP ou quando a consulta chega após outra edição.
-        const completarSeVazio = (id, valor) => {
-            const campo = document.getElementById(id);
-            if (campo && !String(campo.value || "").trim() && valor) {
-                preencherCampo(id, valor);
-            }
-        };
-        completarSeVazio("endereco", endereco.logradouro);
-        completarSeVazio("bairro", endereco.bairro);
-        completarSeVazio("cidade", endereco.localidade);
-        completarSeVazio("estado", endereco.uf);
-
-    } catch (erro) {
-
-        console.error(erro);
-
-        mostrarMensagem("Erro ao consultar CEP.");
-
-    }
-
 }
 
 async function buscarCnpj() {
@@ -272,10 +200,11 @@ async function buscarCnpj() {
             empresa.complemento || ""
         );
 
-        if (empresa.cep) {
-
-            await buscarCep();
-
+        if (empresa.cep && typeof window.consultarCepCliente === "function") {
+            await window.consultarCepCliente({
+                forcar: true,
+                sobrescrever: true
+            });
         }
 
     } catch (erro) {
