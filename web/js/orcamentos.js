@@ -1837,24 +1837,40 @@ async function confirmarAprovacaoOrcamento() {
 }
 
 async function gerarPdfOrcamento(id) {
-    // Abre a janela diretamente no clique: buscas assíncronas posteriores não
-    // devem fazer o Chrome bloquear a impressão como pop-up.
-    const janela = window.open("", "_blank", "width=1000,height=900");
-    if (!janela) {
-        return mostrarMensagem("Permita pop-ups para imprimir o orçamento.");
-    }
-    janela.document.write('<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Preparando orçamento</title></head><body style="font:16px Arial;padding:30px">Preparando orçamento...</body></html>');
+    // A impressão é feita em um iframe temporário da própria página.
+    // Assim não dependemos de pop-up/nova aba, que o Chrome pode bloquear.
+    const iframeAnterior = document.getElementById("iframeImpressaoOrcamento");
+    if (iframeAnterior) iframeAnterior.remove();
+
+    const quadroImpressao = document.createElement("iframe");
+    quadroImpressao.id = "iframeImpressaoOrcamento";
+    quadroImpressao.setAttribute("aria-hidden", "true");
+    quadroImpressao.style.position = "fixed";
+    quadroImpressao.style.right = "0";
+    quadroImpressao.style.bottom = "0";
+    quadroImpressao.style.width = "1px";
+    quadroImpressao.style.height = "1px";
+    quadroImpressao.style.border = "0";
+    quadroImpressao.style.opacity = "0";
+    quadroImpressao.style.pointerEvents = "none";
+    document.body.appendChild(quadroImpressao);
+
+    const limparQuadroImpressao = () => {
+        if (quadroImpressao?.parentNode) {
+            quadroImpressao.parentNode.removeChild(quadroImpressao);
+        }
+    };
 
     let r;
     try {
         r = await get(`/orcamentos/${id}`);
     } catch (erro) {
-        janela.close();
+        limparQuadroImpressao();
         return mostrarMensagem(erro.message || "Não foi possível carregar o orçamento.");
     }
 
     if (!r?.sucesso) {
-        janela.close();
+        limparQuadroImpressao();
         return mostrarMensagem(r?.mensagem || "Erro ao carregar orçamento.");
     }
 
@@ -2185,7 +2201,7 @@ async function gerarPdfOrcamento(id) {
             "Corrija o cadastro para imprimir o endereço corretamente. Deseja imprimir mesmo assim?"
         );
         if (!imprimirMesmoAssim) {
-            janela.close();
+            limparQuadroImpressao();
             return;
         }
     }
@@ -2399,8 +2415,7 @@ async function gerarPdfOrcamento(id) {
         o.dataValidade ||
         o.criadoEm;
 
-    janela.document.open();
-    janela.document.write(`
+    const htmlImpressao = `
 <!doctype html>
 <html lang="pt-BR">
 <head>
@@ -3116,9 +3131,57 @@ async function gerarPdfOrcamento(id) {
     <\/script>
 </body>
 </html>
-    `);
+`;
 
-    janela.document.close();
+    let impressaoDisparada = false;
+
+    const dispararImpressao = () => {
+        if (impressaoDisparada) return;
+
+        const alvo = quadroImpressao.contentWindow;
+        if (!alvo) {
+            limparQuadroImpressao();
+            mostrarMensagem("Não foi possível preparar a impressão do orçamento.");
+            return;
+        }
+
+        impressaoDisparada = true;
+
+        try {
+            alvo.focus();
+
+            alvo.onafterprint = () => {
+                setTimeout(limparQuadroImpressao, 150);
+            };
+
+            // Pequeno atraso apenas para o Chrome finalizar layout/fontes/imagens.
+            setTimeout(() => {
+                try {
+                    alvo.focus();
+                    alvo.print();
+                } catch (erro) {
+                    console.error("[Orçamento/PDF] Falha ao abrir impressão:", erro);
+                    limparQuadroImpressao();
+                    mostrarMensagem("Não foi possível abrir a tela de impressão.");
+                }
+            }, 250);
+        } catch (erro) {
+            console.error("[Orçamento/PDF] Falha ao preparar impressão:", erro);
+            limparQuadroImpressao();
+            mostrarMensagem("Não foi possível abrir a tela de impressão.");
+        }
+    };
+
+    quadroImpressao.onload = dispararImpressao;
+    quadroImpressao.srcdoc = htmlImpressao;
+
+    // Limpeza de segurança caso o navegador não dispare afterprint.
+    setTimeout(() => {
+        if (quadroImpressao?.parentNode) {
+            limparQuadroImpressao();
+        }
+    }, 120000);
+
 }
 
 
