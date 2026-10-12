@@ -257,6 +257,13 @@ model ConfiguracaoFiscal {
   consumidorFinal                Boolean  @default(true)
   emitirNfeAoFaturar             Boolean  @default(false)
 
+  // Reforma Tributária do Consumo (IBS/CBS/IS).
+  // As alíquotas são configuráveis e não são presumidas pelo ERP.
+  rtcAtivo                        Boolean  @default(false)
+  cbsAliquotaPadrao               Decimal? @db.Decimal(7, 4)
+  ibsUfAliquotaPadrao             Decimal? @db.Decimal(7, 4)
+  ibsMunAliquotaPadrao            Decimal? @db.Decimal(7, 4)
+
   ativo                     Boolean           @default(false)
 
   criadoEm     DateTime @default(now())
@@ -397,6 +404,15 @@ model Produto {
   ncm              String?
   cfopPadrao       String?
   origemMercadoria String?
+
+  // Reforma Tributária do Consumo.
+  // A classificação deve seguir a tabela oficial vigente/contador.
+  ibsCbsSituacaoTributaria      String?
+  ibsCbsClassificacaoTributaria String?
+  isSituacaoTributaria          String?
+  isClassificacaoTributaria     String?
+  isAliquota                    Decimal? @db.Decimal(7, 4)
+
   ativo            Boolean @default(true)
 
   // Composição do produto/padrão para formação do custo base.
