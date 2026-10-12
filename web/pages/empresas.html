@@ -71,6 +71,19 @@
                         <div class="col"><div class="form-group"><label>Consumidor final</label><select id="consumidorFinal" class="form-control"><option value="true">Sim</option><option value="false">Não</option></select></div></div>
                     </div>
                     <div class="form-group"><label>Informações complementares padrão</label><textarea id="informacoesComplementares" class="form-control" rows="3"></textarea></div>
+
+                    <div class="card" style="margin:18px 0;background:#fffdf5;border:1px solid #f0d98b;">
+                        <div class="card-header"><div><h3 class="card-title">Reforma Tributária do Consumo — 2027</h3><p class="text-muted">IBS, CBS e Imposto Seletivo. Não use alíquotas presumidas: confirme o regime e os percentuais aplicáveis antes da emissão fiscal.</p></div></div>
+                        <div class="card-body">
+                            <div class="modal-fields-3">
+                                <div class="form-group"><label>Alíquota padrão CBS (%)</label><input id="cbsAliquotaPadrao" type="number" min="0" step="0.0001" class="form-control" placeholder="Confirmar com contador"></div>
+                                <div class="form-group"><label>Alíquota padrão IBS — UF (%)</label><input id="ibsUfAliquotaPadrao" type="number" min="0" step="0.0001" class="form-control" placeholder="Confirmar com contador"></div>
+                                <div class="form-group"><label>Alíquota padrão IBS — Município (%)</label><input id="ibsMunAliquotaPadrao" type="number" min="0" step="0.0001" class="form-control" placeholder="Confirmar com contador"></div>
+                            </div>
+                            <label class="switch-row"><input id="rtcAtivo" type="checkbox"><span class="switch-control"></span><span><strong>Preparar NF-e com IBS/CBS</strong><small>Ative somente depois de classificar os produtos e validar a emissão em homologação.</small></span></label>
+                        </div>
+                    </div>
+
                     <label class="switch-row"><input id="fiscalAtivo" type="checkbox"><span class="switch-control"></span><span><strong>Configuração fiscal ativa</strong><small>Habilita o uso desses dados nas próximas etapas fiscais.</small></span></label>
                     <label class="switch-row" style="margin-top:12px"><input id="emitirNfeAoFaturar" type="checkbox"><span class="switch-control"></span><span><strong>Emitir NF-e automaticamente ao faturar</strong><small>Recomendado somente depois de validar a homologação. Se desligado, a emissão continua pelo botão da venda.</small></span></label>
                 </div></div>
