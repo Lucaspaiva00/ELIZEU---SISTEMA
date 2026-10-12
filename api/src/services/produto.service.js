@@ -96,9 +96,62 @@ class ProdutoService {
             throw new Error("O estoque mínimo do material principal é inválido.");
         }
 
+        const ibsCbsSituacaoTributaria =
+            String(dados.ibsCbsSituacaoTributaria || "").trim() || null;
+        const ibsCbsClassificacaoTributaria =
+            String(dados.ibsCbsClassificacaoTributaria || "").trim() || null;
+        const isSituacaoTributaria =
+            String(dados.isSituacaoTributaria || "").trim() || null;
+        const isClassificacaoTributaria =
+            String(dados.isClassificacaoTributaria || "").trim() || null;
+
+        if (ibsCbsSituacaoTributaria && !/^\d{3}$/.test(ibsCbsSituacaoTributaria)) {
+            throw new Error("O CST IBS/CBS deve possuir 3 dígitos.");
+        }
+
+        if (ibsCbsClassificacaoTributaria && !/^\d{6}$/.test(ibsCbsClassificacaoTributaria)) {
+            throw new Error("O cClassTrib IBS/CBS deve possuir 6 dígitos.");
+        }
+
+        if (
+            ibsCbsSituacaoTributaria &&
+            ibsCbsClassificacaoTributaria &&
+            !ibsCbsClassificacaoTributaria.startsWith(ibsCbsSituacaoTributaria)
+        ) {
+            throw new Error("Os 3 primeiros dígitos do cClassTrib devem coincidir com o CST IBS/CBS.");
+        }
+
+        const informouIs = Boolean(
+            isSituacaoTributaria ||
+            isClassificacaoTributaria ||
+            String(dados.isAliquota ?? "").trim()
+        );
+
+        let isAliquota = null;
+
+        if (informouIs) {
+            if (!/^\d{3}$/.test(isSituacaoTributaria || "")) {
+                throw new Error("O CST do Imposto Seletivo deve possuir 3 dígitos.");
+            }
+
+            if (!/^\d{6}$/.test(isClassificacaoTributaria || "")) {
+                throw new Error("O cClassTrib do Imposto Seletivo deve possuir 6 dígitos.");
+            }
+
+            isAliquota = Number(dados.isAliquota);
+            if (!Number.isFinite(isAliquota) || isAliquota < 0) {
+                throw new Error("Informe uma alíquota válida para o Imposto Seletivo.");
+            }
+        }
+
         return {
             ...dados,
             descricao: String(dados.descricao || "").trim() || null,
+            ibsCbsSituacaoTributaria,
+            ibsCbsClassificacaoTributaria,
+            isSituacaoTributaria,
+            isClassificacaoTributaria,
+            isAliquota,
             composicao,
             custoComposicao,
             margemLucroPadrao,
