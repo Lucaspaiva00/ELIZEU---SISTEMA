@@ -102,6 +102,29 @@ class EmpresaService {
             throw new Error("CRT inválido.");
         }
 
+        const rtcAtivo = Boolean(dados.rtcAtivo);
+        const normalizarAliquotaRtc = (valor) => {
+            if (valor === null || valor === undefined || valor === "") return null;
+            const numero = Number(valor);
+            return Number.isFinite(numero) ? numero : NaN;
+        };
+
+        const cbsAliquotaPadrao = normalizarAliquotaRtc(dados.cbsAliquotaPadrao);
+        const ibsUfAliquotaPadrao = normalizarAliquotaRtc(dados.ibsUfAliquotaPadrao);
+        const ibsMunAliquotaPadrao = normalizarAliquotaRtc(dados.ibsMunAliquotaPadrao);
+
+        if (rtcAtivo) {
+            const aliquotas = [
+                [cbsAliquotaPadrao, "alíquota padrão da CBS"],
+                [ibsUfAliquotaPadrao, "alíquota padrão do IBS estadual"],
+                [ibsMunAliquotaPadrao, "alíquota padrão do IBS municipal"]
+            ];
+            const invalidas = aliquotas.filter(([valor]) => !Number.isFinite(valor) || valor < 0);
+            if (invalidas.length) {
+                throw new Error(`Para ativar a Reforma Tributária, informe: ${invalidas.map(([, nome]) => nome).join(", ")}.`);
+            }
+        }
+
         if (dados.ativo) {
             const obrigatorios = [
                 [dados.regimeTributario, "regime tributário"],
@@ -136,6 +159,10 @@ class EmpresaService {
             presencaComprador: Number.isInteger(Number(dados.presencaComprador)) ? Number(dados.presencaComprador) : 9,
             consumidorFinal: dados.consumidorFinal !== false,
             emitirNfeAoFaturar: Boolean(dados.emitirNfeAoFaturar),
+            rtcAtivo,
+            cbsAliquotaPadrao,
+            ibsUfAliquotaPadrao,
+            ibsMunAliquotaPadrao,
             ativo: Boolean(dados.ativo)
         });
     }
