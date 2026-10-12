@@ -973,6 +973,16 @@ function obterDadosFormulario() {
             valorCampoProduto("cfopPadrao") || null,
         origemMercadoria:
             valorCampoProduto("origemMercadoria") || null,
+        ibsCbsSituacaoTributaria:
+            valorCampoProduto("ibsCbsSituacaoTributaria") || null,
+        ibsCbsClassificacaoTributaria:
+            valorCampoProduto("ibsCbsClassificacaoTributaria") || null,
+        isSituacaoTributaria:
+            valorCampoProduto("isSituacaoTributaria") || null,
+        isClassificacaoTributaria:
+            valorCampoProduto("isClassificacaoTributaria") || null,
+        isAliquota:
+            valorCampoProduto("isAliquota") === "" ? null : Number(valorCampoProduto("isAliquota")),
         margemLucroPadrao: Number(document.getElementById("margemLucroPadrao")?.value || 0),
         ativo: true,
         composicao: composicao
@@ -1055,6 +1065,39 @@ function validarProduto(produto) {
 
     if (!Number.isFinite(produto.estoqueMinimo) || produto.estoqueMinimo < 0) {
         throw new Error("Informe um estoque mínimo válido para o material principal.");
+    }
+
+    if (produto.ibsCbsSituacaoTributaria && !/^\d{3}$/.test(produto.ibsCbsSituacaoTributaria)) {
+        throw new Error("O CST IBS/CBS deve possuir 3 dígitos.");
+    }
+
+    if (produto.ibsCbsClassificacaoTributaria && !/^\d{6}$/.test(produto.ibsCbsClassificacaoTributaria)) {
+        throw new Error("O cClassTrib IBS/CBS deve possuir 6 dígitos.");
+    }
+
+    if (
+        produto.ibsCbsSituacaoTributaria &&
+        produto.ibsCbsClassificacaoTributaria &&
+        !produto.ibsCbsClassificacaoTributaria.startsWith(produto.ibsCbsSituacaoTributaria)
+    ) {
+        throw new Error("Os 3 primeiros dígitos do cClassTrib devem coincidir com o CST IBS/CBS.");
+    }
+
+    const informouIs =
+        produto.isSituacaoTributaria ||
+        produto.isClassificacaoTributaria ||
+        produto.isAliquota !== null;
+
+    if (informouIs) {
+        if (!/^\d{3}$/.test(produto.isSituacaoTributaria || "")) {
+            throw new Error("O CST do Imposto Seletivo deve possuir 3 dígitos.");
+        }
+        if (!/^\d{6}$/.test(produto.isClassificacaoTributaria || "")) {
+            throw new Error("O cClassTrib do Imposto Seletivo deve possuir 6 dígitos.");
+        }
+        if (!Number.isFinite(produto.isAliquota) || produto.isAliquota < 0) {
+            throw new Error("Informe uma alíquota válida para o Imposto Seletivo.");
+        }
     }
 
     produto.composicao.forEach((item, index) => {
@@ -1162,6 +1205,11 @@ function editarProduto(id) {
         "origemMercadoria",
         produto.origemMercadoria
     );
+    preencherCampoProduto("ibsCbsSituacaoTributaria", produto.ibsCbsSituacaoTributaria);
+    preencherCampoProduto("ibsCbsClassificacaoTributaria", produto.ibsCbsClassificacaoTributaria);
+    preencherCampoProduto("isSituacaoTributaria", produto.isSituacaoTributaria);
+    preencherCampoProduto("isClassificacaoTributaria", produto.isClassificacaoTributaria);
+    preencherCampoProduto("isAliquota", produto.isAliquota ?? "");
     preencherCampoProduto(
         "margemLucroPadrao",
         Number(produto.margemLucroPadrao || 0)
@@ -1325,6 +1373,15 @@ function visualizarProduto(id) {
     definirTexto(
         "detalheCfop",
         produto.cfopPadrao || "-"
+    );
+
+    definirTexto("detalheCstIbsCbs", produto.ibsCbsSituacaoTributaria || "-");
+    definirTexto("detalheClassTribIbsCbs", produto.ibsCbsClassificacaoTributaria || "-");
+    definirTexto(
+        "detalheImpostoSeletivo",
+        produto.isSituacaoTributaria
+            ? `${produto.isSituacaoTributaria} / ${produto.isClassificacaoTributaria || "-"} / ${Number(produto.isAliquota || 0).toLocaleString("pt-BR", { maximumFractionDigits: 4 })}%`
+            : "Não informado / não aplicável"
     );
 
     document.getElementById(
