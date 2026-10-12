@@ -108,6 +108,37 @@ class NfeService {
             adicionarPendencia(pendencias, somenteDigitos(produto.ncm).length !== 8, `Produto "${produto.nome}" está sem NCM válido.`, "produto");
             adicionarPendencia(pendencias, !/^\d{4}$/.test(texto(produto.cfopPadrao || fiscal?.cfopPadrao)), `Produto "${produto.nome}" está sem CFOP válido.`, "produto");
             adicionarPendencia(pendencias, !/^[0-8]$/.test(texto(produto.origemMercadoria)), `Produto "${produto.nome}" está sem origem da mercadoria.`, "produto");
+
+            if (fiscal?.rtcAtivo) {
+                const cstRtc = texto(produto.ibsCbsSituacaoTributaria);
+                const classRtc = texto(produto.ibsCbsClassificacaoTributaria);
+
+                adicionarPendencia(pendencias, !/^\d{3}$/.test(cstRtc), `Produto "${produto.nome}" está sem CST IBS/CBS válido (3 dígitos).`, "produto");
+                adicionarPendencia(pendencias, !/^\d{6}$/.test(classRtc), `Produto "${produto.nome}" está sem cClassTrib IBS/CBS válido (6 dígitos).`, "produto");
+                adicionarPendencia(
+                    pendencias,
+                    /^\d{3}$/.test(cstRtc) && /^\d{6}$/.test(classRtc) && !classRtc.startsWith(cstRtc),
+                    `Produto "${produto.nome}" possui CST IBS/CBS incompatível com o cClassTrib.`,
+                    "produto"
+                );
+            }
+        }
+
+        if (fiscal?.rtcAtivo) {
+            const aliquotasRtc = [
+                [fiscal.cbsAliquotaPadrao, "CBS"],
+                [fiscal.ibsUfAliquotaPadrao, "IBS estadual"],
+                [fiscal.ibsMunAliquotaPadrao, "IBS municipal"]
+            ];
+
+            aliquotasRtc.forEach(([valor, nome]) => {
+                adicionarPendencia(
+                    pendencias,
+                    valor === null || valor === undefined || !Number.isFinite(Number(valor)) || Number(valor) < 0,
+                    `Alíquota padrão de ${nome} não configurada para a Reforma Tributária.`,
+                    "fiscal"
+                );
+            });
         }
 
         adicionarPendencia(pendencias, !possuiProduto, "A venda não possui produtos para NF-e modelo 55.", "produto");
@@ -158,7 +189,11 @@ class NfeService {
                 cofinsSituacaoTributaria: fiscal.cofinsSituacaoTributariaPadrao,
                 modalidadeFrete: fiscal.modalidadeFrete,
                 presencaComprador: fiscal.presencaComprador,
-                consumidorFinal: fiscal.consumidorFinal
+                consumidorFinal: fiscal.consumidorFinal,
+                rtcAtivo: Boolean(fiscal.rtcAtivo),
+                cbsAliquotaPadrao: fiscal.cbsAliquotaPadrao === null ? null : numero(fiscal.cbsAliquotaPadrao),
+                ibsUfAliquotaPadrao: fiscal.ibsUfAliquotaPadrao === null ? null : numero(fiscal.ibsUfAliquotaPadrao),
+                ibsMunAliquotaPadrao: fiscal.ibsMunAliquotaPadrao === null ? null : numero(fiscal.ibsMunAliquotaPadrao)
             },
             itens: (venda.itens || []).filter(item => item.tipo === "PRODUTO").map((item, indice) => {
                 const produto = item.variacaoProduto.produto;
@@ -166,6 +201,11 @@ class NfeService {
                     numeroItem: indice + 1, codigo: item.codigoProduto || produto.codigo, sku: item.sku,
                     descricao: item.descricao, ncm: somenteDigitos(produto.ncm), cfop: produto.cfopPadrao || fiscal.cfopPadrao,
                     origemMercadoria: produto.origemMercadoria, unidade: produto.unidadeMedida,
+                    ibsCbsSituacaoTributaria: produto.ibsCbsSituacaoTributaria || null,
+                    ibsCbsClassificacaoTributaria: produto.ibsCbsClassificacaoTributaria || null,
+                    isSituacaoTributaria: produto.isSituacaoTributaria || null,
+                    isClassificacaoTributaria: produto.isClassificacaoTributaria || null,
+                    isAliquota: produto.isAliquota === null ? null : numero(produto.isAliquota),
                     quantidade: numero(item.quantidade), valorUnitario: numero(item.valorUnitario), desconto: numero(item.desconto), total: numero(item.total)
                 };
             }),
