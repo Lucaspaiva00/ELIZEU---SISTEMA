@@ -50,7 +50,7 @@ function preencherEmpresa(empresa) {
 }
 
 function preencherFiscal(fiscal) {
-    ["regimeTributario", "crt", "inscricaoMunicipal", "cnaePrincipal", "codigoMunicipio", "ambiente", "serieNfe", "proximoNumeroNfe", "cfopPadrao", "naturezaOperacao", "emailFiscal", "informacoesComplementares", "icmsSituacaoTributariaPadrao", "pisSituacaoTributariaPadrao", "cofinsSituacaoTributariaPadrao", "modalidadeFrete", "presencaComprador"].forEach((campo) => definir(campo, fiscal[campo]));
+    ["regimeTributario", "crt", "inscricaoMunicipal", "cnaePrincipal", "codigoMunicipio", "ambiente", "serieNfe", "proximoNumeroNfe", "cfopPadrao", "naturezaOperacao", "emailFiscal", "informacoesComplementares", "icmsSituacaoTributariaPadrao", "pisSituacaoTributariaPadrao", "cofinsSituacaoTributariaPadrao", "modalidadeFrete", "presencaComprador", "cbsAliquotaPadrao", "ibsUfAliquotaPadrao", "ibsMunAliquotaPadrao"].forEach((campo) => definir(campo, fiscal[campo]));
     if (!fiscal.ambiente) definir("ambiente", "HOMOLOGACAO");
     if (!fiscal.serieNfe) definir("serieNfe", 1);
     if (!fiscal.proximoNumeroNfe) definir("proximoNumeroNfe", 1);
@@ -59,6 +59,7 @@ function preencherFiscal(fiscal) {
     definir("consumidorFinal", fiscal.consumidorFinal === false ? "false" : "true");
     document.getElementById("fiscalAtivo").checked = Boolean(fiscal.ativo);
     document.getElementById("emitirNfeAoFaturar").checked = Boolean(fiscal.emitirNfeAoFaturar);
+    document.getElementById("rtcAtivo").checked = Boolean(fiscal.rtcAtivo);
 }
 
 function preencherFocus(focus) {
@@ -134,6 +135,10 @@ async function salvarFiscal(evento) {
         presencaComprador: Number(valor("presencaComprador") || 9),
         consumidorFinal: valor("consumidorFinal") !== "false",
         emitirNfeAoFaturar: document.getElementById("emitirNfeAoFaturar").checked,
+        rtcAtivo: document.getElementById("rtcAtivo").checked,
+        cbsAliquotaPadrao: valor("cbsAliquotaPadrao") === "" ? null : Number(valor("cbsAliquotaPadrao")),
+        ibsUfAliquotaPadrao: valor("ibsUfAliquotaPadrao") === "" ? null : Number(valor("ibsUfAliquotaPadrao")),
+        ibsMunAliquotaPadrao: valor("ibsMunAliquotaPadrao") === "" ? null : Number(valor("ibsMunAliquotaPadrao")),
         ativo: document.getElementById("fiscalAtivo").checked
     };
     if (dados.ambiente === "PRODUCAO" && !confirm("Confirma o ambiente de PRODUÇÃO? Antes disso valide uma NF-e em homologação e confirme a numeração atual com o contador/Omie.")) return;
