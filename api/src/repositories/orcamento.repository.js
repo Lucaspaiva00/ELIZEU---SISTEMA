@@ -176,7 +176,8 @@ class OrcamentoRepository {
                     valorUnitario: item.valorUnitario,
                     desconto: item.desconto ?? 0,
                     total: item.total,
-                    custoUnitario: item.custoUnitario
+                    custoUnitario: item.custoUnitario,
+                                observacao: item.observacao || null
                 }))
             });
 
@@ -230,7 +231,8 @@ class OrcamentoRepository {
                     valorUnitario: item.valorUnitario,
                     desconto: item.desconto ?? 0,
                     total: item.total,
-                    custoUnitario: item.custoUnitario
+                    custoUnitario: item.custoUnitario,
+                                observacao: item.observacao || null
                 }))
             });
 
@@ -319,7 +321,8 @@ class OrcamentoRepository {
                                 valorUnitario: item.valorUnitario,
                                 desconto: item.desconto,
                                 total: item.total,
-                                custoUnitario: item.custoUnitario
+                                custoUnitario: item.custoUnitario,
+                                observacao: item.observacao || null
                             }
                         });
                         continue;
@@ -342,7 +345,8 @@ class OrcamentoRepository {
                             valorUnitario: item.valorUnitario,
                             desconto: item.desconto,
                             total: item.total,
-                            custoUnitario: item.custoUnitario
+                            custoUnitario: item.custoUnitario,
+                                observacao: item.observacao || null
                         }
                     });
                 }

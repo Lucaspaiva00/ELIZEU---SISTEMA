@@ -72,6 +72,9 @@ class OrcamentoService {
             item.valorUnitario = Number(item.valorUnitario);
             item.desconto = desconto;
             item.total = Math.max((item.quantidade * item.valorUnitario) - item.desconto, 0);
+
+            const observacao = String(item.observacao || "").trim();
+            item.observacao = observacao ? observacao.slice(0, 500) : null;
         }
     }
 

@@ -137,7 +137,7 @@ async function visualizarVenda(id) {
     document.getElementById("viewVendaParcelas").value = `${v.quantidadeParcelas}x`;
     document.getElementById("viewVendaVencimento").value = fmtData(v.primeiroVencimento);
     document.getElementById("viewVendaTotal").value = fmtMoeda(v.total);
-    document.getElementById("viewVendaItens").innerHTML = (v.itens || []).map(i => `<tr><td>${esc(i.descricao)}</td><td>${Number(i.quantidade)}</td><td>${fmtMoeda(i.valorUnitario)}</td><td>${fmtMoeda(i.total)}</td></tr>`).join("") || '<tr><td colspan="4">Sem itens.</td></tr>';
+    document.getElementById("viewVendaItens").innerHTML = (v.itens || []).map(i => `<tr><td>${esc(i.descricao)}</td><td>${Number(i.quantidade)}</td><td>${fmtMoeda(i.valorUnitario)}</td><td>${esc(i.observacao || "—")}</td><td>${fmtMoeda(i.total)}</td></tr>`).join("") || '<tr><td colspan="5">Sem itens.</td></tr>';
 
     document.getElementById("viewVendaCustoItens").value = fmtMoeda(v.custoItensTotal || 0);
     document.getElementById("viewVendaCustoInterno").value = fmtMoeda(v.custoInternoTotal || 0);

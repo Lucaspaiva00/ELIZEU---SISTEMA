@@ -12,6 +12,7 @@ let orcamentoAprovandoId = null;
 
 let catalogoOrcamentoPrecisaAtualizar = false;
 let atualizandoCatalogoOrcamento = false;
+let orcamentoAlterado = false;
 
 const modalOrcamento = document.getElementById("modalOrcamento");
 const modalSelecionarProduto = document.getElementById(
@@ -54,6 +55,13 @@ function configurarEventos() {
 
     pesquisaCatalogo?.addEventListener("input", renderizarCatalogoItensOrcamento);
     filtroCatalogo?.addEventListener("change", renderizarCatalogoItensOrcamento);
+
+    formOrcamento?.addEventListener("input", () => {
+        if (modalOrcamento.classList.contains("active")) orcamentoAlterado = true;
+    });
+    formOrcamento?.addEventListener("change", () => {
+        if (modalOrcamento.classList.contains("active")) orcamentoAlterado = true;
+    });
 }
 
 function abrirCadastroAuxiliarOrcamento(tipo) {
@@ -376,21 +384,34 @@ function abrirModalOrcamento() {
     renderizarCustosInternos();
     calcularTotais();
 
+    orcamentoAlterado = false;
     modalOrcamento.classList.add("active");
 }
 
-function fecharModalOrcamento() {
-    modalOrcamento.classList.remove("active");
+function fecharModalOrcamento(forcar = false) {
+    if (
+        modalOrcamento.classList.contains("active") &&
+        orcamentoAlterado &&
+        !forcar
+    ) {
+        const confirmou = window.confirm(
+            "Existem alterações não salvas neste orçamento. Deseja sair e perder essas alterações?"
+        );
+        if (!confirmou) return false;
+    }
 
+    modalOrcamento.classList.remove("active");
     formOrcamento.reset();
 
     orcamentoEditandoId = null;
     itensOrcamento = [];
     custosInternos = [];
+    orcamentoAlterado = false;
 
     renderizarItens();
     renderizarCustosInternos();
     calcularTotais();
+    return true;
 }
 
 function abrirModalProduto() {
@@ -649,6 +670,7 @@ function transformarOpcaoCatalogoEmItem(opcao, quantidade, valorUnitario) {
         quantidade,
         valorUnitario,
         custoUnitario: Number(opcao.custoUnitario || 0),
+        observacao: "",
         total: quantidade * valorUnitario
     };
 }
@@ -881,6 +903,7 @@ function confirmarItensSelecionados() {
     itensPendentesSelecao = [];
 
     modalSelecionarProduto.classList.remove("active");
+    orcamentoAlterado = true;
     renderizarItensPendentesSelecao();
     renderizarItens();
     calcularTotais();
@@ -940,7 +963,7 @@ function renderizarItens() {
 
             <tr>
 
-                <td colspan="6" class="text-center">
+                <td colspan="7" class="text-center">
 
                     Nenhum item adicionado.
 
@@ -1033,6 +1056,16 @@ function renderizarItens() {
                 </td>
 
                 <td>
+                    <input
+                        type="text"
+                        class="form-control"
+                        maxlength="500"
+                        placeholder="Ex.: conferir medida / separar branco"
+                        value="${escaparAtributoCatalogo(item.observacao || "")}"
+                        oninput="alterarObservacaoItem(${index}, this.value)">
+                </td>
+
+                <td>
 
                     <strong>
 
@@ -1086,6 +1119,7 @@ function alterarQuantidade(index, valor) {
 
         itensOrcamento[index].valorUnitario;
 
+    orcamentoAlterado = true;
     renderizarItens();
 
     calcularTotais();
@@ -1110,15 +1144,23 @@ function alterarValor(index, valor) {
 
         itensOrcamento[index].quantidade;
 
+    orcamentoAlterado = true;
     renderizarItens();
 
     calcularTotais();
 
 }
 
+function alterarObservacaoItem(index, valor) {
+    if (!itensOrcamento[index]) return;
+    itensOrcamento[index].observacao = String(valor || "").slice(0, 500);
+    orcamentoAlterado = true;
+}
+
 function removerItem(index) {
 
     itensOrcamento.splice(index, 1);
+    orcamentoAlterado = true;
 
     renderizarItens();
 
@@ -1135,6 +1177,7 @@ function adicionarCustoInterno() {
         total: 0
     });
 
+    orcamentoAlterado = true;
     renderizarCustosInternos();
     calcularTotais();
 }
@@ -1208,11 +1251,13 @@ function alterarCustoInterno(index, campo, valor) {
         renderizarCustosInternos();
     }
 
+    orcamentoAlterado = true;
     calcularTotais();
 }
 
 function removerCustoInterno(index) {
     custosInternos.splice(index, 1);
+    orcamentoAlterado = true;
     renderizarCustosInternos();
     calcularTotais();
 }
@@ -1283,6 +1328,11 @@ function calcularTotais() {
 
         moeda(total);
 
+    const subtotalItensResumo = document.getElementById("subtotalItensResumo");
+    const totalItensResumo = document.getElementById("totalItensResumo");
+    if (subtotalItensResumo) subtotalItensResumo.textContent = moeda(subtotal);
+    if (totalItensResumo) totalItensResumo.textContent = moeda(total);
+
     const custoItensTotal = obterCustoItensTotal();
     const custoInternoTotal = obterCustoInternoTotal();
     const lucroEstimado = total - custoItensTotal - custoInternoTotal;
@@ -1298,6 +1348,8 @@ function calcularTotais() {
 }
 
 async function salvarOrcamento() {
+
+    const eraEdicao = Boolean(orcamentoEditandoId);
 
     const botao = document.querySelector(
         "#modalOrcamento .modal-footer .btn-primary"
@@ -1345,13 +1397,14 @@ async function salvarOrcamento() {
 
         }
 
-        fecharModalOrcamento();
+        orcamentoAlterado = false;
+        fecharModalOrcamento(true);
 
         await carregarOrcamentos();
 
         mostrarMensagem(
 
-            orcamentoEditandoId
+            eraEdicao
 
                 ? "Orçamento atualizado com sucesso."
 
@@ -1459,6 +1512,9 @@ function obterDadosFormulario() {
 
             desconto: 0,
 
+            observacao:
+                String(item.observacao || "").trim(),
+
             total:
                 item.total
 
@@ -1548,6 +1604,7 @@ async function editarOrcamento(id) {
                 quantidade: Number(item.quantidade),
                 valorUnitario: Number(item.valorUnitario),
                 custoUnitario: Number(item.custoUnitario || 0),
+                observacao: item.observacao || "",
                 total: Number(item.total)
             });
             return;
@@ -1592,6 +1649,9 @@ async function editarOrcamento(id) {
             custoUnitario:
                 Number(item.custoUnitario || 0),
 
+            observacao:
+                item.observacao || "",
+
             total:
                 Number(item.total)
 
@@ -1618,6 +1678,7 @@ async function editarOrcamento(id) {
         "#modalOrcamento .modal-title"
     ).textContent = "Editar Orçamento";
 
+    orcamentoAlterado = false;
     modalOrcamento.classList.add("active");
 
 }
@@ -1678,6 +1739,8 @@ async function visualizarOrcamento(id) {
                 <td>${item.quantidade}</td>
 
                 <td>${moeda(item.valorUnitario)}</td>
+
+                <td>${escaparHtml(item.observacao || "-")}</td>
 
                 <td>${moeda(item.total)}</td>
 
@@ -3204,6 +3267,13 @@ async function gerarPdfOrcamento(id) {
 }
 
 
+
+window.addEventListener("beforeunload", (event) => {
+    if (modalOrcamento.classList.contains("active") && orcamentoAlterado) {
+        event.preventDefault();
+        event.returnValue = "";
+    }
+});
 
 modalOrcamento.addEventListener(
     "click",

@@ -162,9 +162,13 @@
                                         </div>
                                         <div class="table-responsive">
                                             <table class="table">
-                                                <thead><tr><th>Item</th><th>Variação</th><th width="120">Quantidade</th><th width="140">Unitário</th><th width="140">Total</th><th width="80">Ações</th></tr></thead>
+                                                <thead><tr><th>Item</th><th>Variação</th><th width="120">Quantidade</th><th width="140">Unitário</th><th width="220">Observação interna</th><th width="140">Total</th><th width="80">Ações</th></tr></thead>
                                                 <tbody id="tabelaItens"></tbody>
                                             </table>
+                                        </div>
+                                        <div class="modal-kpi-grid" style="margin-top:16px;">
+                                            <div class="modal-kpi"><small>Subtotal dos itens lançados</small><h3 id="subtotalItensResumo">R$ 0,00</h3></div>
+                                            <div class="modal-kpi"><small>Total atual do orçamento</small><h3 id="totalItensResumo">R$ 0,00</h3></div>
                                         </div>
                                     </div>
                                 </section>
@@ -420,7 +424,7 @@
                             <section class="modal-tab-panel" data-modal-panel="itens">
                                 <div class="modal-section-card">
                                     <div class="modal-section-head"><div><h3>Itens do orçamento</h3><p>Itens e valores apresentados ao cliente.</p></div></div>
-                                    <div class="table-responsive"><table class="table"><thead><tr><th>Produto</th><th>Variação</th><th>Qtd</th><th>Unitário</th><th>Total</th></tr></thead><tbody id="viewTabelaItens"></tbody></table></div>
+                                    <div class="table-responsive"><table class="table"><thead><tr><th>Produto</th><th>Variação</th><th>Qtd</th><th>Unitário</th><th>Observação interna</th><th>Total</th></tr></thead><tbody id="viewTabelaItens"></tbody></table></div>
                                 </div>
                             </section>
                             <section class="modal-tab-panel" data-modal-panel="custos">
