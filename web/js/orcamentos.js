@@ -2485,15 +2485,24 @@ async function gerarPdfOrcamento(id) {
         o.dataValidade ||
         o.criadoEm;
 
+    const nomeClienteArquivo = String(cliente.nome || "Cliente")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^A-Za-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, 60) || "Cliente";
+
+    const numeroArquivo = String(o.numero || "0").padStart(5, "0");
+    const nomeArquivoPdf = `Orcamento-${numeroArquivo}-${nomeClienteArquivo}`;
+    const tituloOriginalPagina = document.title;
+
     const htmlImpressao = `
 <!doctype html>
 <html lang="pt-BR">
 <head>
     <meta charset="utf-8">
 
-    <title>
-        Orçamento ${escapar(o.numero)}
-    </title>
+    <title>${escapar(nomeArquivoPdf)}</title>
 
     <style>
         @page {
@@ -3203,14 +3212,6 @@ async function gerarPdfOrcamento(id) {
         </footer>
     </div>
 
-    <script>
-        window.onload = () => {
-            setTimeout(
-                () => window.print(),
-                450
-            );
-        };
-    <\/script>
 </body>
 </html>
 `;
@@ -3233,21 +3234,26 @@ async function gerarPdfOrcamento(id) {
             alvo.focus();
 
             alvo.onafterprint = () => {
+                document.title = tituloOriginalPagina;
                 setTimeout(limparQuadroImpressao, 150);
             };
 
             // Pequeno atraso apenas para o Chrome finalizar layout/fontes/imagens.
             setTimeout(() => {
                 try {
+                    document.title = nomeArquivoPdf;
+                    if (alvo.document) alvo.document.title = nomeArquivoPdf;
                     alvo.focus();
                     alvo.print();
                 } catch (erro) {
+                    document.title = tituloOriginalPagina;
                     console.error("[Orçamento/PDF] Falha ao abrir impressão:", erro);
                     limparQuadroImpressao();
                     mostrarMensagem("Não foi possível abrir a tela de impressão.");
                 }
             }, 250);
         } catch (erro) {
+            document.title = tituloOriginalPagina;
             console.error("[Orçamento/PDF] Falha ao preparar impressão:", erro);
             limparQuadroImpressao();
             mostrarMensagem("Não foi possível abrir a tela de impressão.");
@@ -3259,6 +3265,7 @@ async function gerarPdfOrcamento(id) {
 
     // Limpeza de segurança caso o navegador não dispare afterprint.
     setTimeout(() => {
+        document.title = tituloOriginalPagina;
         if (quadroImpressao?.parentNode) {
             limparQuadroImpressao();
         }
