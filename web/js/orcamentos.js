@@ -2179,6 +2179,13 @@ async function gerarPdfOrcamento(id) {
         .filter(Boolean)
         .join(", ");
 
+    const quadraLoteCliente = [
+        cliente.quadra ? `Quadra ${String(cliente.quadra).trim()}` : null,
+        cliente.lote ? `Lote ${String(cliente.lote).trim()}` : null
+    ].filter(Boolean).join(" - ");
+
+    const complementoCliente = String(cliente.complemento || "").trim();
+
     const telefoneCliente = formatarTelefonePdf(
         cliente.celular || cliente.telefone
     );
@@ -2905,6 +2912,18 @@ async function gerarPdfOrcamento(id) {
                             )}
                         </span>
                     </div>
+
+                    ${quadraLoteCliente ? `
+                    <div class="linha-info">
+                        <span class="rotulo">Quadra / Lote:</span>
+                        <span>${escapar(quadraLoteCliente)}</span>
+                    </div>` : ""}
+
+                    ${complementoCliente ? `
+                    <div class="linha-info">
+                        <span class="rotulo">Complemento:</span>
+                        <span>${escapar(complementoCliente)}</span>
+                    </div>` : ""}
 
                     <div class="linha-info">
                         <span class="rotulo">

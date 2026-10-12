@@ -209,6 +209,8 @@ function mapearContato(payload) {
         )),
         numero: texto(primeiro(contato.numero, valorExtra(extras, "numero endereco", "número endereço", "numero"))),
         complemento: texto(primeiro(contato.complemento, valorExtra(extras, "complemento"))),
+        quadra: texto(primeiro(contato.quadra, valorExtra(extras, "quadra", "qd", "qdr"))),
+        lote: texto(primeiro(contato.lote, valorExtra(extras, "lote", "lt"))),
         bairro: texto(primeiro(contato.bairro, valorExtra(extras, "bairro"))),
         cidade: texto(primeiro(contato.cidade, contato.city, valorExtra(extras, "cidade"))),
         estado: texto(primeiro(contato.estado, contato.uf, valorExtra(extras, "estado", "uf")))?.toUpperCase(),
@@ -301,7 +303,7 @@ function atualizarSomenteDadosAusentes(existente, dados) {
     // o Elizeu já completou são preservados mesmo após novas sincronizações.
     const preencher = [
         "telefone", "celular", "email", "cep", "endereco", "numero",
-        "complemento", "bairro", "cidade", "estado", "observacoes"
+        "complemento", "quadra", "lote", "bairro", "cidade", "estado", "observacoes"
     ];
     for (const campo of preencher) {
         if (vazio(existente[campo]) && !vazio(dados[campo])) {

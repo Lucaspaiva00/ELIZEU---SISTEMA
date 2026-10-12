@@ -1,0 +1,3 @@
+ALTER TABLE "Cliente"
+ADD COLUMN "quadra" TEXT,
+ADD COLUMN "lote" TEXT;

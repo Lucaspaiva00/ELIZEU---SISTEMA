@@ -693,6 +693,8 @@ function editarCliente(id) {
     preencherCampo("endereco", cliente.endereco);
     preencherCampo("numero", cliente.numero);
     preencherCampo("complemento", cliente.complemento);
+    preencherCampo("quadra", cliente.quadra);
+    preencherCampo("lote", cliente.lote);
     preencherCampo("bairro", cliente.bairro);
     preencherCampo("cidade", cliente.cidade);
     preencherCampo("estado", cliente.estado);
@@ -765,6 +767,8 @@ function obterDadosFormulario() {
         endereco: valorOpcional("endereco"),
         numero: valorOpcional("numero"),
         complemento: valorOpcional("complemento"),
+        quadra: valorOpcional("quadra"),
+        lote: valorOpcional("lote"),
         bairro: valorOpcional("bairro"),
         cidade: valorOpcional("cidade"),
         estado: valorOpcional("estado")?.toUpperCase(),
