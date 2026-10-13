@@ -12,6 +12,10 @@ const consultarProdutos = autorizarQualquer(
 
 router.post("/", auth, autorizar("produtos.criar"), produtoController.criar);
 router.get("/", auth, consultarProdutos, produtoController.listar);
+router.get('/classificacoes-rtc', auth, consultarProdutos, (req, res) => {
+    const rtc = require('../utils/classificacaoRtc');
+    res.json({ sucesso: true, fonte: rtc.catalogo.fonte, consultadoEm: rtc.catalogo.consultadoEm, classificacoes: rtc.listar() });
+});
 router.post("/:id/duplicar", auth, autorizar("produtos.duplicar"), produtoController.duplicar);
 router.get("/:id/estoque-principal/movimentacoes", auth, autorizar("produtos.visualizar"), produtoController.listarMovimentacoesEstoquePrincipal);
 router.post("/:id/estoque-principal/entrada", auth, autorizar("produtos.movimentar_estoque"), produtoController.adicionarEntradaEstoquePrincipal);

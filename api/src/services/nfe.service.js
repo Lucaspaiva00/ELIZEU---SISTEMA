@@ -1,5 +1,6 @@
 const nfeRepository = require("../repositories/nfe.repository");
 const focusNfeService = require("./focusNfe.service");
+const classificacaoRtc = require('../utils/classificacaoRtc');
 
 function texto(valor) { return String(valor ?? "").trim(); }
 function somenteDigitos(valor) { return texto(valor).replace(/\D/g, ""); }
@@ -105,6 +106,9 @@ class NfeService {
             const produto = item.variacaoProduto?.produto;
             adicionarPendencia(pendencias, !produto, `Produto do item "${item.descricao}" não encontrado.`, "produto");
             if (!produto) continue;
+            adicionarPendencia(pendencias,
+                Boolean(produto.isSituacaoTributaria || produto.isClassificacaoTributaria || produto.isAliquota != null),
+                `Produto "${produto.nome}" possui Imposto Seletivo cadastrado, mas o cálculo e o envio de IS ainda não foram homologados.`, 'produto');
             adicionarPendencia(pendencias, somenteDigitos(produto.ncm).length !== 8, `Produto "${produto.nome}" está sem NCM válido.`, "produto");
             adicionarPendencia(pendencias, !/^\d{4}$/.test(texto(produto.cfopPadrao || fiscal?.cfopPadrao)), `Produto "${produto.nome}" está sem CFOP válido.`, "produto");
             adicionarPendencia(pendencias, !/^[0-8]$/.test(texto(produto.origemMercadoria)), `Produto "${produto.nome}" está sem origem da mercadoria.`, "produto");
@@ -112,6 +116,8 @@ class NfeService {
             if (fiscal?.rtcAtivo) {
                 const cstRtc = texto(produto.ibsCbsSituacaoTributaria);
                 const classRtc = texto(produto.ibsCbsClassificacaoTributaria);
+                const erroTabela = classificacaoRtc.validar(cstRtc, classRtc);
+                adicionarPendencia(pendencias, Boolean(erroTabela), `Produto "${produto.nome}": ${erroTabela}`, 'produto');
 
                 adicionarPendencia(pendencias, !/^\d{3}$/.test(cstRtc), `Produto "${produto.nome}" está sem CST IBS/CBS válido (3 dígitos).`, "produto");
                 adicionarPendencia(pendencias, !/^\d{6}$/.test(classRtc), `Produto "${produto.nome}" está sem cClassTrib IBS/CBS válido (6 dígitos).`, "produto");
@@ -125,6 +131,7 @@ class NfeService {
         }
 
         if (fiscal?.rtcAtivo) {
+            adicionarPendencia(pendencias, true, classificacaoRtc.BLOQUEIO_EMISSAO, 'fiscal');
             const aliquotasRtc = [
                 [fiscal.cbsAliquotaPadrao, "CBS"],
                 [fiscal.ibsUfAliquotaPadrao, "IBS estadual"],
@@ -215,6 +222,11 @@ class NfeService {
 
     montarPayloadFocus(nota) {
         const s = nota.dadosEmissao;
+        // Protege também notas preparadas antes da atualização e chamadas diretas.
+        if (s.tributacaoPadrao?.rtcAtivo) throw new Error(classificacaoRtc.BLOQUEIO_EMISSAO);
+        if (s.itens?.some(item => item.isSituacaoTributaria || item.isClassificacaoTributaria || item.isAliquota != null)) {
+            throw new Error('Emissão com Imposto Seletivo indisponível até implementar e homologar seu cálculo e payload.');
+        }
         const e = s.emitente;
         const d = s.destinatario;
         const t = s.tributacaoPadrao;
@@ -350,6 +362,11 @@ class NfeService {
         if (!nota.referenciaFocus) nota = await nfeRepository.atualizar(nota.id, { referenciaFocus: referencia });
 
         if (nota.status === "TRANSMITINDO") return this.consultar(vendaId, empresaId);
+
+        // Uma nota antiga pode ter snapshot sem RTC e a configuração atual já estar ativa.
+        if (nota.dadosEmissao?.tributacaoPadrao?.rtcAtivo) {
+            return { pronta: false, pendencias: [{ mensagem: classificacaoRtc.BLOQUEIO_EMISSAO, destino: 'fiscal' }], notaFiscal: nota };
+        }
 
         const payload = this.montarPayloadFocus(nota);
         nota = await nfeRepository.atualizar(nota.id, { status: "TRANSMITINDO", transmitidaEm: new Date(), motivoStatus: null });

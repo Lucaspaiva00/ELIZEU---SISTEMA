@@ -14,6 +14,7 @@ const formProduto = document.getElementById("formProduto");
 const modalEstoquePrincipal = document.getElementById("modalEstoquePrincipal");
 
 document.addEventListener("DOMContentLoaded", async () => {
+    await carregarClassificacoesRtc();
     await carregarCategorias();
     await carregarProdutos();
     abrirNovoProdutoPorUrl();
@@ -156,6 +157,7 @@ function renderizarTabela(lista) {
                     ${escaparHtml(produto.nome)}
 
                 </button>
+                <small title="${escaparAtributo((produto.fiscalCadastro?.pendencias || []).join(" | "))}">${produto.fiscalCadastro?.completo ? "Cadastro fiscal completo" : "Fiscal pendente"}</small>
             </td>
 
             <td>
@@ -1206,6 +1208,7 @@ function editarProduto(id) {
         produto.origemMercadoria
     );
     preencherCampoProduto("ibsCbsSituacaoTributaria", produto.ibsCbsSituacaoTributaria);
+    atualizarClassificacoesRtc();
     preencherCampoProduto("ibsCbsClassificacaoTributaria", produto.ibsCbsClassificacaoTributaria);
     preencherCampoProduto("isSituacaoTributaria", produto.isSituacaoTributaria);
     preencherCampoProduto("isClassificacaoTributaria", produto.isClassificacaoTributaria);
@@ -1787,12 +1790,14 @@ function filtrarProdutos() {
         .trim()
         .toLowerCase();
 
+    const base = document.getElementById("somenteFiscalPendente")?.checked
+        ? produtos.filter(p => !p.fiscalCadastro?.completo) : produtos;
     if (!pesquisa) {
-        renderizarTabela(produtos);
+        renderizarTabela(base);
         return;
     }
 
-    const filtrados = produtos.filter((produto) => {
+    const filtrados = base.filter((produto) => {
         const codigo = String(
             produto.codigo || ""
         ).toLowerCase();
@@ -1833,6 +1838,9 @@ function preencherCampoProduto(id, valor) {
     const campo = document.getElementById(id);
 
     if (campo) {
+        if (["ibsCbsSituacaoTributaria", "ibsCbsClassificacaoTributaria"].includes(id) && valor && ![...campo.options].some(o => o.value === valor)) {
+            campo.add(new Option(`${valor} — cadastro anterior; revisar tabela oficial`, valor));
+        }
         campo.value = valor ?? "";
     }
 }
@@ -1918,3 +1926,23 @@ document.addEventListener("keydown", (event) => {
         fecharModalProduto();
     }
 });
+
+let classificacoesRtc = [];
+async function carregarClassificacoesRtc() {
+    try {
+        const resposta = await get('/produtos/classificacoes-rtc');
+        classificacoesRtc = resposta.classificacoes || [];
+        const campo = document.getElementById('ibsCbsSituacaoTributaria');
+        const csts = new Map(classificacoesRtc.map(c => [c.cst, c.descricaoCst]));
+        campo.innerHTML = '<option value="">Selecione</option>' + [...csts].map(([codigo, descricao]) =>
+            `<option value="${escaparAtributo(codigo)}">${escaparHtml(codigo + ' — ' + descricao)}</option>`).join('');
+    } catch (erro) {
+        console.error('Catálogo fiscal indisponível:', erro);
+    }
+}
+function atualizarClassificacoesRtc() {
+    const cst = document.getElementById('ibsCbsSituacaoTributaria').value;
+    const campo = document.getElementById('ibsCbsClassificacaoTributaria');
+    campo.innerHTML = '<option value="">Selecione</option>' + classificacoesRtc.filter(c => c.cst === cst).map(c =>
+        `<option value="${escaparAtributo(c.codigo)}">${escaparHtml(c.codigo + ' — ' + c.descricao)}</option>`).join('');
+}

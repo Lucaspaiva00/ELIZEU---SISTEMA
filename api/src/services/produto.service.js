@@ -1,4 +1,5 @@
 const produtoRepository = require("../repositories/produto.repository");
+const classificacaoRtc = require('../utils/classificacaoRtc');
 
 class ProdutoService {
     normalizarCodigo(valor) {
@@ -121,6 +122,11 @@ class ProdutoService {
             throw new Error("Os 3 primeiros dígitos do cClassTrib devem coincidir com o CST IBS/CBS.");
         }
 
+        if (ibsCbsSituacaoTributaria || ibsCbsClassificacaoTributaria) {
+            const erro = classificacaoRtc.validar(ibsCbsSituacaoTributaria, ibsCbsClassificacaoTributaria);
+            if (erro) throw new Error(erro);
+        }
+
         const informouIs = Boolean(
             isSituacaoTributaria ||
             isClassificacaoTributaria ||
@@ -170,7 +176,11 @@ class ProdutoService {
     }
 
     async listar(empresaId) {
-        return produtoRepository.listar(empresaId);
+        const produtos = await produtoRepository.listar(empresaId);
+        return produtos.map(produto => {
+            const pendencias = classificacaoRtc.pendenciasProduto(produto);
+            return { ...produto, fiscalCadastro: { completo: pendencias.length === 0, pendencias } };
+        });
     }
 
     async buscarPorId(id) {
