@@ -194,8 +194,6 @@ model Empresa {
   endereco    String?
   numero      String?
   complemento String?
-  quadra      String?
-  lote        String?
   bairro      String?
   cidade      String?
   estado      String?
@@ -617,6 +615,8 @@ model Cliente {
   endereco    String?
   numero      String?
   complemento String?
+  quadra      String?
+  lote        String?
   bairro      String?
   cidade      String?
   estado      String?
