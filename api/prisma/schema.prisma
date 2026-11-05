@@ -1081,9 +1081,6 @@ model ContaReceber {
   vendaId Int?
   venda   Venda? @relation(fields: [vendaId], references: [id], onDelete: SetNull)
 
-  compraId Int?
-  compra Compra? @relation(fields: [compraId], references: [id], onDelete: SetNull)
-
   clienteId Int
   cliente   Cliente @relation(fields: [clienteId], references: [id])
 
@@ -1132,6 +1129,9 @@ model ContaPagar {
   vendaId Int?
   venda   Venda? @relation(fields: [vendaId], references: [id], onDelete: SetNull)
 
+  compraId Int?
+  compra Compra? @relation(fields: [compraId], references: [id], onDelete: SetNull)
+
   // Identifica a linha de custo interno que originou o título.
   // Em conjunto com vendaId impede geração duplicada no faturamento.
   custoInternoIndice Int?
@@ -1177,6 +1177,7 @@ model ContaPagar {
   @@unique([vendaId, custoInternoIndice])
   @@index([empresaId, status, dataVencimento])
   @@index([vendaId])
+  @@index([compraId])
   @@index([fornecedorId])
   @@index([recorrenciaGrupo])
 }
