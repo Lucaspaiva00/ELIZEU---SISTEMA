@@ -384,14 +384,20 @@ function criarGraficoProjecao(lista) {
 }
 
 function preencherOperacional(resumo) {
-    document.getElementById("kpiClientes").textContent = resumo.clientes;
-    document.getElementById("kpiProdutos").textContent = resumo.produtos;
-    document.getElementById("kpiCategorias").textContent = resumo.categorias;
-    document.getElementById("kpiOrcamentos").textContent = resumo.orcamentos;
-    document.getElementById("kpiValor").textContent = moeda(resumo.valorTotal);
-    document.getElementById("kpiEstoque").textContent = resumo.estoqueBaixo;
-    preencherUltimosOrcamentos(resumo.ultimosOrcamentos);
-    preencherEstoqueBaixo(resumo.estoqueBaixoProdutos);
+    document.getElementById("kpiClientes").textContent = resumo.clientes || 0;
+    document.getElementById("kpiFornecedores").textContent = resumo.fornecedores || 0;
+    document.getElementById("kpiProdutos").textContent = resumo.produtos || 0;
+    document.getElementById("kpiOrcamentos").textContent = resumo.orcamentos || 0;
+    document.getElementById("kpiValor").textContent = moeda(resumo.valorTotal || 0);
+    document.getElementById("kpiEstoque").textContent = resumo.estoqueBaixo || 0;
+    document.getElementById("kpiEstoqueParado").textContent = resumo.estoqueParado || 0;
+    document.getElementById("kpiValorEstoque").textContent = moeda(resumo.valorEstoque || 0);
+    document.getElementById("kpiComprasMes").textContent = resumo.comprasMes || 0;
+    document.getElementById("kpiValorComprasMes").textContent = moeda(resumo.valorComprasMes || 0);
+    const categoria = document.getElementById("kpiCategorias");
+    if (categoria) categoria.textContent = resumo.categorias || 0;
+    preencherUltimosOrcamentos(resumo.ultimosOrcamentos || []);
+    preencherEstoqueBaixo(resumo.estoqueBaixoProdutos || []);
 }
 
 function preencherUltimosOrcamentos(lista) {
@@ -414,15 +420,16 @@ function preencherEstoqueBaixo(lista) {
     const tbody = document.getElementById("tabelaEstoqueBaixo");
 
     if (!lista.length) {
-        tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Nenhum produto com estoque baixo.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Nenhum produto com estoque baixo.</td></tr>';
         return;
     }
 
     tbody.innerHTML = lista.map(item => `<tr>
-        <td>${escaparHtml(item.produto?.nome)}</td>
-        <td>${escaparHtml(item.sku)}</td>
-        <td>${numero(item.estoqueAtual)}</td>
-        <td>${numero(item.estoqueMinimo)}</td>
+        <td><strong>${escaparHtml(item.nome || "Produto")}</strong></td>
+        <td>${escaparHtml(item.codigo || "—")}</td>
+        <td>${numero(item.estoqueAtual)} ${escaparHtml(item.unidadeMedida || "UN")}</td>
+        <td>${numero(item.estoqueMinimo)} ${escaparHtml(item.unidadeMedida || "UN")}</td>
+        <td>${moeda(item.custoMedio || item.ultimoCusto || 0)}</td>
     </tr>`).join("");
 }
 
