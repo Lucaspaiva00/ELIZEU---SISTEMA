@@ -248,7 +248,14 @@ class CompraRepository {
                 }
             }
 
-            return this.buscarPorId(compra.id, dados.empresaId);
+            return tx.compra.findUnique({
+                where: { id: compra.id },
+                include: {
+                    fornecedor: true,
+                    itens: { include: { produto: true } },
+                    contasPagar: { orderBy: { parcelaNumero: "asc" } }
+                }
+            });
         }, { timeout: 20000 });
     }
 
@@ -313,7 +320,14 @@ class CompraRepository {
                 }
             });
 
-            return this.buscarPorId(compra.id, empresaId);
+            return tx.compra.findUnique({
+                where: { id: compra.id },
+                include: {
+                    fornecedor: true,
+                    itens: { include: { produto: true } },
+                    contasPagar: { orderBy: { parcelaNumero: "asc" } }
+                }
+            });
         }, { timeout: 20000 });
     }
 
