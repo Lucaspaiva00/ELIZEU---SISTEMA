@@ -16,6 +16,7 @@ router.get('/classificacoes-rtc', auth, consultarProdutos, (req, res) => {
     const rtc = require('../utils/classificacaoRtc');
     res.json({ sucesso: true, fonte: rtc.catalogo.fonte, consultadoEm: rtc.catalogo.consultadoEm, classificacoes: rtc.listar() });
 });
+router.get("/estoque/fornecedores", auth, autorizar("produtos.movimentar_estoque"), produtoController.listarFornecedores);
 router.post("/:id/duplicar", auth, autorizar("produtos.duplicar"), produtoController.duplicar);
 router.get("/:id/estoque-principal/movimentacoes", auth, autorizar("produtos.visualizar"), produtoController.listarMovimentacoesEstoquePrincipal);
 router.post("/:id/estoque-principal/entrada", auth, autorizar("produtos.movimentar_estoque"), produtoController.adicionarEntradaEstoquePrincipal);
