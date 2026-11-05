@@ -352,7 +352,7 @@ function renderizarTabela(lista) {
     if (!totalRegistros) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="7" class="text-center">
+                <td colspan="8" class="text-center">
                     Nenhum cliente cadastrado.
                 </td>
             </tr>
@@ -386,6 +386,10 @@ function renderizarTabela(lista) {
             <td>${escaparHtml(telefone)}</td>
             <td>${escaparHtml(documento)}</td>
             <td>${escaparHtml(email)}</td>
+            <td>
+                ${cliente.ehCliente !== false ? '<span class="badge badge-primary">Cliente</span>' : ''}
+                ${cliente.ehFornecedor ? '<span class="badge badge-warning">Fornecedor</span>' : ''}
+            </td>
             <td>
                 <span class="badge ${origem === "SACMAIS" ? "badge-info" : "badge-secondary"}">
                     ${origem === "SACMAIS" ? "SacMais" : "ERP"}
@@ -602,6 +606,8 @@ function proximaPaginaClientes() {
 function abrirModal() {
     clienteEditandoId = null;
     formCliente.reset();
+    document.getElementById("ehCliente").checked = true;
+    document.getElementById("ehFornecedor").checked = false;
 
     const titulo = document.querySelector("#modalCliente .modal-title");
 
@@ -654,8 +660,8 @@ async function salvarCliente() {
 
         mostrarMensagem(
             clienteEditandoId
-                ? "Cliente atualizado com sucesso."
-                : "Cliente cadastrado com sucesso."
+                ? "Cadastro atualizado com sucesso."
+                : "Cadastro realizado com sucesso."
         );
     } catch (erro) {
         console.error(erro);
@@ -665,7 +671,7 @@ async function salvarCliente() {
             botaoSalvar.disabled = false;
             botaoSalvar.innerHTML = `
                 <i class="fas fa-save"></i>
-                Salvar Cliente
+                Salvar Cadastro
             `;
         }
     }
@@ -704,6 +710,13 @@ function editarCliente(id) {
         cliente.prazoPagamentoPadrao
     );
     preencherCampo("observacoes", cliente.observacoes);
+    document.getElementById("ehCliente").checked = cliente.ehCliente !== false;
+    document.getElementById("ehFornecedor").checked = Boolean(cliente.ehFornecedor);
+    preencherCampo("pixTipo", cliente.pixTipo);
+    preencherCampo("pixChave", cliente.pixChave);
+    preencherCampo("bancoNome", cliente.bancoNome);
+    preencherCampo("bancoAgencia", cliente.bancoAgencia);
+    preencherCampo("bancoConta", cliente.bancoConta);
 
     const titulo = document.querySelector("#modalCliente .modal-title");
 
@@ -777,11 +790,22 @@ function obterDadosFormulario() {
             "prazoPagamentoPadrao"
         ),
         observacoes: valorOpcional("observacoes"),
+        ehCliente: document.getElementById("ehCliente")?.checked !== false,
+        ehFornecedor: Boolean(document.getElementById("ehFornecedor")?.checked),
+        pixTipo: valorOpcional("pixTipo"),
+        pixChave: valorOpcional("pixChave"),
+        bancoNome: valorOpcional("bancoNome"),
+        bancoAgencia: valorOpcional("bancoAgencia"),
+        bancoConta: valorOpcional("bancoConta"),
         ativo: true
     };
 }
 
 function validarCliente(dados) {
+    if (!dados.ehCliente && !dados.ehFornecedor) {
+        throw new Error("Marque este cadastro como cliente, fornecedor ou ambos.");
+    }
+
     if (!dados.tipoPessoa) {
         throw new Error("Selecione o tipo de pessoa.");
     }
