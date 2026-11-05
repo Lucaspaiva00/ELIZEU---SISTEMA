@@ -84,6 +84,10 @@ class DashboardService {
         return dashboardRepository.buscarFinanceiro(empresaId, intervalo);
     }
 
+    async buscarAlertas(empresaId) {
+        return dashboardRepository.buscarAlertas(empresaId);
+    }
+
     async buscarResumo(empresaId) {
 
         return await dashboardRepository.buscarResumo(
