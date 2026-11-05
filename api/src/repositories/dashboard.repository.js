@@ -444,6 +444,48 @@ class DashboardRepository {
         };
     }
 
+    async buscarAlertas(empresaId) {
+        const agora = new Date();
+        const hoje = new Date(agora);
+        hoje.setHours(0, 0, 0, 0);
+        const amanha = new Date(hoje);
+        amanha.setDate(amanha.getDate() + 1);
+        const fimAmanha = new Date(amanha);
+        fimAmanha.setHours(23, 59, 59, 999);
+
+        const [receberVencidas, pagarVencidas, receberAmanha, pagarAmanha, produtos] = await Promise.all([
+            prisma.contaReceber.count({
+                where: { empresaId, status: { in: ["PENDENTE","PARCIAL","ATRASADO"] }, dataVencimento: { lt: hoje } }
+            }),
+            prisma.contaPagar.count({
+                where: { empresaId, status: { in: ["PENDENTE","PARCIAL","ATRASADO"] }, dataVencimento: { lt: hoje } }
+            }),
+            prisma.contaReceber.count({
+                where: { empresaId, status: { in: ["PENDENTE","PARCIAL"] }, dataVencimento: { gte: amanha, lte: fimAmanha } }
+            }),
+            prisma.contaPagar.count({
+                where: { empresaId, status: { in: ["PENDENTE","PARCIAL"] }, dataVencimento: { gte: amanha, lte: fimAmanha } }
+            }),
+            prisma.produto.findMany({
+                where: { empresaId, ativo: true, controlaEstoque: true },
+                select: { estoqueAtual: true, estoqueMinimo: true }
+            })
+        ]);
+
+        const estoqueBaixo = produtos.filter(
+            p => Number(p.estoqueAtual || 0) <= Number(p.estoqueMinimo || 0)
+        ).length;
+
+        const alertas = [];
+        if (receberVencidas) alertas.push({ tipo:"danger", icone:"fa-hand-holding-dollar", titulo:`${receberVencidas} conta(s) a receber vencida(s)`, destino:"contas-receber.html" });
+        if (pagarVencidas) alertas.push({ tipo:"danger", icone:"fa-file-invoice-dollar", titulo:`${pagarVencidas} conta(s) a pagar vencida(s)`, destino:"contas-pagar.html" });
+        if (estoqueBaixo) alertas.push({ tipo:"warning", icone:"fa-boxes-stacked", titulo:`${estoqueBaixo} produto(s) abaixo do estoque mínimo`, destino:"produtos.html" });
+        if (receberAmanha) alertas.push({ tipo:"info", icone:"fa-calendar-day", titulo:`${receberAmanha} recebimento(s) vencem amanhã`, destino:"contas-receber.html" });
+        if (pagarAmanha) alertas.push({ tipo:"info", icone:"fa-calendar-day", titulo:`${pagarAmanha} pagamento(s) vencem amanhã`, destino:"contas-pagar.html" });
+
+        return { quantidade: alertas.length, alertas };
+    }
+
     async buscarResumo(empresaId) {
         const agora = new Date();
         const inicioMes = new Date(agora.getFullYear(), agora.getMonth(), 1);
