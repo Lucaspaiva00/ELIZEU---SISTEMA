@@ -626,14 +626,26 @@ model Cliente {
   observacoes          String?
   ativo                Boolean  @default(true)
 
+  // Um mesmo cadastro pode atuar como cliente, fornecedor ou ambos.
+  ehCliente    Boolean @default(true)
+  ehFornecedor Boolean @default(false)
+
+  // Dados bancários usados principalmente para pagamentos a fornecedores.
+  pixTipo     String?
+  pixChave    String?
+  bancoNome   String?
+  bancoAgencia String?
+  bancoConta   String?
+
   // Integração SacMais
   sacmaisId             String?
   origemCadastro        String?   @default("ERP")
   sincronizadoSacMaisEm DateTime?
 
-  orcamentos    Orcamento[]
-  vendas        Venda[]
-  contasReceber ContaReceber[]
+  orcamentos             Orcamento[]
+  vendas                 Venda[]
+  contasReceber           ContaReceber[]
+  contasPagarFornecedor   ContaPagar[] @relation("ContaPagarFornecedor")
 
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
@@ -891,7 +903,8 @@ model ContaFinanceira {
   padrao           Boolean             @default(false)
   ativa            Boolean             @default(true)
 
-  movimentacoes MovimentacaoFinanceira[]
+  movimentacoes            MovimentacaoFinanceira[]
+  movimentacoesEstoqueProduto MovimentacaoEstoqueProduto[] @relation("MovimentoEstoqueProdutoContaPagar")
 
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
@@ -1019,6 +1032,8 @@ model ContaPagar {
   centroCustoId Int?
   centroCusto   CentroCusto? @relation(fields: [centroCustoId], references: [id], onDelete: SetNull)
 
+  fornecedorId        Int?
+  fornecedor           Cliente? @relation("ContaPagarFornecedor", fields: [fornecedorId], references: [id], onDelete: SetNull)
   fornecedorNome      String?
   fornecedorDocumento String?
   descricao           String
@@ -1162,6 +1177,9 @@ model MovimentacaoEstoqueProduto {
 
   responsavelId Int?
   responsavel   Usuario? @relation("MovimentoEstoqueProdutoResponsavel", fields: [responsavelId], references: [id], onDelete: SetNull)
+
+  contaPagarId Int?
+  contaPagar   ContaPagar? @relation("MovimentoEstoqueProdutoContaPagar", fields: [contaPagarId], references: [id], onDelete: SetNull)
 
   tipo   TipoMovimentacaoEstoque
   origem OrigemMovimentacaoEstoque @default(AJUSTE_MANUAL)
