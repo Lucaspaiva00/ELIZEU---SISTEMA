@@ -445,120 +445,98 @@ class DashboardRepository {
     }
 
     async buscarResumo(empresaId) {
+        const agora = new Date();
+        const inicioMes = new Date(agora.getFullYear(), agora.getMonth(), 1);
+        const limiteParado = new Date(agora);
+        limiteParado.setDate(limiteParado.getDate() - 90);
 
         const [
-
             clientes,
-
             produtos,
-
+            fornecedores,
             categorias,
-
             orcamentos,
-
-            variacoes,
-
             totalOrcamentos,
-
             ultimosOrcamentos,
-
-            estoqueBaixoProdutos
-
+            listaProdutos,
+            comprasMes
         ] = await Promise.all([
-
-            prisma.cliente.count({
-                where: { empresaId }
-            }),
-
-            prisma.produto.count({
-                where: { empresaId }
-            }),
-
-            prisma.categoriaProduto.count({
-                where: { empresaId }
-            }),
-
-            prisma.orcamento.count({
-                where: { empresaId }
-            }),
-
-            prisma.variacaoProduto.findMany({
-                where: {
-                    produto: {
-                        empresaId
-                    }
-                },
-                select: {
-                    estoqueAtual: true,
-                    estoqueMinimo: true
-                }
-            }),
-
+            prisma.cliente.count({ where: { empresaId, ativo: true } }),
+            prisma.produto.count({ where: { empresaId, ativo: true } }),
+            prisma.fornecedor.count({ where: { empresaId, ativo: true } }),
+            prisma.categoriaProduto.count({ where: { empresaId } }),
+            prisma.orcamento.count({ where: { empresaId } }),
             prisma.orcamento.aggregate({
-                where: {
-                    empresaId
-                },
-                _sum: {
-                    total: true
-                }
+                where: { empresaId },
+                _sum: { total: true }
             }),
-
             prisma.orcamento.findMany({
-                where: {
-                    empresaId
-                },
-                include: {
-                    cliente: true
-                },
-                orderBy: {
-                    criadoEm: "desc"
-                },
+                where: { empresaId },
+                include: { cliente: true },
+                orderBy: { criadoEm: "desc" },
                 take: 5
             }),
-
-            prisma.variacaoProduto.findMany({
-                where: {
-                    produto: {
-                        empresaId
+            prisma.produto.findMany({
+                where: { empresaId, ativo: true, controlaEstoque: true },
+                select: {
+                    id: true,
+                    codigo: true,
+                    nome: true,
+                    unidadeMedida: true,
+                    estoqueAtual: true,
+                    estoqueMinimo: true,
+                    custoMedio: true,
+                    ultimoCusto: true,
+                    movimentacoesEstoque: {
+                        select: { dataMovimentacao: true },
+                        orderBy: { dataMovimentacao: "desc" },
+                        take: 1
                     }
                 },
-                include: {
-                    produto: true
-                },
-                orderBy: {
-                    estoqueAtual: "asc"
-                },
-                take: 5
+                orderBy: { estoqueAtual: "asc" }
+            }),
+            prisma.compra.findMany({
+                where: { empresaId, status: "CONFIRMADA", dataCompra: { gte: inicioMes } },
+                select: { total: true }
             })
-
         ]);
 
-        const estoqueBaixo = variacoes.filter(v =>
-            Number(v.estoqueAtual) <= Number(v.estoqueMinimo)
+        const estoqueBaixoProdutos = listaProdutos
+            .filter(p => Number(p.estoqueAtual || 0) <= Number(p.estoqueMinimo || 0))
+            .slice(0, 8);
+
+        const estoqueBaixo = listaProdutos.filter(
+            p => Number(p.estoqueAtual || 0) <= Number(p.estoqueMinimo || 0)
         ).length;
 
+        const valorEstoque = listaProdutos.reduce((soma, produto) => {
+            const custo = Number(produto.custoMedio || produto.ultimoCusto || 0);
+            return soma + (Number(produto.estoqueAtual || 0) * custo);
+        }, 0);
+
+        const estoqueParado = listaProdutos.filter(produto => {
+            const ultima = produto.movimentacoesEstoque?.[0]?.dataMovimentacao;
+            return Number(produto.estoqueAtual || 0) > 0 && (!ultima || new Date(ultima) < limiteParado);
+        }).length;
+
+        const valorComprasMes = comprasMes.reduce((soma, compra) => soma + Number(compra.total || 0), 0);
+
         return {
-
             clientes,
-
             produtos,
-
+            fornecedores,
             categorias,
-
             orcamentos,
-
             estoqueBaixo,
-
-            valorTotal:
-                Number(totalOrcamentos._sum.total || 0),
-
+            estoqueParado,
+            valorEstoque,
+            comprasMes: comprasMes.length,
+            valorComprasMes,
+            valorTotal: Number(totalOrcamentos._sum.total || 0),
             ultimosOrcamentos,
-
             estoqueBaixoProdutos
-
         };
 
-    }
 
 }
 
