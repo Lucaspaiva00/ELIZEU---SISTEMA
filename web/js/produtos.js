@@ -128,7 +128,7 @@ function renderizarTabela(lista) {
     if (!lista.length) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="7" class="text-center">
+                <td colspan="9" class="text-center">
                     Nenhum produto cadastrado.
                 </td>
             </tr>
@@ -182,6 +182,14 @@ function renderizarTabela(lista) {
                 <span class="badge ${Number(produto.estoqueAtual || 0) <= Number(produto.estoqueMinimo || 0) ? "badge-warning" : "badge-success"}">
                     ${numero(produto.estoqueAtual || 0)} ${escaparHtml(produto.unidadeMedida || "UN")}
                 </span>
+            </td>
+
+            <td>
+                ${moeda(Number(produto.custoMedio || produto.ultimoCusto || 0))}
+            </td>
+
+            <td>
+                <strong>${moeda(Number(produto.estoqueAtual || 0) * Number(produto.custoMedio || produto.ultimoCusto || 0))}</strong>
             </td>
 
             <td>
