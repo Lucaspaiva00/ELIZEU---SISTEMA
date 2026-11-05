@@ -3,6 +3,7 @@ const router = express.Router();
 const auth = require("../middlewares/auth.middleware");
 const { autorizar, autorizarQualquer } = require("../middlewares/permissions.middleware");
 const clienteController = require("../controllers/cliente.controller");
+const clienteResumoController = require("../controllers/clienteResumo.controller");
 
 const consultarClientes = autorizarQualquer(
     "clientes.visualizar",
@@ -12,6 +13,7 @@ const consultarClientes = autorizarQualquer(
 
 router.post("/", auth, autorizar("clientes.criar"), clienteController.criar);
 router.get("/", auth, consultarClientes, clienteController.listar);
+router.get("/:id/resumo", auth, autorizar("clientes.visualizar"), clienteResumoController.buscar);
 router.get("/:id", auth, consultarClientes, clienteController.buscarPorId);
 router.put("/:id", auth, autorizar("clientes.editar"), clienteController.atualizar);
 router.delete("/:id", auth, autorizar("clientes.excluir"), clienteController.excluir);
