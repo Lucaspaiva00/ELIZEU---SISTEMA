@@ -1066,6 +1066,7 @@ model ContaPagar {
   @@unique([vendaId, custoInternoIndice])
   @@index([empresaId, status, dataVencimento])
   @@index([vendaId])
+  @@index([fornecedorId])
   @@index([recorrenciaGrupo])
 }
 
@@ -1194,5 +1195,6 @@ model MovimentacaoEstoqueProduto {
 
   @@index([empresaId, dataMovimentacao])
   @@index([produtoId, dataMovimentacao])
+  @@index([contaPagarId])
 }
 
