@@ -33,6 +33,16 @@ class DashboardController {
 
     }
 
+    async buscarAlertas(req, res) {
+        try {
+            const alertas = await dashboardService.buscarAlertas(req.usuario.empresaId);
+            return res.json({ sucesso: true, ...alertas });
+        } catch (erro) {
+            console.error(erro);
+            return res.status(500).json({ sucesso: false, mensagem: "Erro ao carregar alertas." });
+        }
+    }
+
     async buscarResumo(req, res) {
 
         try {
