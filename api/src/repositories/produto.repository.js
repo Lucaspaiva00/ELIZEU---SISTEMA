@@ -357,6 +357,28 @@ class ProdutoRepository {
         });
     }
 
+    async listarFornecedores(empresaId) {
+        return prisma.cliente.findMany({
+            where: {
+                empresaId,
+                ativo: true,
+                ehFornecedor: true
+            },
+            select: {
+                id: true,
+                nome: true,
+                nomeFantasia: true,
+                cpfCnpj: true,
+                pixTipo: true,
+                pixChave: true,
+                bancoNome: true,
+                bancoAgencia: true,
+                bancoConta: true
+            },
+            orderBy: { nome: "asc" }
+        });
+    }
+
     async listarMovimentacoesEstoquePrincipal(produtoId, empresaId, limite = 50) {
         return prisma.movimentacaoEstoqueProduto.findMany({
             where: { produtoId, empresaId },
@@ -373,7 +395,7 @@ class ProdutoRepository {
         });
     }
 
-    async adicionarEntradaEstoquePrincipal(produtoId, empresaId, responsavelId, quantidade, observacoes) {
+    async adicionarEntradaEstoquePrincipal(produtoId, empresaId, responsavelId, quantidade, observacoes, financeiro = null) {
         return prisma.$transaction(async (tx) => {
             const produto = await tx.produto.findFirst({
                 where: { id: produtoId, empresaId, ativo: true }
@@ -381,6 +403,53 @@ class ProdutoRepository {
 
             if (!produto) throw new Error("Produto não encontrado.");
             if (!produto.controlaEstoque) throw new Error("Este produto está com o controle de estoque desativado.");
+
+            let contaPagar = null;
+            let fornecedor = null;
+
+            if (financeiro?.gerarContaPagar) {
+                fornecedor = await tx.cliente.findFirst({
+                    where: {
+                        id: financeiro.fornecedorId,
+                        empresaId,
+                        ativo: true,
+                        ehFornecedor: true
+                    }
+                });
+
+                if (!fornecedor) {
+                    throw new Error("Fornecedor inválido ou não marcado como fornecedor.");
+                }
+
+                const vencimento = new Date(financeiro.dataVencimento);
+                vencimento.setHours(12, 0, 0, 0);
+
+                contaPagar = await tx.contaPagar.create({
+                    data: {
+                        empresaId,
+                        fornecedorId: fornecedor.id,
+                        fornecedorNome: fornecedor.nomeFantasia || fornecedor.nome,
+                        fornecedorDocumento: fornecedor.cpfCnpj,
+                        descricao: `Compra de estoque - ${produto.nome}`,
+                        numeroDocumento: financeiro.numeroDocumento || null,
+                        valorOriginal: financeiro.valorTotal,
+                        dataCompetencia: new Date(),
+                        dataEmissao: new Date(),
+                        dataVencimento: vencimento,
+                        formaPagamento: financeiro.formaPagamento || null,
+                        status: vencimento < new Date(new Date().setHours(0, 0, 0, 0))
+                            ? "ATRASADO"
+                            : "PENDENTE",
+                        observacoes: [
+                            `Gerado automaticamente pela entrada de estoque de ${quantidade} ${produto.unidadeMedida}.`,
+                            observacoes || null
+                        ].filter(Boolean).join(" ")
+                    },
+                    include: {
+                        fornecedor: true
+                    }
+                });
+            }
 
             const atualizado = await tx.produto.update({
                 where: { id: produtoId },
@@ -395,19 +464,23 @@ class ProdutoRepository {
                     empresaId,
                     produtoId,
                     responsavelId: responsavelId || null,
+                    contaPagarId: contaPagar?.id || null,
                     tipo: "ENTRADA",
-                    origem: "AJUSTE_MANUAL",
+                    origem: financeiro?.gerarContaPagar ? "COMPRA" : "AJUSTE_MANUAL",
                     quantidade,
                     saldoAnterior,
                     saldoPosterior,
                     observacoes: observacoes || null
                 },
                 include: {
-                    responsavel: { select: { id: true, nome: true } }
+                    responsavel: { select: { id: true, nome: true } },
+                    contaPagar: {
+                        include: { fornecedor: true }
+                    }
                 }
             });
 
-            return { produto: atualizado, movimentacao };
+            return { produto: atualizado, movimentacao, contaPagar, fornecedor };
         });
     }
 
