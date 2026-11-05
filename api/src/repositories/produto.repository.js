@@ -407,12 +407,11 @@ class ProdutoRepository {
             let fornecedor = null;
 
             if (financeiro?.gerarContaPagar) {
-                fornecedor = await tx.cliente.findFirst({
+                fornecedor = await tx.fornecedor.findFirst({
                     where: {
                         id: financeiro.fornecedorId,
                         empresaId,
-                        ativo: true,
-                        ehFornecedor: true
+                        ativo: true
                     }
                 });
 
