@@ -225,6 +225,21 @@ function abrirModalPagar(id) {
     document.getElementById("descricaoPagamento").textContent = `${titulo.fornecedorNome || "Fornecedor"} • ${titulo.descricao}`;
     document.getElementById("valorPagamento").value = saldo.toFixed(2);
     document.getElementById("dataPagamento").value = dataInput(); document.getElementById("formaPagamentoBaixa").value = titulo.formaPagamento || "";
+
+    const dadosFornecedor = document.getElementById("dadosPagamentoFornecedor");
+    const fornecedor = titulo.fornecedor;
+    if (dadosFornecedor) {
+        const linhas = [];
+        if (fornecedor?.pixChave) linhas.push(`<strong>Pix:</strong> ${escapar(fornecedor.pixTipo || "Chave")} — ${escapar(fornecedor.pixChave)}`);
+        if (fornecedor?.bancoNome) linhas.push(`<strong>Banco:</strong> ${escapar(fornecedor.bancoNome)}`);
+        if (fornecedor?.bancoAgencia) linhas.push(`<strong>Agência:</strong> ${escapar(fornecedor.bancoAgencia)}`);
+        if (fornecedor?.bancoConta) linhas.push(`<strong>Conta:</strong> ${escapar(fornecedor.bancoConta)}`);
+        dadosFornecedor.innerHTML = linhas.length
+            ? `<div class="modal-section-head"><div><h3>Dados do fornecedor</h3><p>Informações cadastradas para facilitar o pagamento.</p></div></div><div>${linhas.join("<br>")}</div>`
+            : "";
+        dadosFornecedor.style.display = linhas.length ? "block" : "none";
+    }
+
     ["valorDesconto", "valorJuros", "valorMulta"].forEach(idCampo => document.getElementById(idCampo).value = 0);
     const padrao = contasFinanceiras.find(conta => conta.padrao); if (padrao) document.getElementById("contaFinanceiraId").value = padrao.id;
     document.getElementById("modalPagar").classList.add("active");
