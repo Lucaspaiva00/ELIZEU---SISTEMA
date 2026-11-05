@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Relatórios | Elian Sigs</title>
+<link rel="stylesheet" href="../css/app.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+<style>
+.report-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:18px}
+.report-kpi{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:16px}.report-kpi span{display:block;color:#64748b;font-size:12px}.report-kpi strong{font-size:22px}
+.report-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}.report-section{margin-top:18px}
+.status-pill{display:inline-flex;padding:4px 9px;border-radius:999px;font-size:11px;font-weight:700}.st-repor{background:#fee2e2;color:#991b1b}.st-atencao{background:#fef3c7;color:#92400e}.st-parado{background:#e2e8f0;color:#475569}.st-saudavel{background:#dcfce7;color:#166534}
+@media(max-width:900px){.report-kpis{grid-template-columns:repeat(2,1fr)}.report-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body><div class="wrapper"><div id="sidebar"></div><main class="main"><div id="topbar"></div><section class="content">
+<div class="page-header"><div><h1 class="page-title">Relatórios e Estoque Inteligente</h1><p class="page-subtitle">Rentabilidade, fluxo realizado, compras e reposição baseada no consumo real.</p></div></div>
+
+<div class="card"><div class="card-body"><div class="filters">
+<div class="form-group"><label>Início</label><input id="relInicio" type="date" class="form-control"></div>
+<div class="form-group"><label>Fim</label><input id="relFim" type="date" class="form-control"></div>
+<div class="form-group" style="align-self:end"><button class="btn btn-primary" onclick="carregarRelatorios()"><i class="fas fa-filter"></i> Atualizar</button></div>
+</div></div></div>
+
+<div class="report-kpis report-section">
+<div class="report-kpi"><span>Receita de vendas</span><strong id="rpReceita">R$ 0,00</strong></div>
+<div class="report-kpi"><span>Lucro gerencial</span><strong id="rpLucro">R$ 0,00</strong><small id="rpMargem">Margem 0%</small></div>
+<div class="report-kpi"><span>Resultado de caixa</span><strong id="rpCaixa">R$ 0,00</strong><small id="rpCaixaDetalhe">Recebido - pago</small></div>
+<div class="report-kpi"><span>Compras no período</span><strong id="rpCompras">R$ 0,00</strong></div>
+</div>
+
+<div class="report-grid">
+<div class="card"><div class="card-body"><h3>DRE gerencial simplificada</h3><div class="table-responsive"><table class="table"><tbody>
+<tr><td>Receita líquida de vendas</td><td class="text-right"><strong id="dreReceita">R$ 0,00</strong></td></tr>
+<tr><td>(-) Custo dos itens vendidos</td><td class="text-right" id="dreCustoItens">R$ 0,00</td></tr>
+<tr><td>(-) Custos internos</td><td class="text-right" id="dreCustosInternos">R$ 0,00</td></tr>
+<tr><td><strong>Resultado gerencial</strong></td><td class="text-right"><strong id="dreResultado">R$ 0,00</strong></td></tr>
+<tr><td>Margem</td><td class="text-right" id="dreMargem">0%</td></tr>
+<tr><td>Recebido no caixa</td><td class="text-right" id="dreRecebido">R$ 0,00</td></tr>
+<tr><td>Pago no caixa</td><td class="text-right" id="drePago">R$ 0,00</td></tr>
+</tbody></table></div></div></div>
+<div class="card"><div class="card-body"><h3>Compras por fornecedor</h3><div class="table-responsive"><table class="table"><thead><tr><th>Fornecedor</th><th>Compras</th><th>Valor</th></tr></thead><tbody id="tblFornecedores"></tbody></table></div></div></div>
+</div>
+
+<div class="card report-section"><div class="card-body"><div class="page-header" style="margin-bottom:10px"><div><h3>Rentabilidade por venda</h3><p class="page-subtitle">Lucro e margem com base nos custos gravados na venda.</p></div></div>
+<div class="table-responsive"><table class="table"><thead><tr><th>Venda</th><th>Data</th><th>Cliente</th><th>Receita</th><th>Custo</th><th>Lucro</th><th>Margem</th></tr></thead><tbody id="tblRentabilidade"></tbody></table></div></div></div>
+
+<div class="report-kpis report-section">
+<div class="report-kpi"><span>Valor atual do estoque</span><strong id="estValor">R$ 0,00</strong></div>
+<div class="report-kpi"><span>Produtos para repor</span><strong id="estRepor">0</strong></div>
+<div class="report-kpi"><span>Custo estimado da reposição</span><strong id="estCustoReposicao">R$ 0,00</strong></div>
+<div class="report-kpi"><span>Itens parados</span><strong id="estParados">0</strong></div>
+</div>
+
+<div class="card report-section"><div class="card-body">
+<div class="page-header" style="margin-bottom:10px"><div><h3>Estoque inteligente</h3><p class="page-subtitle">Sugestão considera saídas dos últimos 90 dias, cobertura de 30 dias e estoque mínimo.</p></div></div>
+<div class="table-responsive"><table class="table"><thead><tr><th>Produto</th><th>Atual</th><th>Saídas 90d</th><th>Cobertura</th><th>Giro est.</th><th>Sugestão</th><th>Custo reposição</th><th>Situação</th></tr></thead><tbody id="tblEstoqueInteligente"></tbody></table></div>
+</div></div>
+
+</section></main></div>
+<script src="../js/layout.js"></script><script src="../js/api.js"></script><script src="../js/utils.js"></script><script src="../js/app.js"></script><script src="../js/menu.js"></script><script src="../js/relatorios.js"></script>
+</body></html>

@@ -21,6 +21,7 @@ router.use("/categorias-financeiras", require("./categoriaFinanceira.routes"));
 router.use("/centros-custo", require("./centroCusto.routes"));
 router.use("/dashboard", require("./dashboard.routes"));
 router.use("/auditoria", require("./auditoria.routes"));
+router.use("/relatorios", require("./relatorio.routes"));
 router.use("/integracoes/sacmais", require("./sacmais.routes"));
 
 module.exports = router;
