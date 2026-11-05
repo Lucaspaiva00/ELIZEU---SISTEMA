@@ -173,6 +173,43 @@
                     </div>
 
                 </div>
+                <div class="modal-overlay" id="modalCliente360">
+                    <div class="modal modal-xl">
+                        <div class="modal-header">
+                            <div>
+                                <h2 class="modal-title" id="cliente360Titulo">Visão 360º do Cliente</h2>
+                                <p class="modal-section-help">Histórico comercial e financeiro consolidado.</p>
+                            </div>
+                            <button type="button" class="modal-close" onclick="fecharCliente360()">&times;</button>
+                        </div>
+                        <div class="modal-body">
+                            <div style="display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;margin-bottom:16px">
+                                <div class="card"><div class="card-body"><small>Total comprado</small><h3 id="c360Total">R$ 0,00</h3></div></div>
+                                <div class="card"><div class="card-body"><small>Vendas</small><h3 id="c360Vendas">0</h3></div></div>
+                                <div class="card"><div class="card-body"><small>Ticket médio</small><h3 id="c360Ticket">R$ 0,00</h3></div></div>
+                                <div class="card"><div class="card-body"><small>Recebido</small><h3 id="c360Recebido">R$ 0,00</h3></div></div>
+                                <div class="card"><div class="card-body"><small>Em aberto</small><h3 id="c360Aberto">R$ 0,00</h3></div></div>
+                                <div class="card"><div class="card-body"><small>Vencido</small><h3 id="c360Vencido">R$ 0,00</h3></div></div>
+                            </div>
+                            <div class="modal-fields-2">
+                                <div class="modal-section-card">
+                                    <div class="modal-section-head"><div><h3>Linha do tempo</h3><p>Orçamentos, vendas e recebimentos recentes.</p></div></div>
+                                    <div id="cliente360Timeline"></div>
+                                </div>
+                                <div class="modal-section-card">
+                                    <div class="modal-section-head"><div><h3>Financeiro recente</h3><p>Últimos títulos do cliente.</p></div></div>
+                                    <div class="table-responsive">
+                                        <table class="table">
+                                            <thead><tr><th>Descrição</th><th>Vencimento</th><th>Status</th><th>Saldo</th></tr></thead>
+                                            <tbody id="cliente360Contas"></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Modal -->
 
                 <div class="modal-overlay" id="modalCliente" data-modal-tabs>

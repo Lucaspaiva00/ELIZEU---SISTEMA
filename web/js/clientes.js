@@ -400,6 +400,15 @@ function renderizarTabela(lista) {
                 <div class="table-actions">
                     <button
                         type="button"
+                        class="btn btn-light"
+                        onclick="abrirCliente360(${cliente.id})"
+                        title="Visão 360º"
+                    >
+                        <i class="fas fa-chart-line"></i>
+                    </button>
+
+                    <button
+                        type="button"
                         class="btn btn-warning"
                         onclick="editarCliente(${cliente.id})"
                         title="Editar cliente"
@@ -888,3 +897,64 @@ document.addEventListener("keydown", (event) => {
         fecharModal();
     }
 });
+
+function moedaCliente360(valor) {
+    return Number(valor || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+function dataCliente360(valor) {
+    return valor ? new Date(valor).toLocaleDateString("pt-BR") : "—";
+}
+
+async function abrirCliente360(id) {
+    try {
+        const resposta = await get(`/clientes/${id}/resumo`);
+        if (!resposta?.sucesso) throw new Error(resposta?.mensagem || "Erro ao carregar visão 360º.");
+
+        const dados = resposta.resumo;
+        const i = dados.indicadores || {};
+        document.getElementById("cliente360Titulo").textContent = `Cliente 360º — ${dados.cliente?.nomeFantasia || dados.cliente?.nome || "Cliente"}`;
+        document.getElementById("c360Total").textContent = moedaCliente360(i.totalComprado);
+        document.getElementById("c360Vendas").textContent = i.quantidadeVendas || 0;
+        document.getElementById("c360Ticket").textContent = moedaCliente360(i.ticketMedio);
+        document.getElementById("c360Recebido").textContent = moedaCliente360(i.recebido);
+        document.getElementById("c360Aberto").textContent = moedaCliente360(i.emAberto);
+        document.getElementById("c360Vencido").textContent = moedaCliente360(i.vencido);
+
+        const timeline = dados.timeline || [];
+        document.getElementById("cliente360Timeline").innerHTML = timeline.length
+            ? timeline.map(item => `<div style="display:flex;gap:12px;padding:12px 0;border-bottom:1px solid #eef2f7">
+                <div style="width:38px;height:38px;border-radius:10px;background:#f1f5f9;display:flex;align-items:center;justify-content:center">
+                    <i class="fas ${item.tipo === "VENDA" ? "fa-cart-shopping" : item.tipo === "RECEBIMENTO" ? "fa-hand-holding-dollar" : "fa-file-signature"}"></i>
+                </div>
+                <div style="flex:1">
+                    <strong>${escaparHtml(item.titulo || "")}</strong>
+                    <div style="font-size:12px;color:#64748b">${dataCliente360(item.data)} • ${escaparHtml(item.descricao || "")}</div>
+                </div>
+                <strong>${moedaCliente360(item.valor)}</strong>
+            </div>`).join("")
+            : '<div class="text-muted">Sem histórico comercial ainda.</div>';
+
+        const contas = dados.contas || [];
+        document.getElementById("cliente360Contas").innerHTML = contas.length
+            ? contas.map(c => {
+                const saldo = Math.max(0, Number(c.valorOriginal || 0) - Number(c.valorRecebido || 0));
+                return `<tr>
+                    <td>${escaparHtml(c.descricao || "—")}</td>
+                    <td>${dataCliente360(c.dataVencimento)}</td>
+                    <td><span class="badge ${c.status === "ATRASADO" ? "badge-danger" : c.status === "PAGO" ? "badge-success" : "badge-warning"}">${escaparHtml(c.status || "")}</span></td>
+                    <td><strong>${moedaCliente360(saldo)}</strong></td>
+                </tr>`;
+            }).join("")
+            : '<tr><td colspan="4" class="text-center">Sem títulos financeiros.</td></tr>';
+
+        document.getElementById("modalCliente360").classList.add("active");
+    } catch (erro) {
+        console.error(erro);
+        mostrarMensagem(erro.message || "Erro ao carregar visão 360º.");
+    }
+}
+
+function fecharCliente360() {
+    document.getElementById("modalCliente360")?.classList.remove("active");
+}
