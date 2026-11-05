@@ -123,6 +123,18 @@ class ProdutoController {
 
     }
 
+    async listarFornecedores(req, res) {
+        try {
+            const fornecedores = await produtoService.listarFornecedores(
+                req.usuario.empresaId
+            );
+
+            return res.json({ sucesso: true, fornecedores });
+        } catch (error) {
+            return res.status(400).json({ sucesso: false, mensagem: error.message });
+        }
+    }
+
     async listarMovimentacoesEstoquePrincipal(req, res) {
         try {
             const movimentacoes = await produtoService.listarMovimentacoesEstoquePrincipal(
