@@ -5,6 +5,7 @@ let produtoDetalhesId = null;
 let produtoEstoquePrincipalId = null;
 let variacoes = [];
 let composicao = [];
+let fornecedoresEstoquePrincipal = [];
 
 const modalProduto = document.getElementById("modalProduto");
 const modalDetalhesProduto = document.getElementById(
@@ -1604,10 +1605,20 @@ async function abrirModalEstoquePrincipal(id) {
     document.getElementById("estoquePrincipalQuantidade").value = "";
     document.getElementById("estoquePrincipalNovoSaldo").value = "";
     document.getElementById("estoquePrincipalObservacoes").value = "";
+    document.getElementById("estoquePrincipalGerarContaPagar").checked = false;
+    document.getElementById("estoquePrincipalFornecedor").value = "";
+    document.getElementById("estoquePrincipalFormaPagamento").value = "";
+    document.getElementById("estoquePrincipalValorTotal").value = "";
+    document.getElementById("estoquePrincipalVencimento").value = "";
+    document.getElementById("estoquePrincipalNumeroDocumento").value = "";
     alternarOperacaoEstoquePrincipal();
+    alternarFinanceiroEstoquePrincipal();
     atualizarResumoEstoquePrincipal(produto);
     modalEstoquePrincipal.classList.add("active");
-    await carregarMovimentacoesEstoquePrincipal();
+    await Promise.all([
+        carregarMovimentacoesEstoquePrincipal(),
+        carregarFornecedoresEstoquePrincipal()
+    ]);
 }
 
 function fecharModalEstoquePrincipal() {
@@ -1619,8 +1630,50 @@ function alternarOperacaoEstoquePrincipal() {
     const operacao = document.getElementById("estoquePrincipalOperacao")?.value || "ENTRADA";
     const entrada = document.getElementById("campoEntradaEstoquePrincipal");
     const ajuste = document.getElementById("campoAjusteEstoquePrincipal");
+    const financeiro = document.getElementById("blocoFinanceiroEstoquePrincipal");
     if (entrada) entrada.style.display = operacao === "ENTRADA" ? "block" : "none";
     if (ajuste) ajuste.style.display = operacao === "AJUSTE" ? "block" : "none";
+    if (financeiro) financeiro.style.display = operacao === "ENTRADA" ? "block" : "none";
+    if (operacao !== "ENTRADA") {
+        document.getElementById("estoquePrincipalGerarContaPagar").checked = false;
+    }
+    alternarFinanceiroEstoquePrincipal();
+}
+
+function alternarFinanceiroEstoquePrincipal() {
+    const marcado = Boolean(document.getElementById("estoquePrincipalGerarContaPagar")?.checked);
+    const campos = document.getElementById("camposFinanceiroEstoquePrincipal");
+    if (campos) campos.style.display = marcado ? "block" : "none";
+}
+
+async function carregarFornecedoresEstoquePrincipal() {
+    try {
+        const resposta = await get("/produtos/estoque/fornecedores");
+        fornecedoresEstoquePrincipal = resposta?.fornecedores || [];
+        const select = document.getElementById("estoquePrincipalFornecedor");
+        if (!select) return;
+        select.innerHTML = '<option value="">Selecione o fornecedor</option>' + fornecedoresEstoquePrincipal
+            .map(item => `<option value="${item.id}">${escaparHtml(item.nomeFantasia || item.nome)} — ${escaparHtml(item.cpfCnpj || "")}</option>`)
+            .join("");
+        select.onchange = atualizarPixFornecedorEstoquePrincipal;
+    } catch (erro) {
+        console.error(erro);
+    }
+}
+
+function atualizarPixFornecedorEstoquePrincipal() {
+    const id = Number(document.getElementById("estoquePrincipalFornecedor")?.value);
+    const fornecedor = fornecedoresEstoquePrincipal.find(item => item.id === id);
+    const info = document.getElementById("estoquePrincipalPixFornecedor");
+    if (!info) return;
+    if (!fornecedor) {
+        info.textContent = "";
+        return;
+    }
+    const partes = [];
+    if (fornecedor.pixChave) partes.push(`Pix: ${fornecedor.pixTipo || "chave"} — ${fornecedor.pixChave}`);
+    if (fornecedor.bancoNome) partes.push(`Banco: ${fornecedor.bancoNome}`);
+    info.textContent = partes.join(" • ") || "Fornecedor sem dados bancários cadastrados.";
 }
 
 function nomeTipoMovimentacaoEstoquePrincipal(tipo) {
@@ -1707,6 +1760,40 @@ async function salvarMovimentacaoEstoquePrincipal() {
         }
         rota = `/produtos/${produtoEstoquePrincipalId}/estoque-principal/entrada`;
         dados = { quantidade, observacoes };
+
+        if (document.getElementById("estoquePrincipalGerarContaPagar")?.checked) {
+            const fornecedorId = Number(document.getElementById("estoquePrincipalFornecedor").value);
+            const valorTotal = Number(document.getElementById("estoquePrincipalValorTotal").value);
+            const formaPagamento = document.getElementById("estoquePrincipalFormaPagamento").value;
+            const dataVencimento = document.getElementById("estoquePrincipalVencimento").value;
+
+            if (!fornecedorId) {
+                mostrarMensagem("Selecione o fornecedor da compra.");
+                return;
+            }
+            if (!Number.isFinite(valorTotal) || valorTotal <= 0) {
+                mostrarMensagem("Informe o valor total da compra.");
+                return;
+            }
+            if (!formaPagamento) {
+                mostrarMensagem("Selecione a forma de pagamento.");
+                return;
+            }
+            if (!dataVencimento) {
+                mostrarMensagem("Informe o vencimento da compra.");
+                return;
+            }
+
+            dados = {
+                ...dados,
+                gerarContaPagar: true,
+                fornecedorId,
+                valorTotal,
+                formaPagamento,
+                dataVencimento,
+                numeroDocumento: document.getElementById("estoquePrincipalNumeroDocumento").value.trim() || null
+            };
+        }
     }
 
     try {
