@@ -358,11 +358,10 @@ class ProdutoRepository {
     }
 
     async listarFornecedores(empresaId) {
-        return prisma.cliente.findMany({
+        return prisma.fornecedor.findMany({
             where: {
                 empresaId,
-                ativo: true,
-                ehFornecedor: true
+                ativo: true
             },
             select: {
                 id: true,
