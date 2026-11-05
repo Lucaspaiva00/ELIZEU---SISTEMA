@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Compras | Elian Sigs</title>
+  <link rel="stylesheet" href="../css/app.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+  <style>
+    .purchase-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:18px}
+    .purchase-kpi{background:#fff;border:1px solid #e8edf4;border-radius:14px;padding:16px}
+    .purchase-kpi span{display:block;color:#64748b;font-size:13px}.purchase-kpi strong{font-size:24px;color:#0f172a}
+    .purchase-items{display:grid;gap:10px}.purchase-item{display:grid;grid-template-columns:2fr .7fr .9fr .9fr auto;gap:10px;align-items:end;padding:12px;border:1px solid #e5e7eb;border-radius:12px}
+    .purchase-total{font-weight:700;font-size:18px}.inline-check{display:flex;align-items:center;gap:8px;margin:8px 0 14px}
+    .finance-box{border:1px solid #dbe4f0;background:#f8fafc;border-radius:12px;padding:14px}
+    .status-chip{display:inline-flex;padding:4px 9px;border-radius:999px;font-size:12px;font-weight:700}
+    .status-ok{background:#dcfce7;color:#166534}.status-cancel{background:#fee2e2;color:#991b1b}
+    @media(max-width:900px){.purchase-kpis{grid-template-columns:repeat(2,1fr)}.purchase-item{grid-template-columns:1fr 1fr}.purchase-item .produto-col{grid-column:1/-1}}
+  </style>
+</head>
+<body>
+<div class="wrapper">
+  <div id="sidebar"></div>
+  <main class="main">
+    <div id="topbar"></div>
+    <section class="content">
+      <div class="page-header">
+        <div><h1 class="page-title">Compras</h1><p class="page-subtitle">Entrada de materiais ligada ao fornecedor, estoque, custo e contas a pagar.</p></div>
+        <div class="page-actions"><button class="btn btn-primary" onclick="abrirNovaCompra()"><i class="fas fa-plus"></i> Nova Compra</button></div>
+      </div>
+
+      <div class="purchase-kpis">
+        <div class="purchase-kpi"><span>Compras confirmadas</span><strong id="kpiCompras">0</strong></div>
+        <div class="purchase-kpi"><span>Total comprado</span><strong id="kpiTotal">R$ 0,00</strong></div>
+        <div class="purchase-kpi"><span>Financeiro em aberto</span><strong id="kpiAberto">R$ 0,00</strong></div>
+        <div class="purchase-kpi"><span>Vencido</span><strong id="kpiVencido">R$ 0,00</strong></div>
+      </div>
+
+      <div class="card"><div class="card-body">
+        <div class="filters">
+          <div class="form-group"><label>Pesquisar</label><input id="pesquisaCompra" class="form-control" placeholder="Fornecedor, documento ou número..." oninput="renderizarCompras()"></div>
+          <div class="form-group"><label>Status</label><select id="statusCompraFiltro" class="form-control" onchange="renderizarCompras()"><option value="">Todos</option><option value="CONFIRMADA">Confirmadas</option><option value="CANCELADA">Canceladas</option></select></div>
+        </div>
+        <div class="table-responsive"><table class="table">
+          <thead><tr><th>#</th><th>Data</th><th>Fornecedor</th><th>Documento</th><th>Itens</th><th>Total</th><th>Financeiro</th><th>Status</th><th width="100">Ações</th></tr></thead>
+          <tbody id="tabelaCompras"></tbody>
+        </table></div>
+      </div></div>
+
+      <div class="modal-overlay" id="modalCompra">
+        <div class="modal modal-xl">
+          <div class="modal-header"><div><h2 class="modal-title">Nova Compra</h2><p class="modal-section-help">Ao confirmar, os itens entram no estoque e os títulos podem ser gerados automaticamente.</p></div><button class="modal-close" onclick="fecharCompra()">&times;</button></div>
+          <div class="modal-body">
+            <div class="modal-section-card">
+              <div class="modal-section-head"><div><h3>Dados da compra</h3></div></div>
+              <div class="modal-fields-3">
+                <div class="form-group"><label>Fornecedor</label><select id="compraFornecedor" class="form-control"></select></div>
+                <div class="form-group"><label>Data</label><input id="compraData" type="date" class="form-control"></div>
+                <div class="form-group"><label>Documento / NF</label><input id="compraDocumento" class="form-control" placeholder="Opcional"></div>
+              </div>
+            </div>
+
+            <div class="modal-section-card">
+              <div class="modal-section-head"><div><h3>Produtos</h3><p>Informe quantidade e custo real de compra.</p></div><button class="btn btn-light btn-sm" onclick="adicionarItemCompra()"><i class="fas fa-plus"></i> Adicionar item</button></div>
+              <div id="itensCompra" class="purchase-items"></div>
+            </div>
+
+            <div class="modal-section-card">
+              <div class="modal-section-head"><div><h3>Totais</h3></div></div>
+              <div class="modal-fields-3">
+                <div class="form-group"><label>Desconto</label><input id="compraDesconto" type="number" min="0" step="0.01" value="0" class="form-control" oninput="recalcularCompra()"></div>
+                <div class="form-group"><label>Frete</label><input id="compraFrete" type="number" min="0" step="0.01" value="0" class="form-control" oninput="recalcularCompra()"></div>
+                <div class="form-group"><label>Outras despesas</label><input id="compraOutras" type="number" min="0" step="0.01" value="0" class="form-control" oninput="recalcularCompra()"></div>
+              </div>
+              <div style="display:flex;justify-content:flex-end;gap:24px;align-items:center"><span>Subtotal: <strong id="compraSubtotal">R$ 0,00</strong></span><span class="purchase-total">Total: <strong id="compraTotal">R$ 0,00</strong></span></div>
+            </div>
+
+            <div class="finance-box">
+              <label class="inline-check"><input id="compraGerarFinanceiro" type="checkbox" checked onchange="alternarFinanceiroCompra()"> Gerar contas a pagar automaticamente</label>
+              <div id="camposFinanceiroCompra" class="modal-fields-3">
+                <div class="form-group"><label>Forma de pagamento</label><select id="compraFormaPagamento" class="form-control"><option value="">Não informada</option><option value="PIX">Pix</option><option value="BOLETO">Boleto</option><option value="TRANSFERENCIA">Transferência</option><option value="DINHEIRO">Dinheiro</option><option value="CARTAO_CREDITO">Cartão de crédito</option><option value="CARTAO_DEBITO">Cartão de débito</option><option value="CHEQUE">Cheque</option><option value="OUTRO">Outro</option></select></div>
+                <div class="form-group"><label>Parcelas</label><input id="compraParcelas" type="number" min="1" max="60" value="1" class="form-control"></div>
+                <div class="form-group"><label>Primeiro vencimento</label><input id="compraVencimento" type="date" class="form-control"></div>
+              </div>
+            </div>
+
+            <div class="form-group" style="margin-top:14px"><label>Observações</label><textarea id="compraObservacoes" class="form-control"></textarea></div>
+          </div>
+          <div class="modal-footer"><button class="btn btn-light" onclick="fecharCompra()">Cancelar</button><button id="btnSalvarCompra" class="btn btn-primary" onclick="salvarCompra()"><i class="fas fa-check"></i> Confirmar Compra</button></div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+<script src="../js/layout.js"></script><script src="../js/api.js"></script><script src="../js/utils.js"></script><script src="../js/app.js"></script><script src="../js/menu.js"></script><script src="../js/compras.js"></script>
+</body>
+</html>
