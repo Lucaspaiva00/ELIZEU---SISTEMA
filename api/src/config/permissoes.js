@@ -34,6 +34,27 @@ const GRUPOS_PERMISSOES = [
         ]
     },
     {
+        id: "fornecedores",
+        nome: "Fornecedores",
+        descricao: "Cadastro de fornecedores, dados bancários e histórico de compras.",
+        permissoes: [
+            { chave: "fornecedores.visualizar", nome: "Visualizar fornecedores" },
+            { chave: "fornecedores.criar", nome: "Cadastrar fornecedores" },
+            { chave: "fornecedores.editar", nome: "Editar fornecedores" },
+            { chave: "fornecedores.excluir", nome: "Excluir/inativar fornecedores" }
+        ]
+    },
+    {
+        id: "compras",
+        nome: "Compras",
+        descricao: "Compras de materiais, entrada em estoque e geração financeira.",
+        permissoes: [
+            { chave: "compras.visualizar", nome: "Visualizar compras" },
+            { chave: "compras.criar", nome: "Registrar compras" },
+            { chave: "compras.cancelar", nome: "Cancelar compras" }
+        ]
+    },
+    {
         id: "catalogo",
         nome: "Produtos e serviços",
         descricao: "Cadastro comercial, composição, preços e estoque.",
@@ -165,7 +186,14 @@ const PERFIS_PADRAO = {
         "movimentacoes.criar",
         "movimentacoes.transferir",
         "movimentacoes.estornar",
-        "financeiro.configurar"
+        "financeiro.configurar",
+        "compras.cancelar",
+        "compras.criar",
+        "compras.visualizar",
+        "fornecedores.excluir",
+        "fornecedores.editar",
+        "fornecedores.criar",
+        "fornecedores.visualizar"
     ],
 
     VENDEDOR: [
@@ -202,7 +230,11 @@ const PERFIS_PADRAO = {
         "movimentacoes.criar",
         "movimentacoes.transferir",
         "movimentacoes.estornar",
-        "financeiro.configurar"
+        "financeiro.configurar",
+        "compras.visualizar",
+        "fornecedores.editar",
+        "fornecedores.criar",
+        "fornecedores.visualizar"
     ],
 
     ESTOQUE: [
@@ -214,7 +246,12 @@ const PERFIS_PADRAO = {
         "produtos.duplicar",
         "produtos.movimentar_estoque",
         "produtos.excluir",
-        "vendas.visualizar"
+        "vendas.visualizar",
+        "compras.criar",
+        "compras.visualizar",
+        "fornecedores.editar",
+        "fornecedores.criar",
+        "fornecedores.visualizar"
     ],
 
     FISCAL: [
@@ -260,6 +297,11 @@ function normalizarPermissoes(permissoes) {
         "clientes.editar": ["clientes.visualizar"],
         "clientes.excluir": ["clientes.visualizar"],
         "clientes.importar": ["clientes.visualizar"],
+        "fornecedores.criar": ["fornecedores.visualizar"],
+        "fornecedores.editar": ["fornecedores.visualizar"],
+        "fornecedores.excluir": ["fornecedores.visualizar"],
+        "compras.criar": ["compras.visualizar", "fornecedores.visualizar", "produtos.visualizar"],
+        "compras.cancelar": ["compras.visualizar"],
         "categorias.gerenciar": ["categorias.visualizar"],
         "produtos.criar": ["produtos.visualizar"],
         "produtos.editar": ["produtos.visualizar"],
