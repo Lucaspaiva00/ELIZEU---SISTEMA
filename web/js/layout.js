@@ -96,6 +96,7 @@ async function carregarLayout() {
 
         // Substitui imediatamente o texto estático pelo perfil da sessão.
         atualizarTopbarUsuario();
+        window.setTimeout(() => carregarAlertasTopbar(), 50);
     }
 
     if (typeof window.inicializarMenuResponsivo === "function") {
@@ -119,4 +120,41 @@ window.addEventListener("storage", (evento) => {
     if (evento.key === "usuario") {
         atualizarTopbarUsuario();
     }
+});
+
+
+async function carregarAlertasTopbar() {
+    const badge = document.getElementById("alertasTopbarBadge");
+    const lista = document.getElementById("alertasTopbarLista");
+    const resumo = document.getElementById("alertasTopbarResumo");
+    if (!badge || !lista || typeof get !== "function") return;
+
+    try {
+        const r = await get("/dashboard/alertas");
+        if (!r?.sucesso) return;
+        const alertas = r.alertas || [];
+        badge.textContent = alertas.length;
+        badge.style.display = alertas.length ? "inline-flex" : "none";
+        if (resumo) resumo.textContent = alertas.length ? `${alertas.length} ponto(s) precisam de atenção` : "Operação em dia";
+        lista.innerHTML = alertas.length
+            ? alertas.map(a => `<a class="topbar-alert-item alert-${a.tipo || "info"}" href="${a.destino || "#"}"><i class="fas ${a.icone || "fa-bell"}"></i><span>${String(a.titulo || "").replaceAll("<","&lt;").replaceAll(">","&gt;")}</span></a>`).join("")
+            : '<div class="topbar-alert-empty"><i class="fas fa-circle-check"></i><span>Nenhum alerta crítico agora.</span></div>';
+    } catch (erro) {
+        console.debug("Alertas indisponíveis para este perfil.", erro);
+    }
+}
+
+function alternarAlertasTopbar() {
+    const dropdown = document.getElementById("alertasTopbar");
+    if (!dropdown) return;
+    dropdown.style.display = dropdown.style.display === "none" ? "block" : "none";
+}
+
+window.carregarAlertasTopbar = carregarAlertasTopbar;
+window.alternarAlertasTopbar = alternarAlertasTopbar;
+
+document.addEventListener("click", (event) => {
+    const caixa = document.querySelector(".topbar-alerts");
+    const dropdown = document.getElementById("alertasTopbar");
+    if (caixa && dropdown && !caixa.contains(event.target)) dropdown.style.display = "none";
 });
