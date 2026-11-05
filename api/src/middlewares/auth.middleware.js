@@ -3,6 +3,7 @@ const config = require("../config/jwt");
 const prisma = require("../config/prisma");
 const controleAcessoRepository = require("../repositories/controleAcesso.repository");
 const { resolverPermissoes } = require("../config/permissoes");
+const auditoriaRepository = require("../repositories/auditoria.repository");
 
 module.exports = async (req, res, next) => {
     const authHeader = req.headers.authorization;
@@ -65,6 +66,26 @@ module.exports = async (req, res, next) => {
             permissoes,
             acessoPersonalizado: Array.isArray(personalizadas)
         };
+
+        if (["POST", "PUT", "PATCH", "DELETE"].includes(req.method)) {
+            const inicio = Date.now();
+            res.on("finish", () => {
+                auditoriaRepository.registrar({
+                    empresaId: usuario.empresaId,
+                    usuarioId: usuario.id,
+                    usuarioNome: usuario.nome,
+                    usuarioEmail: usuario.email,
+                    metodo: req.method,
+                    rota: req.originalUrl || req.url,
+                    statusHttp: res.statusCode,
+                    sucesso: res.statusCode >= 200 && res.statusCode < 400,
+                    referencia: req.params?.id ? String(req.params.id) : null,
+                    ip: req.ip || null,
+                    userAgent: req.headers["user-agent"] || null,
+                    duracaoMs: Date.now() - inicio
+                }).catch((erro) => console.error("[Auditoria] Falha ao registrar:", erro.message));
+            });
+        }
 
         return next();
     } catch (error) {

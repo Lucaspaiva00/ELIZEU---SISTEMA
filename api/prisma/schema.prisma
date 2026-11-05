@@ -228,6 +228,7 @@ model Empresa {
   certificadoDigital       CertificadoDigital?
   notasFiscais             NotaFiscal[]
   integracaoFocusNfe       IntegracaoFocusNfe?
+  auditorias                Auditoria[]
 
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
@@ -344,6 +345,7 @@ model Usuario {
   movimentacoes       MovimentacaoFinanceira[] @relation("MovimentacaoCriadaPor")
   movimentosEstoque   MovimentacaoEstoque[]    @relation("MovimentoEstoqueResponsavel")
   movimentosEstoqueProduto MovimentacaoEstoqueProduto[] @relation("MovimentoEstoqueProdutoResponsavel")
+  auditorias       Auditoria[] @relation("AuditoriaUsuario")
 
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
@@ -361,6 +363,37 @@ model UsuarioControleAcesso {
   atualizadoEm DateTime @updatedAt
 
   @@index([usuarioId])
+}
+
+// =====================================================
+// AUDITORIA
+// =====================================================
+
+model Auditoria {
+  id Int @id @default(autoincrement())
+
+  empresaId Int
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  usuarioId Int?
+  usuario Usuario? @relation("AuditoriaUsuario", fields: [usuarioId], references: [id], onDelete: SetNull)
+
+  usuarioNome String?
+  usuarioEmail String?
+  metodo String
+  modulo String
+  rota String
+  statusHttp Int
+  sucesso Boolean
+  referencia String?
+  ip String?
+  userAgent String?
+
+  criadoEm DateTime @default(now())
+
+  @@index([empresaId, criadoEm])
+  @@index([usuarioId, criadoEm])
+  @@index([empresaId, modulo, criadoEm])
 }
 
 // =====================================================
