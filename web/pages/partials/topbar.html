@@ -22,6 +22,17 @@
 
     </div>
 
+    <div class="topbar-alerts">
+        <button type="button" class="topbar-alert-button" id="btnAlertasTopbar" onclick="alternarAlertasTopbar()" title="Alertas operacionais">
+            <i class="fas fa-bell"></i>
+            <span id="alertasTopbarBadge" class="topbar-alert-badge" style="display:none">0</span>
+        </button>
+        <div class="topbar-alert-dropdown" id="alertasTopbar" style="display:none">
+            <div class="topbar-alert-header"><strong>Alertas</strong><span id="alertasTopbarResumo">Operação em dia</span></div>
+            <div id="alertasTopbarLista" class="topbar-alert-list"></div>
+        </div>
+    </div>
+
     <div class="topbar-user">
 
         <span id="nomeUsuario" title="Perfil do usuário logado">
