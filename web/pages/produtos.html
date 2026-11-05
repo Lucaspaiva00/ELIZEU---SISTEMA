@@ -292,6 +292,23 @@
                                     <input id="estoquePrincipalNovoSaldo" class="form-control" type="number" min="0" step="0.001" placeholder="Ex.: 125">
                                     <small class="text-muted">Use após contagem física. O sistema registra a diferença como ajuste de entrada ou saída.</small>
                                 </div>
+
+                                <div id="blocoFinanceiroEstoquePrincipal" class="modal-section-card" style="margin-top:16px;background:#f8fafc;">
+                                    <div class="modal-section-head">
+                                        <div><h3>Financeiro da compra</h3><p>Opcional. Marque somente quando esta entrada também gerar uma conta a pagar.</p></div>
+                                        <label style="display:flex;align-items:center;gap:8px;font-weight:600;"><input type="checkbox" id="estoquePrincipalGerarContaPagar" onchange="alternarFinanceiroEstoquePrincipal()"> Gerar conta a pagar</label>
+                                    </div>
+                                    <div id="camposFinanceiroEstoquePrincipal" style="display:none;">
+                                        <div class="modal-fields-2">
+                                            <div class="form-group"><label>Fornecedor</label><select id="estoquePrincipalFornecedor" class="form-control"><option value="">Selecione o fornecedor</option></select></div>
+                                            <div class="form-group"><label>Forma de pagamento</label><select id="estoquePrincipalFormaPagamento" class="form-control"><option value="">Selecione</option><option value="PIX">Pix</option><option value="BOLETO">Boleto</option><option value="TRANSFERENCIA">Transferência</option><option value="DINHEIRO">Dinheiro</option><option value="CARTAO_CREDITO">Cartão de crédito</option><option value="CARTAO_DEBITO">Cartão de débito</option><option value="CHEQUE">Cheque</option><option value="OUTRO">Outro</option></select></div>
+                                            <div class="form-group"><label>Valor total da compra</label><input id="estoquePrincipalValorTotal" class="form-control" type="number" min="0.01" step="0.01" placeholder="R$ 0,00"></div>
+                                            <div class="form-group"><label>Vencimento</label><input id="estoquePrincipalVencimento" class="form-control" type="date"></div>
+                                            <div class="form-group"><label>Nº documento / boleto</label><input id="estoquePrincipalNumeroDocumento" class="form-control" placeholder="Opcional"></div>
+                                        </div>
+                                        <div id="estoquePrincipalPixFornecedor" class="field-help" style="margin-top:6px;"></div>
+                                    </div>
+                                </div>
                                 <div class="form-group">
                                     <label>Motivo / observação</label>
                                     <textarea id="estoquePrincipalObservacoes" class="form-control" rows="2" maxlength="500" placeholder="Ex.: Compra de material - NF 123"></textarea>
