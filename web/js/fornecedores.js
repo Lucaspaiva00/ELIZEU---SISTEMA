@@ -33,7 +33,7 @@ function renderizarFornecedores() {
         <td>${escF(f.email || f.celular || f.telefone || "—")}</td>
         <td>${f.pixChave ? '<span class="badge badge-success">Pix cadastrado</span>' : '<span class="badge badge-secondary">Não cadastrado</span>'}</td>
         <td><span class="badge ${f.ativo ? "badge-success" : "badge-danger"}">${f.ativo ? "Ativo" : "Inativo"}</span></td>
-        <td><div class="table-actions"><button class="btn btn-warning" onclick="editarFornecedor(${f.id})"><i class="fas fa-edit"></i></button><button class="btn btn-danger" onclick="excluirFornecedor(${f.id})"><i class="fas fa-trash"></i></button></div></td>
+        <td><div class="table-actions"><button class="btn btn-light" title="Histórico" onclick="abrirHistoricoFornecedor(${f.id})"><i class="fas fa-chart-line"></i></button><button class="btn btn-warning" onclick="editarFornecedor(${f.id})"><i class="fas fa-edit"></i></button><button class="btn btn-danger" onclick="excluirFornecedor(${f.id})"><i class="fas fa-trash"></i></button></div></td>
     </tr>`).join("");
 }
 
@@ -86,3 +86,34 @@ async function excluirFornecedor(id) {
     if(!confirm("Deseja remover este fornecedor?")) return;
     try { const r=await del(`/fornecedores/${id}`); if(!r?.sucesso) throw new Error(r?.mensagem||"Erro."); await carregarFornecedores(); mostrarMensagem(r.mensagem||"Fornecedor removido."); } catch(e){ mostrarMensagem(e.message); }
 }
+
+function moedaF(valor){ return Number(valor||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"}); }
+
+async function abrirHistoricoFornecedor(id) {
+    try {
+        const r = await get(`/compras/fornecedor/${id}/resumo`);
+        if (!r?.sucesso) throw new Error(r?.mensagem || "Erro ao carregar histórico.");
+        const dados = r.resumo;
+        const f = dados.fornecedor;
+        document.getElementById("historicoFornecedorTitulo").textContent = f.nomeFantasia || f.nome;
+        document.getElementById("histTotalComprado").textContent = moedaF(dados.indicadores.totalComprado);
+        document.getElementById("histQtdCompras").textContent = dados.indicadores.quantidadeCompras || 0;
+        document.getElementById("histEmAberto").textContent = moedaF(dados.indicadores.emAberto);
+        document.getElementById("histVencido").textContent = moedaF(dados.indicadores.vencido);
+        document.getElementById("histDadosPagamento").innerHTML = [
+            f.pixChave ? `<p><strong>Pix:</strong> ${escF(f.pixTipo || "")} — ${escF(f.pixChave)}</p>` : "<p>Pix não cadastrado.</p>",
+            f.bancoNome ? `<p><strong>Banco:</strong> ${escF(f.bancoNome)} | Ag. ${escF(f.bancoAgencia || "—")} | Conta ${escF(f.bancoConta || "—")}</p>` : ""
+        ].join("");
+        document.getElementById("histProdutosFornecedor").innerHTML = (dados.produtosMaisComprados || []).length
+            ? dados.produtosMaisComprados.map(p=>`<tr><td>${escF(p.nome)}</td><td>${Number(p.quantidade||0).toLocaleString("pt-BR")}</td><td>${moedaF(p.valor)}</td></tr>`).join("")
+            : '<tr><td colspan="3" class="text-center">Sem compras registradas.</td></tr>';
+        document.getElementById("histComprasFornecedor").innerHTML = (dados.comprasRecentes || []).length
+            ? dados.comprasRecentes.map(c=>`<tr><td>#${String(c.numero).padStart(5,"0")}</td><td>${new Date(c.dataCompra).toLocaleDateString("pt-BR")}</td><td>${c.itens?.length||0}</td><td><strong>${moedaF(c.total)}</strong></td></tr>`).join("")
+            : '<tr><td colspan="4" class="text-center">Sem compras registradas.</td></tr>';
+        document.getElementById("modalHistoricoFornecedor").classList.add("active");
+    } catch (e) {
+        mostrarMensagem(e.message || "Erro ao carregar histórico do fornecedor.");
+    }
+}
+
+function fecharHistoricoFornecedor(){ document.getElementById("modalHistoricoFornecedor").classList.remove("active"); }
