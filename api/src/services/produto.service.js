@@ -216,6 +216,10 @@ class ProdutoService {
         return produto;
     }
 
+    async listarFornecedores(empresaId) {
+        return produtoRepository.listarFornecedores(empresaId);
+    }
+
     async listarMovimentacoesEstoquePrincipal(id, empresaId, limite) {
         await this.buscarPorIdEmpresa(id, empresaId);
         return produtoRepository.listarMovimentacoesEstoquePrincipal(id, empresaId, limite);
@@ -237,12 +241,51 @@ class ProdutoService {
             throw new Error("A observação deve ter no máximo 500 caracteres.");
         }
 
+        let financeiro = null;
+
+        if (dados.gerarContaPagar === true) {
+            const fornecedorId = Number(dados.fornecedorId);
+            const valorTotal = Number(dados.valorTotal);
+            const formaPagamento = String(dados.formaPagamento || "").trim();
+            const dataVencimento = String(dados.dataVencimento || "").trim();
+            const formasPermitidas = [
+                "DINHEIRO", "PIX", "CARTAO_CREDITO", "CARTAO_DEBITO",
+                "BOLETO", "TRANSFERENCIA", "CHEQUE", "CREDITO_LOJA", "OUTRO"
+            ];
+
+            if (!Number.isInteger(fornecedorId) || fornecedorId <= 0) {
+                throw new Error("Selecione o fornecedor da compra.");
+            }
+
+            if (!Number.isFinite(valorTotal) || valorTotal <= 0) {
+                throw new Error("Informe o valor total da compra.");
+            }
+
+            if (!formaPagamento || !formasPermitidas.includes(formaPagamento)) {
+                throw new Error("Selecione uma forma de pagamento válida.");
+            }
+
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(dataVencimento)) {
+                throw new Error("Informe a data de vencimento da compra.");
+            }
+
+            financeiro = {
+                gerarContaPagar: true,
+                fornecedorId,
+                valorTotal,
+                formaPagamento,
+                dataVencimento,
+                numeroDocumento: String(dados.numeroDocumento || "").trim() || null
+            };
+        }
+
         return produtoRepository.adicionarEntradaEstoquePrincipal(
             id,
             dados.empresaId,
             dados.responsavelId,
             quantidade,
-            observacoes || null
+            observacoes || null,
+            financeiro
         );
     }
 
