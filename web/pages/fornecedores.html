@@ -30,6 +30,25 @@
                 </table></div>
             </div></div>
 
+            <div class="modal-overlay" id="modalHistoricoFornecedor">
+                <div class="modal modal-xl">
+                    <div class="modal-header"><div><h2 class="modal-title" id="historicoFornecedorTitulo">Fornecedor</h2><p class="modal-section-help">Compras, financeiro e produtos mais adquiridos.</p></div><button class="modal-close" onclick="fecharHistoricoFornecedor()">&times;</button></div>
+                    <div class="modal-body">
+                        <div class="purchase-kpis" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:16px">
+                            <div class="card"><div class="card-body"><small>Total comprado</small><h3 id="histTotalComprado">R$ 0,00</h3></div></div>
+                            <div class="card"><div class="card-body"><small>Compras</small><h3 id="histQtdCompras">0</h3></div></div>
+                            <div class="card"><div class="card-body"><small>Em aberto</small><h3 id="histEmAberto">R$ 0,00</h3></div></div>
+                            <div class="card"><div class="card-body"><small>Vencido</small><h3 id="histVencido">R$ 0,00</h3></div></div>
+                        </div>
+                        <div class="modal-fields-2">
+                            <div class="modal-section-card"><div class="modal-section-head"><div><h3>Dados para pagamento</h3></div></div><div id="histDadosPagamento"></div></div>
+                            <div class="modal-section-card"><div class="modal-section-head"><div><h3>Produtos mais comprados</h3></div></div><div class="table-responsive"><table class="table"><thead><tr><th>Produto</th><th>Qtd.</th><th>Valor</th></tr></thead><tbody id="histProdutosFornecedor"></tbody></table></div></div>
+                        </div>
+                        <div class="modal-section-card"><div class="modal-section-head"><div><h3>Compras recentes</h3></div></div><div class="table-responsive"><table class="table"><thead><tr><th>#</th><th>Data</th><th>Itens</th><th>Total</th></tr></thead><tbody id="histComprasFornecedor"></tbody></table></div></div>
+                    </div>
+                </div>
+            </div>
+
             <div class="modal-overlay" id="modalFornecedor" data-modal-tabs>
                 <div class="modal modal-lg modal-tabbed">
                     <div class="modal-header"><div><h2 class="modal-title" id="tituloModalFornecedor">Cadastro de Fornecedor</h2><p class="modal-section-help">Cadastro separado da base de clientes.</p></div><button type="button" class="modal-close" onclick="fecharModalFornecedor()">&times;</button></div>
