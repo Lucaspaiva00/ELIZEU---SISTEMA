@@ -2,7 +2,28 @@ const clienteRepository = require("../repositories/cliente.repository");
 
 class ClienteService {
 
+    prepararDados(dados) {
+        const ehCliente = dados.ehCliente !== false;
+        const ehFornecedor = dados.ehFornecedor === true;
+
+        if (!ehCliente && !ehFornecedor) {
+            throw new Error("Marque o cadastro como cliente, fornecedor ou ambos.");
+        }
+
+        return {
+            ...dados,
+            ehCliente,
+            ehFornecedor,
+            pixTipo: String(dados.pixTipo || "").trim() || null,
+            pixChave: String(dados.pixChave || "").trim() || null,
+            bancoNome: String(dados.bancoNome || "").trim() || null,
+            bancoAgencia: String(dados.bancoAgencia || "").trim() || null,
+            bancoConta: String(dados.bancoConta || "").trim() || null
+        };
+    }
+
     async criar(dados) {
+        dados = this.prepararDados(dados);
 
         const cliente = await clienteRepository.buscarPorCpfCnpj(
             dados.cpfCnpj,
@@ -36,6 +57,7 @@ class ClienteService {
     async atualizar(id, dados) {
 
         await this.buscarPorId(id);
+        dados = this.prepararDados(dados);
 
         const cliente = await clienteRepository.buscarPorCpfCnpj(
             dados.cpfCnpj,
