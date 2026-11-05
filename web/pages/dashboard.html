@@ -250,11 +250,14 @@
 
                     <div class="operational-kpis">
                         <article><i class="fas fa-user-friends"></i><div><span>Clientes</span><strong id="kpiClientes">0</strong></div></article>
+                        <article><i class="fas fa-truck-field"></i><div><span>Fornecedores</span><strong id="kpiFornecedores">0</strong></div></article>
                         <article><i class="fas fa-boxes-stacked"></i><div><span>Produtos</span><strong id="kpiProdutos">0</strong></div></article>
-                        <article><i class="fas fa-tags"></i><div><span>Categorias</span><strong id="kpiCategorias">0</strong></div></article>
+                        <article><i class="fas fa-warehouse"></i><div><span>Valor em estoque</span><strong id="kpiValorEstoque">R$ 0,00</strong></div></article>
+                        <article><i class="fas fa-cart-flatbed"></i><div><span>Compras no mês</span><strong id="kpiComprasMes">0</strong><small id="kpiValorComprasMes">R$ 0,00</small></div></article>
+                        <article class="operational-alert"><i class="fas fa-triangle-exclamation"></i><div><span>Estoque baixo</span><strong id="kpiEstoque">0</strong></div></article>
+                        <article class="operational-alert"><i class="fas fa-hourglass-half"></i><div><span>Parados há 90+ dias</span><strong id="kpiEstoqueParado">0</strong></div></article>
                         <article><i class="fas fa-file-lines"></i><div><span>Total de orçamentos</span><strong id="kpiOrcamentos">0</strong></div></article>
                         <article><i class="fas fa-coins"></i><div><span>Valor total orçado</span><strong id="kpiValor">R$ 0,00</strong></div></article>
-                        <article class="operational-alert"><i class="fas fa-triangle-exclamation"></i><div><span>Estoque baixo</span><strong id="kpiEstoque">0</strong></div></article>
                     </div>
 
                     <div class="dashboard-grid operational-tables">
@@ -267,7 +270,7 @@
                         <article class="dashboard-card">
                             <div class="dashboard-card-header"><div><h2>Alertas de estoque</h2><p>Itens próximos ou abaixo do mínimo</p></div></div>
                             <div class="table-responsive">
-                                <table class="table"><thead><tr><th>Produto</th><th>SKU</th><th>Atual</th><th>Mínimo</th></tr></thead><tbody id="tabelaEstoqueBaixo"></tbody></table>
+                                <table class="table"><thead><tr><th>Produto</th><th>Código</th><th>Atual</th><th>Mínimo</th><th>Custo médio</th></tr></thead><tbody id="tabelaEstoqueBaixo"></tbody></table>
                             </div>
                         </article>
                     </div>
