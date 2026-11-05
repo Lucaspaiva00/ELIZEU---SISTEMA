@@ -75,6 +75,7 @@ function includeContaPagarCompleta() {
     return {
         categoriaFinanceira: true,
         centroCusto: true,
+        fornecedor: true,
         movimentacoes: {
             include: {
                 contaFinanceira: true,
@@ -182,6 +183,7 @@ class ContaPagarRepository {
                         empresaId: dados.empresaId,
                         categoriaFinanceiraId: relacionamentos.categoriaFinanceiraId,
                         centroCustoId: relacionamentos.centroCustoId,
+                        fornecedorId: dados.fornecedorId ? Number(dados.fornecedorId) : null,
                         fornecedorNome: dados.fornecedorNome?.trim() || null,
                         fornecedorDocumento: dados.fornecedorDocumento?.trim() || null,
                         descricao: dados.quantidadeParcelas > 1
