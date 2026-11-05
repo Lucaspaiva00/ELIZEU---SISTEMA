@@ -7,7 +7,7 @@
 
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>Clientes | Elian Sigs</title>
+    <title>Clientes e Fornecedores | Elian Sigs</title>
 
     <link rel="stylesheet" href="../css/app.css">
 
@@ -76,13 +76,13 @@
 
                         <h1 class="page-title">
 
-                            Clientes
+                            Clientes e Fornecedores
 
                         </h1>
 
                         <p class="page-subtitle">
 
-                            Cadastro e gerenciamento de clientes.
+                            Cadastro único para clientes, fornecedores e dados bancários.
 
                         </p>
 
@@ -105,7 +105,7 @@
 
                             <i class="fas fa-plus"></i>
 
-                            Novo Cliente
+                            Novo Cadastro
 
                         </button>
 
@@ -146,6 +146,8 @@
 
                                         <th>E-mail</th>
 
+                                        <th>Tipo</th>
+
                                         <th>Origem</th>
 
                                         <th>Status</th>
@@ -183,6 +185,7 @@
                             <button type="button" class="modal-tab" data-modal-tab="contato"><i class="fas fa-phone"></i> Contato</button>
                             <button type="button" class="modal-tab" data-modal-tab="endereco"><i class="fas fa-location-dot"></i> Endereço</button>
                             <button type="button" class="modal-tab" data-modal-tab="comercial"><i class="fas fa-handshake"></i> Comercial</button>
+                            <button type="button" class="modal-tab" data-modal-tab="financeiro"><i class="fas fa-building-columns"></i> Dados bancários</button>
                         </div>
                         <div class="modal-body">
                             <form id="formCliente">
@@ -200,11 +203,29 @@
                                     <div class="modal-section-card"><div class="modal-section-head"><div><h3>Endereço</h3><p>O CEP continua preenchendo os dados automaticamente.</p></div></div><div class="row"><div class="col-3"><div class="form-group"><label>CEP</label><input type="text" id="cep" class="form-control"><button id="btnCompletarEnderecoCep" type="button" class="btn btn-light btn-sm" style="margin-top:8px" onclick="completarEnderecoPeloCep()"><i class="fas fa-map-location-dot"></i> Completar pelo CEP</button></div></div><div class="col"><div class="form-group"><label>Endereço</label><input type="text" id="endereco" class="form-control"></div></div><div class="col-3"><div class="form-group"><label>Número</label><input type="text" id="numero" class="form-control"></div></div></div><div class="row"><div class="col"><div class="form-group"><label>Complemento</label><input type="text" id="complemento" class="form-control"></div></div><div class="col-3"><div class="form-group"><label>Quadra</label><input type="text" id="quadra" class="form-control" placeholder="Ex.: Qd. 03"></div></div><div class="col-3"><div class="form-group"><label>Lote</label><input type="text" id="lote" class="form-control" placeholder="Ex.: Lt. 12"></div></div></div><div class="row"><div class="col"><div class="form-group"><label>Bairro</label><input type="text" id="bairro" class="form-control"></div></div><div class="col"><div class="form-group"><label>Cidade</label><input type="text" id="cidade" class="form-control"></div></div><div class="col-3"><div class="form-group"><label>Estado</label><input type="text" id="estado" maxlength="2" class="form-control"></div></div></div></div>
                                 </section>
                                 <section class="modal-tab-panel" data-modal-panel="comercial">
-                                    <div class="modal-section-card"><div class="modal-section-head"><div><h3>Condições comerciais</h3><p>Crédito, prazo padrão e observações internas.</p></div></div><div class="modal-fields-2"><div class="form-group"><label>Limite de Crédito</label><input type="number" step="0.01" id="limiteCredito" class="form-control"></div><div class="form-group"><label>Prazo Padrão (dias)</label><input type="number" id="prazoPagamentoPadrao" class="form-control"></div></div><div class="form-group"><label>Observações</label><textarea id="observacoes" class="form-control"></textarea></div></div>
+                                    <div class="modal-section-card"><div class="modal-section-head"><div><h3>Classificação e condições</h3><p>O mesmo cadastro pode ser cliente, fornecedor ou ambos.</p></div></div>
+                                        <div class="modal-fields-2">
+                                            <label style="display:flex;gap:8px;align-items:center;"><input type="checkbox" id="ehCliente" checked> Cliente</label>
+                                            <label style="display:flex;gap:8px;align-items:center;"><input type="checkbox" id="ehFornecedor"> Fornecedor</label>
+                                        </div>
+                                        <div class="modal-fields-2"><div class="form-group"><label>Limite de Crédito</label><input type="number" step="0.01" id="limiteCredito" class="form-control"></div><div class="form-group"><label>Prazo Padrão (dias)</label><input type="number" id="prazoPagamentoPadrao" class="form-control"></div></div><div class="form-group"><label>Observações</label><textarea id="observacoes" class="form-control"></textarea></div>
+                                    </div>
+                                </section>
+                                <section class="modal-tab-panel" data-modal-panel="financeiro">
+                                    <div class="modal-section-card">
+                                        <div class="modal-section-head"><div><h3>Dados para pagamento</h3><p>Esses dados serão exibidos automaticamente no financeiro quando o cadastro for usado como fornecedor.</p></div></div>
+                                        <div class="modal-fields-2">
+                                            <div class="form-group"><label>Tipo de chave Pix</label><select id="pixTipo" class="form-control"><option value="">Não informado</option><option value="CNPJ">CNPJ</option><option value="CPF">CPF</option><option value="EMAIL">E-mail</option><option value="TELEFONE">Telefone</option><option value="ALEATORIA">Chave aleatória</option></select></div>
+                                            <div class="form-group"><label>Chave Pix</label><input type="text" id="pixChave" class="form-control" placeholder="Chave para pagamento"></div>
+                                            <div class="form-group"><label>Banco</label><input type="text" id="bancoNome" class="form-control"></div>
+                                            <div class="form-group"><label>Agência</label><input type="text" id="bancoAgencia" class="form-control"></div>
+                                            <div class="form-group"><label>Conta</label><input type="text" id="bancoConta" class="form-control"></div>
+                                        </div>
+                                    </div>
                                 </section>
                             </form>
                         </div>
-                        <div class="modal-footer"><button class="btn btn-light" onclick="fecharModal()">Cancelar</button><button type="button" class="btn btn-primary" onclick="salvarCliente()"><i class="fas fa-save"></i> Salvar Cliente</button></div>
+                        <div class="modal-footer"><button class="btn btn-light" onclick="fecharModal()">Cancelar</button><button type="button" class="btn btn-primary" onclick="salvarCliente()"><i class="fas fa-save"></i> Salvar Cadastro</button></div>
                     </div>
                 </div>
 
