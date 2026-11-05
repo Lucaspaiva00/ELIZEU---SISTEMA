@@ -536,7 +536,7 @@ class DashboardRepository {
             ultimosOrcamentos,
             estoqueBaixoProdutos
         };
-
+    }
 
 }
 
