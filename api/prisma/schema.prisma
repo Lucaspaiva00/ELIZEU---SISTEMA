@@ -206,6 +206,7 @@ model Empresa {
   categoriasServico        CategoriaServico[]
   servicos                 Servico[]
   clientes                 Cliente[]
+  fornecedores             Fornecedor[]
   orcamentos               Orcamento[]
   tabelasPreco             TabelaPreco[]
   vendas                   Venda[]
@@ -626,26 +627,14 @@ model Cliente {
   observacoes          String?
   ativo                Boolean  @default(true)
 
-  // Um mesmo cadastro pode atuar como cliente, fornecedor ou ambos.
-  ehCliente    Boolean @default(true)
-  ehFornecedor Boolean @default(false)
-
-  // Dados bancários usados principalmente para pagamentos a fornecedores.
-  pixTipo     String?
-  pixChave    String?
-  bancoNome   String?
-  bancoAgencia String?
-  bancoConta   String?
-
   // Integração SacMais
   sacmaisId             String?
   origemCadastro        String?   @default("ERP")
   sincronizadoSacMaisEm DateTime?
 
-  orcamentos             Orcamento[]
-  vendas                 Venda[]
-  contasReceber           ContaReceber[]
-  contasPagarFornecedor   ContaPagar[] @relation("ContaPagarFornecedor")
+  orcamentos    Orcamento[]
+  vendas        Venda[]
+  contasReceber ContaReceber[]
 
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
@@ -654,6 +643,53 @@ model Cliente {
   @@unique([empresaId, sacmaisId])
   @@index([empresaId, nome])
   @@index([empresaId, sacmaisId])
+}
+
+// =====================================================
+// FORNECEDORES
+// =====================================================
+
+model Fornecedor {
+  id Int @id @default(autoincrement())
+
+  empresaId Int
+  empresa   Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  tipoPessoa   TipoPessoa
+  nome         String
+  nomeFantasia String?
+  cpfCnpj      String
+
+  inscricaoEstadual String?
+  telefone          String?
+  celular           String?
+  email             String?
+
+  cep         String?
+  endereco    String?
+  numero      String?
+  complemento String?
+  bairro      String?
+  cidade      String?
+  estado      String?
+
+  pixTipo      String?
+  pixChave     String?
+  bancoNome    String?
+  bancoAgencia String?
+  bancoConta   String?
+
+  observacoes String?
+  ativo       Boolean @default(true)
+
+  contasPagar ContaPagar[]
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  @@unique([empresaId, cpfCnpj])
+  @@index([empresaId, nome])
+  @@index([empresaId, ativo])
 }
 
 // =====================================================
@@ -1033,7 +1069,7 @@ model ContaPagar {
   centroCusto   CentroCusto? @relation(fields: [centroCustoId], references: [id], onDelete: SetNull)
 
   fornecedorId        Int?
-  fornecedor           Cliente? @relation("ContaPagarFornecedor", fields: [fornecedorId], references: [id], onDelete: SetNull)
+  fornecedor           Fornecedor? @relation(fields: [fornecedorId], references: [id], onDelete: SetNull)
   fornecedorNome      String?
   fornecedorDocumento String?
   descricao           String
