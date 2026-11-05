@@ -939,8 +939,7 @@ model ContaFinanceira {
   padrao           Boolean             @default(false)
   ativa            Boolean             @default(true)
 
-  movimentacoes              MovimentacaoFinanceira[]
-  movimentacoesEstoqueProduto MovimentacaoEstoqueProduto[] @relation("MovimentoEstoqueProdutoContaPagar")
+  movimentacoes MovimentacaoFinanceira[]
 
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
@@ -1094,7 +1093,8 @@ model ContaPagar {
   recorrenciaGrupo String?
   observacoes      String?
 
-  movimentacoes MovimentacaoFinanceira[]
+  movimentacoes              MovimentacaoFinanceira[]
+  movimentacoesEstoqueProduto MovimentacaoEstoqueProduto[] @relation("MovimentoEstoqueProdutoContaPagar")
 
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
