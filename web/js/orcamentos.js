@@ -309,29 +309,19 @@ function textoBuscaClienteOrcamento(cliente) {
 }
 
 function clientesRecentesOrcamento() {
-    const ids = [];
-    const resultado = [];
+    return [...clientes]
+        .filter((cliente) => cliente?.ativo !== false)
+        .sort((a, b) => {
+            const dataA = new Date(a?.criadoEm || 0).getTime();
+            const dataB = new Date(b?.criadoEm || 0).getTime();
 
-    [...orcamentos]
-        .sort((a, b) => new Date(b.criadoEm || 0) - new Date(a.criadoEm || 0))
-        .forEach((orcamento) => {
-            const id = Number(orcamento.clienteId || orcamento.cliente?.id);
-            if (id && !ids.includes(id)) ids.push(id);
-        });
+            if (dataA !== dataB) {
+                return dataB - dataA;
+            }
 
-    [...clientes]
-        .sort((a, b) => new Date(b.criadoEm || 0) - new Date(a.criadoEm || 0))
-        .forEach((cliente) => {
-            const id = Number(cliente.id);
-            if (id && !ids.includes(id)) ids.push(id);
-        });
-
-    ids.slice(0, 8).forEach((id) => {
-        const cliente = clientes.find((item) => Number(item.id) === id);
-        if (cliente) resultado.push(cliente);
-    });
-
-    return resultado;
+            return Number(b?.id || 0) - Number(a?.id || 0);
+        })
+        .slice(0, 8);
 }
 
 function renderizarClientesRecentesOrcamento() {
