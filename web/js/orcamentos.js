@@ -346,7 +346,7 @@ function renderizarClientesRecentesOrcamento() {
                 type="button"
                 class="btn btn-light btn-sm"
                 onclick="selecionarClienteOrcamento(${cliente.id})"
-                title="${escaparAtributo(descricaoClienteSelect(cliente))}">
+                title="${escaparHtml(descricaoClienteSelect(cliente))}">
                 <i class="fas fa-clock-rotate-left"></i>
                 #${cliente.id} ${escaparHtml(nomeClienteOrcamento(cliente))}
             </button>
