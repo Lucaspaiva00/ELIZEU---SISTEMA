@@ -145,7 +145,29 @@
                                         </div>
                                         <div class="row">
                                             <div class="col">
-                                                <div class="form-group"><label>Cliente</label><select id="clienteId" class="form-control"></select></div>
+                                                <div class="form-group">
+                                                    <label>Cliente</label>
+                                                    <input type="hidden" id="clienteId">
+                                                    <div style="display:flex;gap:8px;align-items:center;">
+                                                        <div style="position:relative;flex:1;">
+                                                            <input
+                                                                id="pesquisaClienteOrcamento"
+                                                                class="form-control"
+                                                                autocomplete="off"
+                                                                placeholder="Busque por nome, CPF/CNPJ, telefone ou código..."
+                                                                oninput="pesquisarClienteOrcamento()"
+                                                                onfocus="pesquisarClienteOrcamento()">
+                                                            <div id="resultadosClienteOrcamento" style="display:none;position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:50;background:#fff;border:1px solid #e5e7eb;border-radius:10px;box-shadow:0 14px 35px rgba(15,23,42,.14);max-height:280px;overflow:auto;"></div>
+                                                        </div>
+                                                        <button type="button" class="btn btn-light" onclick="abrirCadastroClienteOrcamento()" data-permission="clientes.criar" title="Cadastrar cliente sem perder este orçamento">
+                                                            <i class="fas fa-user-plus"></i> Novo cliente
+                                                        </button>
+                                                    </div>
+                                                    <div style="margin-top:10px;">
+                                                        <div style="font-size:12px;font-weight:700;color:#64748b;margin-bottom:7px;">Clientes recentes</div>
+                                                        <div id="clientesRecentesOrcamento" style="display:flex;gap:7px;flex-wrap:wrap;"></div>
+                                                    </div>
+                                                </div>
                                             </div>
                                             <div class="col-2">
                                                 <div class="form-group"><label>Número</label><input id="numero" class="form-control" readonly></div>

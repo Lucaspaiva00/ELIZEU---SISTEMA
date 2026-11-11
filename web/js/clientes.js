@@ -7,11 +7,46 @@ let atualizacaoAutomaticaClientesTimer = null;
 const modalCliente = document.getElementById("modalCliente");
 const formCliente = document.getElementById("formCliente");
 
-document.addEventListener("DOMContentLoaded", () => {
-    carregarClientes();
+document.addEventListener("DOMContentLoaded", async () => {
+    await carregarClientes();
     configurarEventosFormulario();
     iniciarAtualizacaoAutomaticaClientes();
+    abrirNovoClientePorUrl();
 });
+
+function abrirNovoClientePorUrl() {
+    const parametros = new URLSearchParams(window.location.search);
+    if (parametros.get("novo") !== "1") return;
+
+    abrirModal();
+
+    const url = new URL(window.location.href);
+    url.searchParams.delete("novo");
+    window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
+}
+
+function notificarClienteAtualizado(cliente) {
+    if (!cliente?.id) return;
+
+    const mensagem = {
+        tipo: "elian:cliente-atualizado",
+        id: cliente.id,
+        nome: cliente.nome || "",
+        em: Date.now()
+    };
+
+    try {
+        if (window.opener && !window.opener.closed) {
+            window.opener.postMessage(mensagem, window.location.origin);
+        }
+    } catch (erro) {
+        console.warn("Não foi possível notificar a aba do orçamento.", erro);
+    }
+
+    try {
+        localStorage.setItem("elian:cliente-atualizado", JSON.stringify(mensagem));
+    } catch (_) {}
+}
 
 function iniciarAtualizacaoAutomaticaClientes() {
     if (atualizacaoAutomaticaClientesTimer) {
@@ -658,6 +693,7 @@ async function salvarCliente() {
             return;
         }
 
+        notificarClienteAtualizado(resposta.cliente);
         fecharModal();
         await carregarClientes();
 

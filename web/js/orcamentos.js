@@ -13,6 +13,8 @@ let orcamentoAprovandoId = null;
 let catalogoOrcamentoPrecisaAtualizar = false;
 let atualizandoCatalogoOrcamento = false;
 let orcamentoAlterado = false;
+let clienteOrcamentoPrecisaAtualizar = false;
+let clienteOrcamentoSelecionadoId = null;
 
 const modalOrcamento = document.getElementById("modalOrcamento");
 const modalSelecionarProduto = document.getElementById(
@@ -31,22 +33,42 @@ document.addEventListener("DOMContentLoaded", async () => {
     ]);
 });
 
-window.addEventListener("message", (evento) => {
+window.addEventListener("message", async (evento) => {
     if (evento.origin !== window.location.origin) return;
-    if (evento.data?.tipo !== "elian:catalogo-atualizado") return;
 
-    catalogoOrcamentoPrecisaAtualizar = true;
-    atualizarCatalogoOrcamento();
+    if (evento.data?.tipo === "elian:catalogo-atualizado") {
+        catalogoOrcamentoPrecisaAtualizar = true;
+        atualizarCatalogoOrcamento();
+        return;
+    }
+
+    if (evento.data?.tipo === "elian:cliente-atualizado") {
+        clienteOrcamentoPrecisaAtualizar = true;
+        await carregarClientes();
+        if (evento.data?.id) selecionarClienteOrcamento(Number(evento.data.id));
+    }
 });
 
 window.addEventListener("storage", (evento) => {
-    if (evento.key !== "elian:catalogo-atualizado") return;
-    catalogoOrcamentoPrecisaAtualizar = true;
+    if (evento.key === "elian:catalogo-atualizado") {
+        catalogoOrcamentoPrecisaAtualizar = true;
+        return;
+    }
+
+    if (evento.key === "elian:cliente-atualizado") {
+        clienteOrcamentoPrecisaAtualizar = true;
+    }
 });
 
-window.addEventListener("focus", () => {
-    if (!catalogoOrcamentoPrecisaAtualizar) return;
-    atualizarCatalogoOrcamento();
+window.addEventListener("focus", async () => {
+    if (catalogoOrcamentoPrecisaAtualizar) {
+        await atualizarCatalogoOrcamento();
+    }
+
+    if (clienteOrcamentoPrecisaAtualizar) {
+        await carregarClientes();
+        clienteOrcamentoPrecisaAtualizar = false;
+    }
 });
 
 function configurarEventos() {
@@ -258,23 +280,158 @@ function ordenarClientesParaSelect(lista) {
 }
 
 function preencherSelectClientes() {
-    const select = document.getElementById("clienteId");
+    renderizarClientesRecentesOrcamento();
 
-    select.innerHTML = `
-        <option value="">
-            Selecione um cliente
-        </option>
-    `;
+    if (clienteOrcamentoSelecionadoId) {
+        const cliente = clientes.find((item) => Number(item.id) === Number(clienteOrcamentoSelecionadoId));
+        if (cliente) selecionarClienteOrcamento(cliente.id, { fecharResultados: true });
+    }
+}
 
-    ordenarClientesParaSelect(clientes).forEach((cliente) => {
-        const option = document.createElement("option");
+function normalizarBuscaClienteOrcamento(valor) {
+    return textoClienteOrcamento(valor)
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase();
+}
 
-        option.value = cliente.id;
-        option.textContent = descricaoClienteSelect(cliente);
-        option.title = option.textContent;
+function textoBuscaClienteOrcamento(cliente) {
+    return normalizarBuscaClienteOrcamento([
+        cliente?.id,
+        cliente?.nome,
+        cliente?.nomeFantasia,
+        cliente?.cpfCnpj,
+        formatarDocumentoClienteOrcamento(cliente?.cpfCnpj),
+        cliente?.telefone,
+        cliente?.celular,
+        cliente?.email
+    ].filter(Boolean).join(" "));
+}
 
-        select.appendChild(option);
+function clientesRecentesOrcamento() {
+    const ids = [];
+    const resultado = [];
+
+    [...orcamentos]
+        .sort((a, b) => new Date(b.criadoEm || 0) - new Date(a.criadoEm || 0))
+        .forEach((orcamento) => {
+            const id = Number(orcamento.clienteId || orcamento.cliente?.id);
+            if (id && !ids.includes(id)) ids.push(id);
+        });
+
+    [...clientes]
+        .sort((a, b) => new Date(b.criadoEm || 0) - new Date(a.criadoEm || 0))
+        .forEach((cliente) => {
+            const id = Number(cliente.id);
+            if (id && !ids.includes(id)) ids.push(id);
+        });
+
+    ids.slice(0, 8).forEach((id) => {
+        const cliente = clientes.find((item) => Number(item.id) === id);
+        if (cliente) resultado.push(cliente);
     });
+
+    return resultado;
+}
+
+function renderizarClientesRecentesOrcamento() {
+    const container = document.getElementById("clientesRecentesOrcamento");
+    if (!container) return;
+
+    const recentes = clientesRecentesOrcamento();
+
+    container.innerHTML = recentes.length
+        ? recentes.map((cliente) => `
+            <button
+                type="button"
+                class="btn btn-light btn-sm"
+                onclick="selecionarClienteOrcamento(${cliente.id})"
+                title="${escaparAtributo(descricaoClienteSelect(cliente))}">
+                <i class="fas fa-clock-rotate-left"></i>
+                #${cliente.id} ${escaparHtml(nomeClienteOrcamento(cliente))}
+            </button>
+        `).join("")
+        : '<small style="color:#94a3b8;">Os clientes cadastrados ou usados recentemente aparecerão aqui.</small>';
+}
+
+function pesquisarClienteOrcamento() {
+    const input = document.getElementById("pesquisaClienteOrcamento");
+    const resultados = document.getElementById("resultadosClienteOrcamento");
+    if (!input || !resultados) return;
+
+    const termo = normalizarBuscaClienteOrcamento(input.value);
+    const termoDigitos = somenteDigitosClienteOrcamento(input.value);
+
+    let lista = termo
+        ? clientes.filter((cliente) => {
+            const texto = textoBuscaClienteOrcamento(cliente);
+            const documento = somenteDigitosClienteOrcamento(cliente?.cpfCnpj);
+            const telefone = somenteDigitosClienteOrcamento(cliente?.telefone || cliente?.celular);
+            return texto.includes(termo)
+                || String(cliente.id) === termo.replace(/^#/, "")
+                || (termoDigitos && (documento.includes(termoDigitos) || telefone.includes(termoDigitos)));
+        })
+        : clientesRecentesOrcamento();
+
+    lista = lista.slice(0, 12);
+
+    resultados.innerHTML = lista.length
+        ? lista.map((cliente) => {
+            const documento = formatarDocumentoClienteOrcamento(cliente?.cpfCnpj);
+            const telefone = formatarTelefoneClienteOrcamento(cliente?.telefone || cliente?.celular);
+            return `
+                <button type="button" onclick="selecionarClienteOrcamento(${cliente.id})"
+                    style="display:block;width:100%;border:0;border-bottom:1px solid #f1f5f9;background:#fff;padding:11px 13px;text-align:left;cursor:pointer;">
+                    <strong>#${cliente.id} — ${escaparHtml(nomeClienteOrcamento(cliente))}</strong>
+                    <div style="font-size:12px;color:#64748b;margin-top:3px;">
+                        ${[documento, telefone, cliente.email].filter(Boolean).map(escaparHtml).join(" • ") || "Cadastro sem documento/telefone informado"}
+                    </div>
+                </button>
+            `;
+        }).join("")
+        : '<div style="padding:14px;color:#64748b;">Nenhum cliente encontrado.</div>';
+
+    resultados.style.display = "block";
+}
+
+function selecionarClienteOrcamento(id, opcoes = {}) {
+    const cliente = clientes.find((item) => Number(item.id) === Number(id));
+    if (!cliente) return;
+
+    clienteOrcamentoSelecionadoId = Number(cliente.id);
+
+    const hidden = document.getElementById("clienteId");
+    const input = document.getElementById("pesquisaClienteOrcamento");
+    const resultados = document.getElementById("resultadosClienteOrcamento");
+
+    if (hidden) hidden.value = cliente.id;
+    if (input) input.value = `#${cliente.id} — ${descricaoClienteSelect(cliente)}`;
+    if (resultados && opcoes.fecharResultados !== false) resultados.style.display = "none";
+
+    orcamentoAlterado = true;
+}
+
+function limparClienteOrcamento() {
+    clienteOrcamentoSelecionadoId = null;
+    const hidden = document.getElementById("clienteId");
+    const input = document.getElementById("pesquisaClienteOrcamento");
+    const resultados = document.getElementById("resultadosClienteOrcamento");
+    if (hidden) hidden.value = "";
+    if (input) input.value = "";
+    if (resultados) resultados.style.display = "none";
+}
+
+function abrirCadastroClienteOrcamento() {
+    if (typeof window.temPermissao === "function" && !window.temPermissao("clientes.criar")) {
+        return mostrarMensagem("Seu usuário não possui permissão para cadastrar clientes.");
+    }
+
+    const novaAba = window.open("clientes.html?novo=1&origem=orcamento", "_blank");
+    if (!novaAba) {
+        return mostrarMensagem("O navegador bloqueou a nova aba. Libere pop-ups e tente novamente.");
+    }
+
+    clienteOrcamentoPrecisaAtualizar = true;
 }
 
 async function carregarProdutos() {
@@ -368,6 +525,8 @@ function abrirModalOrcamento() {
     custosInternos = [];
 
     formOrcamento.reset();
+    limparClienteOrcamento();
+    renderizarClientesRecentesOrcamento();
 
     document.getElementById("numero").value =
         "Gerado automaticamente";
@@ -1571,8 +1730,7 @@ async function editarOrcamento(id) {
 
     orcamentoEditandoId = orcamento.id;
 
-    document.getElementById("clienteId").value =
-        orcamento.clienteId;
+    selecionarClienteOrcamento(orcamento.clienteId, { fecharResultados: true });
 
     document.getElementById("numero").value =
         orcamento.numero;
@@ -3353,3 +3511,12 @@ function escaparHtml(valor) {
         .replaceAll("'", "&#039;");
 
 }
+
+
+document.addEventListener("click", (evento) => {
+    const resultadosCliente = document.getElementById("resultadosClienteOrcamento");
+    const inputCliente = document.getElementById("pesquisaClienteOrcamento");
+    if (!resultadosCliente || !inputCliente) return;
+    if (resultadosCliente.contains(evento.target) || inputCliente.contains(evento.target)) return;
+    resultadosCliente.style.display = "none";
+});
