@@ -5,7 +5,7 @@ const { descriptografarCertificado } = require("../utils/certificadoCrypto");
 function baseUrl(ambiente) {
     return ambiente === "PRODUCAO"
         ? "https://sefin.nfse.gov.br/SefinNacional"
-        : "https://sefin.producaorestrita.nfse.gov.br/SefinNacional";
+        : "https://sefin.producaorestrita.nfse.gov.br/API/SefinNacional";
 }
 
 function requisicaoJson({ url, pfx, passphrase, metodo = "GET" }) {
