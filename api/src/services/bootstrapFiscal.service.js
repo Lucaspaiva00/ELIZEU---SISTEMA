@@ -13,7 +13,7 @@ async function executarBootstrapFiscal() {
     const estado = String(process.env.FISCAL_BOOTSTRAP_ESTADO || "").trim().toUpperCase();
     const codigoMunicipio = String(process.env.FISCAL_BOOTSTRAP_CODIGO_MUNICIPIO || "").trim();
 
-    if (!empresaId || !cnpj || !arquivoBase64 || !senha || !nomeArquivo) return;
+    if (!empresaId || !cnpj) return;
 
     const empresa = await prisma.empresa.findUnique({ where: { id: empresaId } });
     if (!empresa) throw new Error("Empresa do bootstrap fiscal não encontrada.");
@@ -45,32 +45,34 @@ async function executarBootstrapFiscal() {
         });
     }
 
-    const buffer = Buffer.from(arquivoBase64, "base64");
-    if (!buffer.length || buffer[0] !== 0x30) {
-        throw new Error("Certificado do bootstrap fiscal inválido.");
+    if (arquivoBase64 && senha && nomeArquivo) {
+        const buffer = Buffer.from(arquivoBase64, "base64");
+        if (!buffer.length || buffer[0] !== 0x30) {
+            throw new Error("Certificado do bootstrap fiscal inválido.");
+        }
+
+        const criptografado = criptografarCertificado({ arquivoBase64, senha });
+        const validade = validadeTexto ? new Date(validadeTexto) : null;
+
+        await prisma.certificadoDigital.upsert({
+            where: { empresaId },
+            update: {
+                nomeArquivo,
+                ...criptografado,
+                validade,
+                ativo: true
+            },
+            create: {
+                empresaId,
+                nomeArquivo,
+                ...criptografado,
+                validade,
+                ativo: true
+            }
+        });
     }
 
-    const criptografado = criptografarCertificado({ arquivoBase64, senha });
-    const validade = validadeTexto ? new Date(validadeTexto) : null;
-
-    await prisma.certificadoDigital.upsert({
-        where: { empresaId },
-        update: {
-            nomeArquivo,
-            ...criptografado,
-            validade,
-            ativo: true
-        },
-        create: {
-            empresaId,
-            nomeArquivo,
-            ...criptografado,
-            validade,
-            ativo: true
-        }
-    });
-
-    console.log("[Fiscal bootstrap] CNPJ alinhado ao certificado e A1 armazenado criptografado.");
+    console.log("[Fiscal bootstrap] Cadastro fiscal básico atualizado.");
 }
 
 module.exports = { executarBootstrapFiscal };
