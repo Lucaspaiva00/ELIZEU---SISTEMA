@@ -4,6 +4,7 @@ const auth = require("../middlewares/auth.middleware");
 const { autorizar } = require("../middlewares/permissions.middleware");
 const empresaController = require("../controllers/empresa.controller");
 const focusNfeController = require("../controllers/focusNfe.controller");
+const portalNacionalController = require("../controllers/portalNacional.controller");
 
 router.get("/minha", auth, autorizar("empresa.visualizar"), empresaController.minha);
 router.put("/minha", auth, autorizar("empresa.editar"), empresaController.atualizarMinha);
@@ -13,6 +14,8 @@ router.delete("/minha/certificado", auth, autorizar("empresa.certificado"), empr
 router.get("/minha/focus", auth, autorizar("empresa.fiscal"), focusNfeController.configuracao);
 router.put("/minha/focus", auth, autorizar("empresa.fiscal"), focusNfeController.salvar);
 router.post("/minha/focus/testar", auth, autorizar("empresa.fiscal"), focusNfeController.testar);
+router.get("/minha/portal-nacional", auth, autorizar("empresa.fiscal"), portalNacionalController.status);
+router.post("/minha/portal-nacional/testar", auth, autorizar("empresa.fiscal"), portalNacionalController.testar);
 
 router.post("/", auth, autorizar("empresa.gerenciar"), empresaController.criar);
 router.get("/", auth, autorizar("empresa.gerenciar"), empresaController.listar);

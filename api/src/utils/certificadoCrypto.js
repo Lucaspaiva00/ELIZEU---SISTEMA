@@ -27,4 +27,21 @@ function criptografarCertificado(conteudo) {
     };
 }
 
-module.exports = { criptografarCertificado };
+function descriptografarCertificado(registro) {
+    const decipher = crypto.createDecipheriv(
+        "aes-256-gcm",
+        obterChave(),
+        Buffer.from(registro.iv, "base64")
+    );
+
+    decipher.setAuthTag(Buffer.from(registro.authTag, "base64"));
+
+    const descriptografado = Buffer.concat([
+        decipher.update(Buffer.from(registro.conteudoCriptografado, "base64")),
+        decipher.final()
+    ]).toString("utf8");
+
+    return JSON.parse(descriptografado);
+}
+
+module.exports = { criptografarCertificado, descriptografarCertificado };

@@ -3,6 +3,7 @@ require("dotenv").config();
 const app = require("./app");
 const controleAcessoRepository = require("./repositories/controleAcesso.repository");
 const sacmaisAutoSyncService = require("./services/sacmaisAutoSync.service");
+const { executarBootstrapFiscal } = require("./services/bootstrapFiscal.service");
 
 const PORT = process.env.PORT || 3000;
 
@@ -11,6 +12,7 @@ async function iniciarServidor() {
         // Garante que o controle de acesso exista antes de aceitar requisições.
         // A migration equivalente continua no projeto para manter o histórico formal do banco.
         await controleAcessoRepository.garantirEstrutura();
+        await executarBootstrapFiscal();
 
         app.listen(PORT, () => {
             console.log(`🚀 Servidor rodando na porta ${PORT}`);

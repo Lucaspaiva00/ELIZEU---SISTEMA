@@ -27,7 +27,7 @@
                 <button class="empresa-tab" data-tab="endereco"><i class="fas fa-location-dot"></i><span>Endereço</span></button>
                 <button class="empresa-tab" data-tab="fiscal"><i class="fas fa-receipt"></i><span>Configuração fiscal</span></button>
                 <button class="empresa-tab" data-tab="certificado"><i class="fas fa-shield-halved"></i><span>Certificado A1</span></button>
-                <button class="empresa-tab" data-tab="focus"><i class="fas fa-plug"></i><span>Focus NFe</span></button>
+                <button class="empresa-tab" data-tab="portal"><i class="fas fa-landmark"></i><span>Portal Nacional</span></button>
             </div>
 
             <form id="formEmpresa">
@@ -101,20 +101,21 @@
                 </div></div>
             </div>
 
-            <div class="empresa-panel" data-panel="focus">
-                <div class="fiscal-alert"><i class="fas fa-circle-info"></i><div><strong>Integração oficial com a Focus NFe</strong><span>Salve primeiro o token de homologação e teste. O token nunca volta para o navegador depois de salvo.</span></div></div>
-                <form id="formFocus">
-                    <div class="card"><div class="card-header"><div><h2 class="card-title">Tokens da Focus NFe</h2><p class="text-muted">Homologação e produção ficam separados e criptografados no banco.</p></div><div id="focusBadge" class="badge badge-warning">Não configurado</div></div><div class="card-body">
-                        <div class="row">
-                            <div class="col"><div class="form-group"><label>Token Focus — Homologação</label><div class="password-field"><input id="tokenFocusHomologacao" type="password" class="form-control" autocomplete="new-password" placeholder="Cole o token de homologação"><button type="button" onclick="alternarSenhaCampo('tokenFocusHomologacao', this)"><i class="fas fa-eye"></i></button></div><small id="statusTokenHomologacao" class="field-help">Não configurado.</small></div><button class="btn btn-light" type="button" onclick="testarFocus('HOMOLOGACAO')"><i class="fas fa-vial"></i> Testar homologação</button></div>
-                            <div class="col"><div class="form-group"><label>Token Focus — Produção</label><div class="password-field"><input id="tokenFocusProducao" type="password" class="form-control" autocomplete="new-password" placeholder="Cole o token de produção"><button type="button" onclick="alternarSenhaCampo('tokenFocusProducao', this)"><i class="fas fa-eye"></i></button></div><small id="statusTokenProducao" class="field-help">Não configurado.</small></div><button class="btn btn-light" type="button" onclick="testarFocus('PRODUCAO')"><i class="fas fa-vial"></i> Testar produção</button></div>
+            <div class="empresa-panel" data-panel="portal">
+                <div class="fiscal-alert"><i class="fas fa-landmark"></i><div><strong>Integração direta com o Portal Nacional da NFS-e</strong><span>Sem intermediário. O ERP usa o certificado A1 da própria empresa para autenticação mTLS com a SEFIN Nacional.</span></div></div>
+                <div class="card">
+                    <div class="card-header"><div><h2 class="card-title">Conexão Portal Nacional</h2><p class="text-muted">O primeiro teste consulta os parâmetros oficiais do município no ambiente configurado.</p></div><div id="portalNacionalBadge" class="badge badge-warning">Pendente</div></div>
+                    <div class="card-body">
+                        <div id="portalNacionalResumo" style="line-height:1.7;"></div>
+                        <div class="alert alert-info" style="margin-top:16px;">
+                            <i class="fas fa-circle-info"></i>
+                            A emissão automática será liberada somente depois de validar município, regime, CNAE e os dados do serviço. Nenhum código fiscal será presumido pelo sistema.
                         </div>
-                        <div style="margin-top:18px;padding:14px;border:1px solid #e5e7eb;border-radius:10px;background:#f8fafc;line-height:1.55;"><strong>Importante</strong><br>O certificado A1 também precisa estar habilitado para este CNPJ na Focus NFe. O certificado A1 não é enviado ao GitHub. Use a aba <strong>Certificado A1</strong> para guardá-lo criptografado no ERP e mantenha o mesmo CNPJ/certificado habilitado também na conta Focus NFe.</div>
-                        <label class="switch-row" style="margin-top:18px"><input id="focusAtivo" type="checkbox" checked><span class="switch-control"></span><span><strong>Integração Focus NFe ativa</strong><small>Permite transmissão de NF-e pelo ERP.</small></span></label>
-                    </div></div>
-                    <div class="panel-actions"><button class="btn btn-primary" type="submit"><i class="fas fa-lock"></i> Salvar tokens Focus NFe</button></div>
-                </form>
+                    </div>
+                </div>
+                <div class="panel-actions"><button class="btn btn-primary" type="button" onclick="testarPortalNacional()"><i class="fas fa-plug-circle-check"></i> Testar conexão com o Portal Nacional</button></div>
             </div>
+        </div>
         </section>
     </main>
 </div>

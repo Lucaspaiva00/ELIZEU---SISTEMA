@@ -1,13 +1,13 @@
 let empresaAtual = null;
 let focusAtual = null;
+let portalNacionalAtual = null;
 
 document.addEventListener("DOMContentLoaded", async () => {
     configurarAbas();
     document.getElementById("formEmpresa").addEventListener("submit", salvarEmpresa);
     document.getElementById("formFiscal").addEventListener("submit", salvarFiscal);
     document.getElementById("formCertificado").addEventListener("submit", salvarCertificado);
-    document.getElementById("formFocus").addEventListener("submit", salvarFocus);
-    await Promise.all([carregarEmpresa(), carregarFocus()]);
+    await Promise.all([carregarEmpresa(), carregarPortalNacional()]);
 });
 
 function configurarAbas() {
@@ -225,4 +225,48 @@ function alternarSenhaCampo(id, botao) {
     campo.type = campo.type === "password" ? "text" : "password";
     const icone = botao.querySelector("i");
     if (icone) icone.className = `fas fa-${campo.type === "password" ? "eye" : "eye-slash"}`;
+}
+
+
+async function carregarPortalNacional() {
+    try {
+        const resposta = await get("/empresas/minha/portal-nacional");
+        if (!resposta?.sucesso) return;
+        portalNacionalAtual = resposta.status;
+        preencherPortalNacional(portalNacionalAtual);
+    } catch (erro) {
+        console.error("Portal Nacional:", erro);
+    }
+}
+
+function preencherPortalNacional(status) {
+    const resumo = document.getElementById("portalNacionalResumo");
+    const badge = document.getElementById("portalNacionalBadge");
+    if (!resumo || !badge) return;
+
+    const pendencias = status?.pendencias || [];
+    const certificado = status?.certificado;
+
+    resumo.innerHTML = `
+        <div><strong>Empresa:</strong> ${status?.empresa?.razaoSocial || "—"}</div>
+        <div><strong>CNPJ:</strong> ${status?.empresa?.cnpj || "—"}</div>
+        <div><strong>Ambiente:</strong> ${status?.ambiente === "PRODUCAO" ? "Produção" : "Produção restrita / homologação"}</div>
+        <div><strong>Município IBGE:</strong> ${status?.codigoMunicipio || "Não informado"}</div>
+        <div><strong>Certificado:</strong> ${certificado?.nomeArquivo || "Não configurado"}</div>
+        <div><strong>Pendências:</strong> ${pendencias.length ? pendencias.join(", ") : "Nenhuma para teste de conexão"}</div>
+    `;
+
+    const pronto = Boolean(status?.prontoParaTestar);
+    badge.className = `badge ${pronto ? "badge-success" : "badge-warning"}`;
+    badge.textContent = pronto ? "Pronto para testar" : "Configuração pendente";
+}
+
+async function testarPortalNacional() {
+    const resposta = await post("/empresas/minha/portal-nacional/testar", {});
+    if (!resposta?.sucesso) {
+        mostrarMensagem(resposta?.mensagem || "Não foi possível conectar ao Portal Nacional.");
+        return;
+    }
+    mostrarMensagem("Conexão com o Portal Nacional validada com sucesso.");
+    await carregarPortalNacional();
 }
