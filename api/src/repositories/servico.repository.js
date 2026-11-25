@@ -29,6 +29,12 @@ class ServicoRepository {
                     nome: dados.nome,
                     descricao: dados.descricao || null,
                     unidadeMedida: dados.unidadeMedida || "UN",
+                    nfseCodigoServicoNacional: dados.nfseCodigoServicoNacional || null,
+                    nfseCodigoNbs: dados.nfseCodigoNbs || null,
+                    nfseAliquotaIss: dados.nfseAliquotaIss === null || dados.nfseAliquotaIss === undefined || dados.nfseAliquotaIss === "" ? null : Number(dados.nfseAliquotaIss),
+                    nfseIssRetido: Boolean(dados.nfseIssRetido),
+                    nfseLocalIncidencia: dados.nfseLocalIncidencia || null,
+                    nfseDescricaoFiscal: dados.nfseDescricaoFiscal || null,
                     ativo: dados.ativo ?? true
                 }
             });
@@ -104,6 +110,12 @@ class ServicoRepository {
                     nome: dados.nome,
                     descricao: dados.descricao || null,
                     unidadeMedida: dados.unidadeMedida || "UN",
+                    nfseCodigoServicoNacional: dados.nfseCodigoServicoNacional || null,
+                    nfseCodigoNbs: dados.nfseCodigoNbs || null,
+                    nfseAliquotaIss: dados.nfseAliquotaIss === null || dados.nfseAliquotaIss === undefined || dados.nfseAliquotaIss === "" ? null : Number(dados.nfseAliquotaIss),
+                    nfseIssRetido: Boolean(dados.nfseIssRetido),
+                    nfseLocalIncidencia: dados.nfseLocalIncidencia || null,
+                    nfseDescricaoFiscal: dados.nfseDescricaoFiscal || null,
                     ativo: dados.ativo ?? true
                 }
             });

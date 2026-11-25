@@ -152,6 +152,12 @@ async function salvarServico(evento) {
         categoriaId: Number(document.getElementById("categoriaId").value),
         unidadeMedida: document.getElementById("unidadeMedida").value,
         descricao: document.getElementById("descricao").value.trim(),
+        nfseCodigoServicoNacional: document.getElementById("nfseCodigoServicoNacional").value.replace(/\D/g, ""),
+        nfseCodigoNbs: document.getElementById("nfseCodigoNbs").value.trim(),
+        nfseAliquotaIss: document.getElementById("nfseAliquotaIss").value === "" ? null : Number(document.getElementById("nfseAliquotaIss").value),
+        nfseIssRetido: document.getElementById("nfseIssRetido").checked,
+        nfseLocalIncidencia: document.getElementById("nfseLocalIncidencia").value.trim(),
+        nfseDescricaoFiscal: document.getElementById("nfseDescricaoFiscal").value.trim(),
         ativo: true,
         variacoes: variacoesServico.map((variacao) => ({
             ...variacao,
@@ -193,6 +199,12 @@ function editarServico(id) {
     document.getElementById("categoriaId").value = servico.categoriaId;
     document.getElementById("unidadeMedida").value = servico.unidadeMedida;
     document.getElementById("descricao").value = servico.descricao || "";
+    document.getElementById("nfseCodigoServicoNacional").value = servico.nfseCodigoServicoNacional || "";
+    document.getElementById("nfseCodigoNbs").value = servico.nfseCodigoNbs || "";
+    document.getElementById("nfseAliquotaIss").value = servico.nfseAliquotaIss ?? "";
+    document.getElementById("nfseIssRetido").checked = Boolean(servico.nfseIssRetido);
+    document.getElementById("nfseLocalIncidencia").value = servico.nfseLocalIncidencia || "";
+    document.getElementById("nfseDescricaoFiscal").value = servico.nfseDescricaoFiscal || "";
     document.getElementById("tituloModalServico").textContent = "Editar serviço";
     variacoesServico = (servico.variacoes || []).map((variacao) => ({ ...variacao, precoCusto: Number(variacao.precoCusto), precoVenda: Number(variacao.precoVenda) }));
     renderizarVariacoes();

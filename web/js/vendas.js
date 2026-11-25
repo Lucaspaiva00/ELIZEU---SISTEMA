@@ -186,8 +186,12 @@ async function visualizarVenda(id) {
     }
 
     const nfe = v.notaFiscal;
+    const temProdutos = (v.itens || []).some(i => i.tipo === "PRODUTO");
+    const temServicos = (v.itens || []).some(i => i.tipo === "SERVICO");
     document.getElementById("btnEmitirNfe").style.display =
-        v.status === "FATURADA" && (!nfe || ["PRONTA_TRANSMISSAO", "REJEITADA", "ERRO"].includes(nfe.status)) ? "inline-flex" : "none";
+        v.status === "FATURADA" && temProdutos && (!nfe || ["PRONTA_TRANSMISSAO", "REJEITADA", "ERRO"].includes(nfe.status)) ? "inline-flex" : "none";
+    document.getElementById("btnEmitirNfse").style.display =
+        v.status === "FATURADA" && temServicos && (!v.notaFiscalServico || ["PRONTA_TRANSMISSAO", "REJEITADA", "ERRO","PENDENTE_CONFIGURACAO"].includes(v.notaFiscalServico.status)) ? "inline-flex" : "none";
     document.getElementById("btnConsultarNfe").style.display =
         nfe?.referenciaFocus && !["CANCELADA"].includes(nfe.status) ? "inline-flex" : "none";
     document.getElementById("btnDanfeNfe").style.display = nfe?.caminhoDanfe ? "inline-flex" : "none";
@@ -230,7 +234,7 @@ async function cancelarVendaAtual() {
 
 
 async function emitirNfe(id) {
-    if (!confirm("Emitir esta NF-e pela Focus NFe? Em homologação ela não possui valor fiscal. Em produção, confirme antes a numeração atual e os CST/CSOSN com o contador.")) return;
+    if (!confirm("Emitir a NF-e dos MATERIAIS desta venda? Em homologação ela não possui valor fiscal. Os serviços serão tratados em uma NFS-e separada.")) return;
 
     const resposta = await post(`/vendas/${id}/nfe/emitir`, {});
 
@@ -295,3 +299,25 @@ async function cancelarNfeAtual() {
     await visualizarVenda(vendaAtualId);
 }
 
+
+
+async function emitirNfse(id) {
+    const parametros = await get(`/vendas/${id}/nfse/parametros`);
+    if (!parametros?.sucesso) {
+        return mostrarMensagem(parametros?.mensagem || "Não foi possível consultar os parâmetros da NFS-e.");
+    }
+
+    const resposta = await post(`/vendas/${id}/nfse/emitir`, {});
+    if (!resposta?.sucesso) {
+        const pendencias = resposta?.pendencias || [];
+        if (pendencias.length) {
+            return mostrarMensagem("NFS-e bloqueada até finalizar:\n" + pendencias.map(p => "• " + p.mensagem).join("\n"));
+        }
+        return mostrarMensagem(resposta?.mensagem || "Erro ao preparar NFS-e.");
+    }
+
+    mostrarMensagem("NFS-e de serviços enviada.");
+    await carregarVendas();
+    if (vendaAtualId === id) await visualizarVenda(id);
+}
+function emitirNfseAtual(){ if(vendaAtualId) emitirNfse(vendaAtualId); }

@@ -105,7 +105,8 @@ function includeVenda() {
             orderBy: [{ custoInternoIndice: "asc" }, { id: "asc" }]
         },
         movimentacoesEstoque: true,
-        notaFiscal: true
+        notaFiscal: true,
+        notaFiscalServico: true
     };
 }
 

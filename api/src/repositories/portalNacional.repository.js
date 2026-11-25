@@ -4,18 +4,21 @@ const { descriptografarCertificado } = require("../utils/certificadoCrypto");
 
 function baseUrl(ambiente) {
     return ambiente === "PRODUCAO"
-        ? "https://sefin.nfse.gov.br/SefinNacional"
-        : "https://sefin.producaorestrita.nfse.gov.br/API/SefinNacional";
+        ? "https://adn.nfse.gov.br"
+        : "https://adn.producaorestrita.nfse.gov.br";
 }
 
-function requisicaoJson({ url, pfx, passphrase, metodo = "GET" }) {
+function requisicaoJson({ url, pfx, passphrase, metodo = "GET", corpo = null }) {
     return new Promise((resolve, reject) => {
         const req = https.request(url, {
             method: metodo,
             pfx,
             passphrase,
             minVersion: "TLSv1.2",
-            headers: { Accept: "application/json" }
+            headers: {
+                Accept: "application/json",
+                ...(corpo ? { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(corpo) } : {})
+            }
         }, (res) => {
             const chunks = [];
             res.on("data", (chunk) => chunks.push(chunk));
@@ -29,6 +32,7 @@ function requisicaoJson({ url, pfx, passphrase, metodo = "GET" }) {
 
         req.on("error", reject);
         req.setTimeout(20000, () => req.destroy(new Error("Tempo limite ao conectar ao Portal Nacional.")));
+        if (corpo) req.write(corpo);
         req.end();
     });
 }
@@ -66,6 +70,49 @@ class PortalNacionalRepository {
             pendencias,
             prontoParaTestar: pendencias.every((p) => p !== "certificado A1" && p !== "código IBGE do município")
         };
+    }
+
+    async consultarServico(empresaId, codigoServico) {
+        const empresa = await prisma.empresa.findUnique({
+            where: { id: empresaId },
+            include: { configuracaoFiscal: true, certificadoDigital: true }
+        });
+        if (!empresa?.certificadoDigital?.ativo) throw new Error("Certificado A1 não configurado.");
+        if (!empresa?.configuracaoFiscal?.codigoMunicipio) throw new Error("Código IBGE do município não configurado.");
+        const codigo = String(codigoServico || "").replace(/\D/g, "");
+        if (!codigo) throw new Error("Informe o código nacional do serviço.");
+
+        const certificado = descriptografarCertificado(empresa.certificadoDigital);
+        const ambiente = empresa.configuracaoFiscal.ambiente || "HOMOLOGACAO";
+        const url = `${baseUrl(ambiente)}/parametros_municipais/${empresa.configuracaoFiscal.codigoMunicipio}/${codigo}`;
+        const resposta = await requisicaoJson({
+            url,
+            pfx: Buffer.from(certificado.arquivoBase64, "base64"),
+            passphrase: certificado.senha
+        });
+        return { ambiente, url, statusHttp: resposta.status, resposta: resposta.dados };
+    }
+
+    async enviarDps(empresaId, xmlDps) {
+        const empresa = await prisma.empresa.findUnique({
+            where: { id: empresaId },
+            include: { configuracaoFiscal: true, certificadoDigital: true }
+        });
+        if (!empresa?.certificadoDigital?.ativo) throw new Error("Certificado A1 não configurado.");
+
+        const certificado = descriptografarCertificado(empresa.certificadoDigital);
+        const ambiente = empresa.configuracaoFiscal?.ambiente || "HOMOLOGACAO";
+        const zlib = require("zlib");
+        const dpsCompactada = zlib.gzipSync(Buffer.from(xmlDps, "utf8")).toString("base64");
+        const corpo = JSON.stringify({ dpsXmlGZipB64: dpsCompactada });
+        const resposta = await requisicaoJson({
+            url: `${baseUrl(ambiente)}/nfse`,
+            pfx: Buffer.from(certificado.arquivoBase64, "base64"),
+            passphrase: certificado.senha,
+            metodo: "POST",
+            corpo
+        });
+        return { ambiente, statusHttp: resposta.status, resposta: resposta.dados };
     }
 
     async testar(empresaId) {

@@ -227,6 +227,7 @@ model Empresa {
   configuracaoFiscal       ConfiguracaoFiscal?
   certificadoDigital       CertificadoDigital?
   notasFiscais             NotaFiscal[]
+  notasFiscaisServico      NotaFiscalServico[]
   integracaoFocusNfe       IntegracaoFocusNfe?
   auditorias                Auditoria[]
 
@@ -248,6 +249,8 @@ model ConfiguracaoFiscal {
   ambiente                  AmbienteFiscal    @default(HOMOLOGACAO)
   serieNfe                  Int               @default(1)
   proximoNumeroNfe          Int               @default(1)
+  serieDps                  Int               @default(1)
+  proximoNumeroDps          Int               @default(1)
   cfopPadrao                String?
   naturezaOperacao          String?
   emailFiscal               String?
@@ -540,6 +543,15 @@ model Servico {
   nome          String
   descricao     String?
   unidadeMedida UnidadeMedida @default(UN)
+
+  // Dados fiscais para NFS-e padrão nacional.
+  nfseCodigoServicoNacional String?
+  nfseCodigoNbs             String?
+  nfseAliquotaIss           Decimal? @db.Decimal(7, 4)
+  nfseIssRetido             Boolean  @default(false)
+  nfseLocalIncidencia       String?
+  nfseDescricaoFiscal       String?
+
   ativo         Boolean       @default(true)
 
   variacoes VariacaoServico[]
@@ -934,6 +946,7 @@ model Venda {
   contasPagar          ContaPagar[]
   movimentacoesEstoque MovimentacaoEstoque[]
   notaFiscal           NotaFiscal?
+  notaFiscalServico    NotaFiscalServico?
 
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
@@ -1020,6 +1033,48 @@ model NotaFiscal {
   atualizadoEm DateTime @updatedAt
 
   @@unique([empresaId, serie, numero])
+  @@index([empresaId, status])
+  @@index([vendaId])
+}
+
+// =====================================================
+// NOTAS FISCAIS DE SERVICO - NFS-e PADRAO NACIONAL
+// =====================================================
+
+model NotaFiscalServico {
+  id Int @id @default(autoincrement())
+
+  empresaId Int
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  vendaId Int @unique
+  venda Venda @relation(fields: [vendaId], references: [id], onDelete: Cascade)
+
+  status StatusNotaFiscal @default(PENDENTE_CONFIGURACAO)
+  ambiente AmbienteFiscal
+
+  serieDps Int
+  numeroDps Int
+
+  chaveAcesso String?
+  numeroNfse String?
+  codigoVerificacao String?
+
+  dadosEmissao Json?
+  xmlDps String? @db.Text
+  xmlNfse String? @db.Text
+  respostaApi Json?
+  motivoStatus String? @db.Text
+
+  preparadaEm DateTime @default(now())
+  transmitidaEm DateTime?
+  autorizadaEm DateTime?
+  canceladaEm DateTime?
+
+  criadoEm DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  @@unique([empresaId, serieDps, numeroDps])
   @@index([empresaId, status])
   @@index([vendaId])
 }

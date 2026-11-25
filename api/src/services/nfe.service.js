@@ -149,7 +149,8 @@ class NfeService {
         }
 
         adicionarPendencia(pendencias, !possuiProduto, "A venda não possui produtos para NF-e modelo 55.", "produto");
-        adicionarPendencia(pendencias, possuiServico, "A venda possui serviço. Para não gerar documento fiscal incorreto, a NF-e automática foi bloqueada. Separe produto e serviço ou emita a NFS-e correspondente.", "servico");
+        // Venda mista é suportada: a NF-e modelo 55 considera somente os itens de PRODUTO.
+        // Os itens de SERVICO são emitidos separadamente pela NFS-e.
 
         return { venda, pronta: pendencias.length === 0, pendencias };
     }

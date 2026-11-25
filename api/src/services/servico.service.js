@@ -15,6 +15,17 @@ class ServicoService {
             throw new Error("Selecione uma categoria de serviço.");
         }
 
+        if (dados.nfseAliquotaIss !== null && dados.nfseAliquotaIss !== undefined && dados.nfseAliquotaIss !== "") {
+            const aliquota = Number(dados.nfseAliquotaIss);
+            if (!Number.isFinite(aliquota) || aliquota < 0 || aliquota > 100) {
+                throw new Error("Informe uma alíquota de ISS válida.");
+            }
+        }
+
+        if (dados.nfseCodigoServicoNacional && !/^\d{6}$/.test(String(dados.nfseCodigoServicoNacional).replace(/\D/g, ""))) {
+            throw new Error("O código nacional do serviço deve possuir 6 dígitos.");
+        }
+
         if (!Array.isArray(dados.variacoes) || !dados.variacoes.length) {
             throw new Error("Cadastre ao menos uma variação do serviço.");
         }
