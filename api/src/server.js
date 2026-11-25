@@ -5,6 +5,7 @@ const controleAcessoRepository = require("./repositories/controleAcesso.reposito
 const sacmaisAutoSyncService = require("./services/sacmaisAutoSync.service");
 const { executarBootstrapFiscal } = require("./services/bootstrapFiscal.service");
 const portalNacionalRepository = require("./repositories/portalNacional.repository");
+const nfeDistribuicaoService = require("./services/nfeDistribuicao.service");
 
 const PORT = process.env.PORT || 3000;
 
@@ -14,6 +15,24 @@ async function iniciarServidor() {
         // A migration equivalente continua no projeto para manter o histórico formal do banco.
         await controleAcessoRepository.garantirEstrutura();
         await executarBootstrapFiscal();
+
+        if (process.env.NFE_RECUPERAR_CHAVE) {
+            try {
+                const empresaIdFiscal = Number(process.env.FISCAL_BOOTSTRAP_EMPRESA_ID || 0);
+                const recuperada = await nfeDistribuicaoService.recuperarPorChave(
+                    empresaIdFiscal,
+                    process.env.NFE_RECUPERAR_CHAVE
+                );
+                console.log("[NF-e XML] Consulta:", JSON.stringify({
+                    httpStatus: recuperada.httpStatus,
+                    cStat: recuperada.cStat,
+                    xMotivo: recuperada.xMotivo,
+                    resumo: nfeDistribuicaoService.resumirXml(recuperada.xml)
+                }));
+            } catch (erro) {
+                console.error("[NF-e XML] Falha na recuperação:", erro.message);
+            }
+        }
 
         if (process.env.FISCAL_BOOTSTRAP_TEST_PORTAL === "1") {
             try {
