@@ -12,6 +12,11 @@ async function executarBootstrapFiscal() {
     const cidade = String(process.env.FISCAL_BOOTSTRAP_CIDADE || "").trim();
     const estado = String(process.env.FISCAL_BOOTSTRAP_ESTADO || "").trim().toUpperCase();
     const codigoMunicipio = String(process.env.FISCAL_BOOTSTRAP_CODIGO_MUNICIPIO || "").trim();
+    const ie = String(process.env.FISCAL_BOOTSTRAP_IE || "").trim();
+    const cep = String(process.env.FISCAL_BOOTSTRAP_CEP || "").replace(/\D/g, "");
+    const endereco = String(process.env.FISCAL_BOOTSTRAP_ENDERECO || "").trim();
+    const numero = String(process.env.FISCAL_BOOTSTRAP_NUMERO || "").trim();
+    const bairro = String(process.env.FISCAL_BOOTSTRAP_BAIRRO || "").trim();
 
     if (!empresaId || !cnpj) return;
 
@@ -28,18 +33,42 @@ async function executarBootstrapFiscal() {
     if (razaoSocial) dataEmpresa.razaoSocial = razaoSocial;
     if (cidade) dataEmpresa.cidade = cidade;
     if (estado) dataEmpresa.estado = estado;
+    if (ie) dataEmpresa.inscricaoEstadual = ie;
+    if (cep) dataEmpresa.cep = cep;
+    if (endereco) dataEmpresa.endereco = endereco;
+    if (numero) dataEmpresa.numero = numero;
+    if (bairro) dataEmpresa.bairro = bairro;
     await prisma.empresa.update({ where: { id: empresaId }, data: dataEmpresa });
 
     if (codigoMunicipio) {
         await prisma.configuracaoFiscal.upsert({
             where: { empresaId },
-            update: { codigoMunicipio, ambiente: "HOMOLOGACAO" },
+            update: {
+                codigoMunicipio,
+                ambiente: "HOMOLOGACAO",
+                regimeTributario: "SIMPLES_NACIONAL",
+                crt: 1,
+                serieNfe: 1,
+                cfopPadrao: "5101",
+                naturezaOperacao: "Venda de Producao do Estabelecimento",
+                icmsSituacaoTributariaPadrao: "102",
+                modalidadeFrete: 9,
+                consumidorFinal: true,
+                ativo: false
+            },
             create: {
                 empresaId,
                 codigoMunicipio,
                 ambiente: "HOMOLOGACAO",
+                regimeTributario: "SIMPLES_NACIONAL",
+                crt: 1,
                 serieNfe: 1,
                 proximoNumeroNfe: 1,
+                cfopPadrao: "5101",
+                naturezaOperacao: "Venda de Producao do Estabelecimento",
+                icmsSituacaoTributariaPadrao: "102",
+                modalidadeFrete: 9,
+                consumidorFinal: true,
                 ativo: false
             }
         });

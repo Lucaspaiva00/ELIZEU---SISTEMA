@@ -6,6 +6,7 @@ const sacmaisAutoSyncService = require("./services/sacmaisAutoSync.service");
 const { executarBootstrapFiscal } = require("./services/bootstrapFiscal.service");
 const portalNacionalRepository = require("./repositories/portalNacional.repository");
 const nfeDistribuicaoService = require("./services/nfeDistribuicao.service");
+const sefazGoService = require("./services/sefazGo.service");
 
 const PORT = process.env.PORT || 3000;
 
@@ -15,6 +16,16 @@ async function iniciarServidor() {
         // A migration equivalente continua no projeto para manter o histórico formal do banco.
         await controleAcessoRepository.garantirEstrutura();
         await executarBootstrapFiscal();
+
+        if (process.env.NFE_TESTAR_SEFAZ_GO === "1") {
+            try {
+                const empresaIdFiscal = Number(process.env.FISCAL_BOOTSTRAP_EMPRESA_ID || 0);
+                const teste = await sefazGoService.testarStatus(empresaIdFiscal, "HOMOLOGACAO");
+                console.log("[SEFAZ GO] Status homologação:", JSON.stringify(teste));
+            } catch (erro) {
+                console.error("[SEFAZ GO] Teste falhou:", erro.message);
+            }
+        }
 
         if (process.env.NFE_RECUPERAR_CHAVE) {
             try {
