@@ -1,3 +1,4 @@
+const { montarNfeHomologacao } = require("./nfeXmlGo");
 const nfeRepository = require("../repositories/nfe.repository");
 const classificacaoRtc = require('../utils/classificacaoRtc');
 
@@ -117,7 +118,7 @@ class NfeService {
         // Venda mista é suportada: a NF-e modelo 55 considera somente os itens de PRODUTO.
         // Os itens de SERVICO são emitidos separadamente pela NFS-e.
 
-        adicionarPendencia(pendencias, true, "A transmissão direta da NF-e de materiais à SEFAZ ainda está indisponível.", "fiscal");
+        adicionarPendencia(pendencias, true, "A transmissão direta da NF-e de materiais à SEFAZ ainda está indisponível.", "transmissao");
         return { venda, pronta: false, pendencias };
     }
 
@@ -185,6 +186,23 @@ class NfeService {
             }),
             informacoesComplementares: fiscal.informacoesComplementares || null
         };
+    }
+
+    async previsualizar(vendaId, empresaId) {
+        const { venda, pendencias } = await this.validar(vendaId, empresaId);
+        const pendenciasDaPrevia = pendencias.filter(item => item.destino !== "transmissao");
+        if (pendenciasDaPrevia.length) return { pronta: false, pendencias: pendenciasDaPrevia };
+
+        const fiscal = venda.empresa.configuracaoFiscal;
+        const nota = {
+            ambiente: "HOMOLOGACAO",
+            serie: fiscal.serieNfe,
+            numero: fiscal.proximoNumeroNfe,
+            dadosEmissao: this.montarSnapshot(venda)
+        };
+        const codigoPrevia = String(venda.id).slice(-8).padStart(8, "0");
+        const { xml } = montarNfeHomologacao(nota, codigoPrevia);
+        return { pronta: true, ambiente: nota.ambiente, xml };
     }
 
     async preparar(vendaId, empresaId) {
