@@ -114,6 +114,8 @@ class NfseService {
         pend(pendencias, !texto(cliente?.nome), "Nome do tomador não informado.", "cliente");
 
         const itens=(venda.itens||[]).filter(i=>i.tipo==="SERVICO");
+        const codigosServico=[...new Set(itens.map(i=>digitos(i.variacaoServico?.servico?.nfseCodigoServicoNacional)).filter(Boolean))];
+        pend(pendencias, codigosServico.length>1, "A venda possui serviços com códigos nacionais diferentes. A emissão precisa ser separada por código de serviço.", "servico");
         pend(pendencias, !itens.length, "A venda não possui serviços para emissão de NFS-e.", "servico");
 
         for(const item of itens){
@@ -121,6 +123,7 @@ class NfseService {
             pend(pendencias, !servico, `Serviço "${item.descricao}" não encontrado.`, "servico");
             if(!servico) continue;
             pend(pendencias, !digitos(servico.nfseCodigoServicoNacional), `Serviço "${servico.nome}" está sem código nacional de serviço.`, "servico");
+            pend(pendencias, !texto(servico.nfseCodigoNbs), `Serviço "${servico.nome}" está sem NBS 2.0.`, "servico");
             pend(pendencias, !texto(servico.nfseDescricaoFiscal || servico.descricao || servico.nome), `Serviço "${servico.nome}" está sem descrição fiscal.`, "servico");
         }
         return { venda, itens, pronta: pendencias.length===0, pendencias };
@@ -170,7 +173,7 @@ class NfseService {
     montarDpsBasica(nota){
         const s=nota.dadosEmissao;
         const primeiro=s.itens[0];
-        const id=`ID${s.prestador.codigoMunicipio}${s.prestador.cnpj}${String(nota.serieDps).padStart(5,"0")}${String(nota.numeroDps).padStart(15,"0")}`;
+        const id=`DPS${s.prestador.codigoMunicipio}2${s.prestador.cnpj}${String(nota.serieDps).padStart(5,"0")}${String(nota.numeroDps).padStart(15,"0")}`;
         const agora=new Date().toISOString();
         const doc=s.tomador.documento;
         const docTag=doc.length===11?`<CPF>${doc}</CPF>`:`<CNPJ>${doc}</CNPJ>`;
@@ -196,15 +199,19 @@ class NfseService {
         const gerada=await this.gerarDps(vendaId,empresaId);
         if(!gerada.pronta) return gerada;
         const resposta=await portalNacionalRepository.enviarDps(empresaId,gerada.xmlDps);
-        const ok=resposta.statusHttp>=200 && resposta.statusHttp<300;
         const dados=resposta.resposta || {};
+        const sucesso=Boolean(resposta.statusHttp>=200 && resposta.statusHttp<300 && dados?.chaveAcesso && dados?.nfseXmlGZipB64);
+        let xmlNfse=null;
+        if(sucesso){
+            try { xmlNfse=require("zlib").gunzipSync(Buffer.from(dados.nfseXmlGZipB64,"base64")).toString("utf8"); } catch (_) { xmlNfse=null; }
+        }
         const atualizada=await nfseRepository.atualizar(gerada.notaFiscalServico.id,{
             respostaApi:dados,
-            xmlNfse:typeof dados==="string"?dados:(dados?.nfseXml || dados?.xml || null),
-            status:ok?"AUTORIZADA":"REJEITADA",
-            motivoStatus:ok?"NFS-e recebida pela SEFIN Nacional.":JSON.stringify(dados).slice(0,4000),
+            xmlNfse,
+            status:sucesso?"AUTORIZADA":"REJEITADA",
+            motivoStatus:sucesso?`NFS-e autorizada pela SEFIN Nacional. Chave ${dados.chaveAcesso}.`:JSON.stringify(dados).slice(0,4000),
             transmitidaEm:new Date(),
-            autorizadaEm:ok?new Date():null
+            autorizadaEm:sucesso?new Date():null
         });
         return {pronta:true,notaFiscalServico:atualizada,retorno:dados};
     }
