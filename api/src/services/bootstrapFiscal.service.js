@@ -48,24 +48,9 @@ async function executarBootstrapFiscal() {
     if (codigoMunicipio) {
         await prisma.configuracaoFiscal.upsert({
             where: { empresaId },
-            update: {
-                codigoMunicipio,
-                ambiente: "HOMOLOGACAO",
-                regimeTributario: "SIMPLES_NACIONAL",
-                crt: 1,
-                serieNfe: 1,
-                ...(proximoNumeroNfe > 0 ? { proximoNumeroNfe } : {}),
-                cfopPadrao: "5101",
-                naturezaOperacao: "Venda de Producao do Estabelecimento",
-                icmsSituacaoTributariaPadrao: "102",
-                ...(pisCst ? { pisSituacaoTributariaPadrao: pisCst } : {}),
-                ...(cofinsCst ? { cofinsSituacaoTributariaPadrao: cofinsCst } : {}),
-                inscricaoMunicipal: im || undefined,
-                cnaePrincipal: cnae || undefined,
-                modalidadeFrete: 9,
-                consumidorFinal: true,
-                ativo: false
-            },
+            // O bootstrap só preenche a configuração na primeira instalação.
+            // A operação fiscal e a numeração passam a ser mantidas no ERP.
+            update: {},
             create: {
                 empresaId,
                 codigoMunicipio,
