@@ -438,6 +438,33 @@ async function visualizarVenda(id) {
         });
         fiscalStatus.append(consultar);
     }
+    if (nfe?.status === "TRANSMITINDO" && nfe.ambiente === "PRODUCAO" && nfe.chaveAcesso
+        && window.temPermissao?.("fiscal.emitir")) {
+        const retransmitir = document.createElement("button");
+        retransmitir.type = "button";
+        retransmitir.className = "btn btn-light btn-sm";
+        retransmitir.style.margin = "10px 0 0 8px";
+        retransmitir.textContent = "Retransmitir a mesma NF-e";
+        retransmitir.addEventListener("click", async () => {
+            retransmitir.disabled = true;
+            try {
+                const mensagem = `Consultar a SEFAZ e retransmitir a NF-e nº ${nfe.numero}, série ${nfe.serie}, somente se a chave estiver ausente? O XML e o número serão os mesmos.`;
+                if (!await confirmarAcao(mensagem)) return;
+                const resposta = await post(`/vendas/${v.id}/nfe/retransmitir`, { confirmado: true });
+                if (vendaAtualId !== v.id) return;
+                await carregarVendas();
+                if (vendaAtualId === v.id) await abrirFiscalVenda(v.id);
+                const nota = resposta?.notaFiscal;
+                if (nota?.status === "AUTORIZADA" && nota.protocolo) {
+                    return mostrarMensagem(`NF-e autorizada pela SEFAZ. Protocolo ${nota.protocolo}.`, { tipo: "sucesso" });
+                }
+                mostrarMensagem(resposta?.mensagem || nota?.motivoStatus || "Autorização ainda não confirmada. Consulte a SEFAZ.", { tipo: "erro" });
+            } finally {
+                retransmitir.disabled = false;
+            }
+        });
+        fiscalStatus.append(retransmitir);
+    }
     if (temServicos || v.notaFiscalServico) {
         painelFiscal.insertAdjacentHTML("beforeend", '<section id="viewVendaNfse" class="modal-section-card"><h3>NFS-e Serviços</h3><div data-nfse-status aria-live="polite">Consultando NFS-e…</div></section>');
         void carregarNfseVenda(v.id, painelFiscal.querySelector("[data-nfse-status]"));
