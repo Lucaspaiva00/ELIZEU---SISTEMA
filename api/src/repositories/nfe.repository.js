@@ -43,10 +43,12 @@ class NfeRepository {
             const existente = await tx.notaFiscal.findUnique({ where: { vendaId: venda.id } });
             if (existente) return existente;
 
-            const fiscal = await tx.configuracaoFiscal.findUnique({ where: { empresaId: venda.empresaId } });
-            if (!fiscal) throw new Error("Configuração fiscal da empresa não encontrada.");
+            const fiscal = await tx.configuracaoFiscal.update({
+                where: { empresaId: venda.empresaId, ambiente: "PRODUCAO", ativo: true },
+                data: { proximoNumeroNfe: { increment: 1 } }
+            });
 
-            const numero = fiscal.proximoNumeroNfe;
+            const numero = fiscal.proximoNumeroNfe - 1;
             const serie = fiscal.serieNfe;
 
             const nota = await tx.notaFiscal.create({
@@ -63,13 +65,16 @@ class NfeRepository {
                 }
             });
 
-            await tx.configuracaoFiscal.update({
-                where: { empresaId: venda.empresaId },
-                data: { proximoNumeroNfe: { increment: 1 } }
-            });
-
             return nota;
         });
+    }
+
+    async iniciarTransmissao(notaId, dados) {
+        const { count } = await prisma.notaFiscal.updateMany({
+            where: { id: notaId, ambiente: "PRODUCAO", status: "PRONTA_TRANSMISSAO" },
+            data: { ...dados, status: "TRANSMITINDO", transmitidaEm: new Date() }
+        });
+        if (count !== 1) throw new Error("Já existe uma tentativa registrada para esta NF-e.");
     }
 
     atualizar(notaId, dados) {
