@@ -380,6 +380,32 @@ async function visualizarVenda(id) {
         });
         fiscalStatus.append(botaoPrevia);
     }
+    if (temProdutos && v.status === "FATURADA" && (!nfe || nfe.status === "PRONTA_TRANSMISSAO") && window.temPermissao?.("fiscal.emitir")) {
+        const emitir = document.createElement("button");
+        emitir.type = "button";
+        emitir.className = "btn btn-primary btn-sm";
+        emitir.style.marginTop = "10px";
+        emitir.textContent = "Emitir NF-e de mercadorias em produção";
+        emitir.addEventListener("click", async () => {
+            emitir.disabled = true;
+            try {
+                if (!await confirmarAcao(`Emitir a NF-e real da venda #${String(v.numero).padStart(5, "0")} para ${v.cliente?.nome || "o destinatário desta venda"}?`)) return;
+                const resposta = await post(`/vendas/${v.id}/nfe/emitir`, {});
+                if (vendaAtualId !== v.id) return;
+                await carregarVendas();
+                await abrirFiscalVenda(v.id);
+                const nota = resposta?.notaFiscal;
+                if (nota?.status === "AUTORIZADA" && nota.protocolo) {
+                    return mostrarMensagem(`NF-e autorizada pela SEFAZ. Protocolo ${nota.protocolo}.`, { tipo: "sucesso" });
+                }
+                const detalhe = resposta?.pendencias?.map(item => item.mensagem).join("\n") || nota?.motivoStatus || resposta?.mensagem;
+                mostrarMensagem(detalhe || "Autorização da NF-e ainda não confirmada. Confira a aba Fiscal.", { tipo: "erro" });
+            } finally {
+                emitir.disabled = false;
+            }
+        });
+        fiscalStatus.append(emitir);
+    }
     if (temServicos || v.notaFiscalServico) {
         painelFiscal.insertAdjacentHTML("beforeend", '<section id="viewVendaNfse" class="modal-section-card"><h3>NFS-e Serviços</h3><div data-nfse-status aria-live="polite">Consultando NFS-e…</div></section>');
         void carregarNfseVenda(v.id, painelFiscal.querySelector("[data-nfse-status]"));
