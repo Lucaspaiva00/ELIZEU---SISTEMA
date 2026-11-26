@@ -95,12 +95,14 @@ class PortalNacionalRepository {
         return { ambiente: fiscal.ambiente || "HOMOLOGACAO", url, statusHttp: resposta.status, resposta: resposta.dados };
     }
 
-    async enviarDps(empresaId, xmlDps) {
-        const { fiscal, certificado, pfx } = await this.dadosEmpresa(empresaId);
+    async enviarDps(empresaId, xmlDps, ambiente) {
+        if (!["PRODUCAO", "HOMOLOGACAO"].includes(ambiente)) {
+            throw new Error("Ambiente fiscal da DPS inválido.");
+        }
+        const { certificado, pfx } = await this.dadosEmpresa(empresaId);
         const zlib = require("zlib");
         const dpsCompactada = zlib.gzipSync(Buffer.from(xmlDps, "utf8")).toString("base64");
         const corpo = JSON.stringify({ dpsXmlGZipB64: dpsCompactada });
-        const ambiente = fiscal.ambiente || "HOMOLOGACAO";
         const url = `${baseSefinUrl(ambiente)}/nfse`;
         const resposta = await requisicaoJson({ url, pfx, passphrase: certificado.senha, metodo: "POST", corpo });
         return { ambiente, url, statusHttp: resposta.status, resposta: resposta.dados, corpoResposta: resposta.body };

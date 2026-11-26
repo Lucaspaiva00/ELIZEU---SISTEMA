@@ -111,6 +111,13 @@ function assinarXmlDps(xml, certificado) {
     return xml.replace("</infDPS>", "</infDPS>" + signature);
 }
 
+const opcaoSimplesPorRegime = {
+    MEI: 2,
+    SIMPLES_NACIONAL: 3,
+    SIMPLES_NACIONAL_EXCESSO: 3,
+    REGIME_NORMAL: 1
+};
+
 class NfseService {
     async validar(vendaId, empresaId) {
         const venda = await nfseRepository.buscarVenda(vendaId, empresaId);
@@ -125,6 +132,7 @@ class NfseService {
         pend(pendencias, digitos(empresa?.cnpj).length!==14, "CNPJ do prestador inválido.", "empresa");
         pend(pendencias, !fiscal?.codigoMunicipio, "Código IBGE do município não configurado.", "fiscal");
         pend(pendencias, !fiscal?.inscricaoMunicipal, "Inscrição municipal não configurada.", "fiscal");
+        pend(pendencias, !opcaoSimplesPorRegime[fiscal?.regimeTributario], "Regime tributário não configurado.", "fiscal");
         pend(pendencias, !fiscal?.cnaePrincipal, "CNAE principal não configurado.", "fiscal");
 
         const cliente=venda.cliente;
@@ -189,7 +197,7 @@ class NfseService {
         return {convenio,servicos,pendencias:validacao.pendencias};
     }
 
-    montarDpsBasica(nota){
+    montarDpsBasica(nota, regimeTributario){
         const s=nota.dadosEmissao;
         const primeiro=s.itens[0];
         const id=`DPS${s.prestador.codigoMunicipio}2${s.prestador.cnpj}${String(nota.serieDps).padStart(5,"0")}${String(nota.numeroDps).padStart(15,"0")}`;
@@ -197,15 +205,31 @@ class NfseService {
         const doc=s.tomador.documento;
         const docTag=doc.length===11?`<CPF>${doc}</CPF>`:`<CNPJ>${doc}</CNPJ>`;
         const descricao=s.itens.map(i=>i.descricao).join(" | ");
-        return `<?xml version="1.0" encoding="UTF-8"?><DPS xmlns="http://www.sped.fazenda.gov.br/nfse" versao="1.01"><infDPS xmlns="http://www.sped.fazenda.gov.br/nfse" Id="${id}"><tpAmb>${nota.ambiente==="PRODUCAO"?"1":"2"}</tpAmb><dhEmi>${agora}</dhEmi><verAplic>ElianSigs-1.0</verAplic><serie>${nota.serieDps}</serie><nDPS>${nota.numeroDps}</nDPS><dCompet>${s.dataCompetencia}</dCompet><tpEmit>1</tpEmit><cLocEmi>${s.prestador.codigoMunicipio}</cLocEmi><prest><CNPJ>${s.prestador.cnpj}</CNPJ><IM>${esc(s.prestador.inscricaoMunicipal)}</IM></prest><toma>${docTag}<xNome>${esc(s.tomador.nome)}</xNome></toma><serv><locPrest><cLocPrestacao>${s.prestador.codigoMunicipio}</cLocPrestacao></locPrest><cServ><cTribNac>${primeiro.codigoServicoNacional}</cTribNac><xDescServ>${esc(descricao)}</xDescServ></cServ></serv><valores><vServPrest><vServ>${s.totalServicos.toFixed(2)}</vServ></vServPrest></valores></infDPS></DPS>`;
+        const homologacao = nota.ambiente === "HOMOLOGACAO";
+        const opcaoSimples = opcaoSimplesPorRegime[regimeTributario];
+        if (!opcaoSimples) throw new Error("Regime tributário não configurado para a DPS.");
+        const apuracaoSimples = opcaoSimples === 3
+            ? `<regApTribSN>${regimeTributario === "SIMPLES_NACIONAL_EXCESSO" ? 2 : 1}</regApTribSN>`
+            : "";
+        const regime = `<regTrib><opSimpNac>${opcaoSimples}</opSimpNac>${apuracaoSimples}<regEspTrib>0</regEspTrib></regTrib>`;
+        const descricaoServico = `<xDescServ>${esc(descricao)}</xDescServ>`;
+        const codigoNbs = `<cNBS>${esc(primeiro.codigoNbs)}</cNBS>`;
+        const classificacaoServico = homologacao ? codigoNbs + descricaoServico : descricaoServico + codigoNbs;
+        const retencaoIss = primeiro.issRetido ? 2 : 1;
+        const aliquota = primeiro.aliquotaIss > 0 ? `<pAliq>${primeiro.aliquotaIss.toFixed(2)}</pAliq>` : "";
+        const tributos = `<trib><tribMun><tribISSQN>1</tribISSQN><tpRetISSQN>${retencaoIss}</tpRetISSQN>${aliquota}</tribMun><totTrib><indTotTrib>0</indTotTrib></totTrib></trib>`;
+        return `<?xml version="1.0" encoding="UTF-8"?><DPS xmlns="http://www.sped.fazenda.gov.br/nfse" versao="1.01"><infDPS xmlns="http://www.sped.fazenda.gov.br/nfse" Id="${id}"><tpAmb>${nota.ambiente==="PRODUCAO"?"1":"2"}</tpAmb><dhEmi>${agora}</dhEmi><verAplic>ElianSigs-1.0</verAplic><serie>${nota.serieDps}</serie><nDPS>${nota.numeroDps}</nDPS><dCompet>${s.dataCompetencia}</dCompet><tpEmit>1</tpEmit>${homologacao ? "<finNFSe>0</finNFSe>" : ""}<cLocEmi>${s.prestador.codigoMunicipio}</cLocEmi><prest><CNPJ>${s.prestador.cnpj}</CNPJ><IM>${esc(s.prestador.inscricaoMunicipal)}</IM>${regime}</prest><toma>${docTag}<xNome>${esc(s.tomador.nome)}</xNome></toma>${homologacao ? "<indDest>0</indDest>" : ""}<serv><locPrest><cLocPrestacao>${s.prestador.codigoMunicipio}</cLocPrestacao></locPrest><cServ><cTribNac>${primeiro.codigoServicoNacional}</cTribNac>${classificacaoServico}</cServ></serv><valores><vServPrest><vServ>${s.totalServicos.toFixed(2)}</vServ></vServPrest>${tributos}</valores></infDPS></DPS>`;
     }
 
     async gerarDps(vendaId,empresaId){
         const preparado=await this.preparar(vendaId,empresaId);
         if(!preparado.pronta) return preparado;
         const nota=await nfseRepository.buscarPorVenda(vendaId,empresaId);
-        const xml=this.montarDpsBasica(nota);
-        const empresa=await prisma.empresa.findUnique({where:{id:empresaId},include:{certificadoDigital:true}});
+        if (nota.status === "AUTORIZADA") throw new Error("Esta NFS-e já foi autorizada.");
+        const empresa=await prisma.empresa.findUnique({
+            where:{id:empresaId},include:{certificadoDigital:true,configuracaoFiscal:true}
+        });
+        const xml=this.montarDpsBasica(nota, empresa?.configuracaoFiscal?.regimeTributario);
         if(!empresa?.certificadoDigital?.ativo) throw new Error("Certificado A1 não configurado.");
         const certificado=descriptografarCertificado(empresa.certificadoDigital);
         const xmlAssinado=assinarXmlDps(xml,certificado);
@@ -217,7 +241,7 @@ class NfseService {
     async emitir(vendaId,empresaId){
         const gerada=await this.gerarDps(vendaId,empresaId);
         if(!gerada.pronta) return gerada;
-        const resposta=await portalNacionalRepository.enviarDps(empresaId,gerada.xmlDps);
+        const resposta=await portalNacionalRepository.enviarDps(empresaId, gerada.xmlDps, gerada.notaFiscalServico.ambiente);
         const dados=resposta.resposta || {};
         const sucesso=Boolean(resposta.statusHttp>=200 && resposta.statusHttp<300 && dados?.chaveAcesso && dados?.nfseXmlGZipB64);
         let xmlNfse=null;
