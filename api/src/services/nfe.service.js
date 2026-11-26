@@ -10,7 +10,7 @@ function adicionarPendencia(lista, condicao, mensagem, destino) {
 }
 
 class NfeService {
-    async validar(vendaId, empresaId) {
+    async validar(vendaId, empresaId, { previa = false } = {}) {
         const venda = await nfeRepository.buscarVenda(vendaId, empresaId);
         if (!venda) throw new Error("Venda não encontrada.");
 
@@ -33,7 +33,7 @@ class NfeService {
 
         adicionarPendencia(pendencias, !fiscal, "Configuração fiscal da empresa não cadastrada.", "fiscal");
         if (fiscal) {
-            adicionarPendencia(pendencias, !fiscal.ativo, "Configuração fiscal está desativada.", "fiscal");
+            adicionarPendencia(pendencias, !previa && !fiscal.ativo, "Configuração fiscal está desativada.", "fiscal");
             adicionarPendencia(pendencias, !fiscal.regimeTributario, "Regime tributário não informado.", "fiscal");
             adicionarPendencia(pendencias, !fiscal.crt, "CRT não informado.", "fiscal");
             adicionarPendencia(pendencias, somenteDigitos(fiscal.codigoMunicipio).length !== 7, "Código IBGE do município inválido ou não informado.", "fiscal");
@@ -118,8 +118,8 @@ class NfeService {
         // Venda mista é suportada: a NF-e modelo 55 considera somente os itens de PRODUTO.
         // Os itens de SERVICO são emitidos separadamente pela NFS-e.
 
-        adicionarPendencia(pendencias, true, "A transmissão direta da NF-e de materiais à SEFAZ ainda está indisponível.", "transmissao");
-        return { venda, pronta: false, pendencias };
+        adicionarPendencia(pendencias, !previa, "A transmissão direta da NF-e de materiais à SEFAZ ainda está indisponível.", "transmissao");
+        return { venda, pronta: pendencias.length === 0, pendencias };
     }
 
     montarSnapshot(venda) {
@@ -189,9 +189,8 @@ class NfeService {
     }
 
     async previsualizar(vendaId, empresaId) {
-        const { venda, pendencias } = await this.validar(vendaId, empresaId);
-        const pendenciasDaPrevia = pendencias.filter(item => item.destino !== "transmissao");
-        if (pendenciasDaPrevia.length) return { pronta: false, pendencias: pendenciasDaPrevia };
+        const { venda, pronta, pendencias } = await this.validar(vendaId, empresaId, { previa: true });
+        if (!pronta) return { pronta: false, pendencias };
 
         const fiscal = venda.empresa.configuracaoFiscal;
         const nota = {
