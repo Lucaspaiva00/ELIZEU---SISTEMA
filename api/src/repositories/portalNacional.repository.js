@@ -106,6 +106,18 @@ class PortalNacionalRepository {
         return { ambiente, url, statusHttp: resposta.status, resposta: resposta.dados, corpoResposta: resposta.body };
     }
 
+    async testarSefin(empresaId) {
+        const { fiscal, certificado, pfx } = await this.dadosEmpresa(empresaId);
+        const ambiente = fiscal.ambiente || "HOMOLOGACAO";
+        const url = `${baseSefinUrl(ambiente)}/nfse`;
+        const zlib = require("zlib");
+        const xmlTeste = `<?xml version="1.0" encoding="UTF-8"?><DPS xmlns="http://www.sped.fazenda.gov.br/nfse" versao="1.01"><infDPS Id="TESTE">${""}</infDPS></DPS>`;
+        const dpsXmlGZipB64 = zlib.gzipSync(Buffer.from(xmlTeste, "utf8")).toString("base64");
+        const corpo = JSON.stringify({ dpsXmlGZipB64 });
+        const resposta = await requisicaoJson({ url, pfx, passphrase: certificado.senha, metodo: "POST", corpo });
+        return { ambiente, url, statusHttp: resposta.status, resposta: resposta.dados, corpoResposta: resposta.body };
+    }
+
     async testar(empresaId) {
         const { fiscal, certificado, pfx } = await this.dadosEmpresa(empresaId);
         const ambiente = fiscal.ambiente || "HOMOLOGACAO";
