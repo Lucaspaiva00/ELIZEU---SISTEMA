@@ -1,12 +1,96 @@
 const crypto = require("crypto");
+const fs = require("fs");
+const os = require("os");
+const path = require("path");
+const { execFileSync } = require("child_process");
 const nfseRepository = require("../repositories/nfse.repository");
 const portalNacionalRepository = require("../repositories/portalNacional.repository");
+const prisma = require("../config/prisma");
+const { descriptografarCertificado } = require("../utils/certificadoCrypto");
 
 function texto(v){ return String(v ?? "").trim(); }
 function digitos(v){ return texto(v).replace(/\D/g,""); }
 function numero(v){ return Number(v || 0); }
 function esc(v){ return texto(v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&apos;"); }
 function pend(lista, condicao, mensagem, destino){ if(condicao) lista.push({mensagem,destino}); }
+
+function canonicalizarXmlControlado(xml) {
+    return String(xml)
+        .replace(/^\s*<\?xml[^>]*\?>\s*/i, "")
+        .replace(/\r\n?/g, "\n")
+        .replace(/>\s+</g, "><")
+        .trim();
+}
+
+function extrairCertificadoFinal(certificado) {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "elian-nfse-"));
+    const pfxPath = path.join(dir, "cert.pfx");
+    try {
+        fs.writeFileSync(pfxPath, Buffer.from(certificado.arquivoBase64, "base64"), { mode: 0o600 });
+        const args = ["pkcs12", "-in", pfxPath, "-clcerts", "-nokeys", "-passin", "env:ELIAN_PFX_PASS"];
+        const env = { ...process.env, ELIAN_PFX_PASS: certificado.senha };
+        return execFileSync("openssl", args, { env, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+    } finally {
+        try { fs.rmSync(dir, { recursive: true, force: true }); } catch (_) {}
+    }
+}
+
+function extrairChavePrivada(certificado) {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "elian-nfse-key-"));
+    const pfxPath = path.join(dir, "cert.pfx");
+    try {
+        fs.writeFileSync(pfxPath, Buffer.from(certificado.arquivoBase64, "base64"), { mode: 0o600 });
+        const args = ["pkcs12", "-in", pfxPath, "-nocerts", "-nodes", "-passin", "env:ELIAN_PFX_PASS"];
+        const env = { ...process.env, ELIAN_PFX_PASS: certificado.senha };
+        return execFileSync("openssl", args, { env, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+    } finally {
+        try { fs.rmSync(dir, { recursive: true, force: true }); } catch (_) {}
+    }
+}
+
+function certificadoBase64(pem) {
+    return pem.replace(/-----BEGIN CERTIFICATE-----/g, "").replace(/-----END CERTIFICATE-----/g, "").replace(/\s+/g, "");
+}
+
+function assinarXmlDps(xml, certificado) {
+    const infMatch = xml.match(/<infDPS\b[\s\S]*?<\/infDPS>/);
+    if (!infMatch) throw new Error("DPS inválida: elemento infDPS não encontrado.");
+
+    const infDps = canonicalizarXmlControlado(infMatch[0]);
+    const idMatch = infDps.match(/\bId="([^"]+)"/);
+    if (!idMatch) throw new Error("DPS inválida: Id da infDPS não encontrado.");
+    const id = idMatch[1];
+
+    const digestValue = crypto.createHash("sha256").update(infDps, "utf8").digest("base64");
+    const signedInfo = [
+        '<SignedInfo xmlns="http://www.w3.org/2000/09/xmldsig#">',
+        '<CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>',
+        '<SignatureMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#rsa-sha256"/>',
+        `<Reference URI="#${id}">`,
+        '<Transforms><Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/><Transform Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/></Transforms>',
+        '<DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/>',
+        `<DigestValue>${digestValue}</DigestValue>`,
+        '</Reference>',
+        '</SignedInfo>'
+    ].join("");
+
+    const privateKeyPem = extrairChavePrivada(certificado);
+    const signer = crypto.createSign("RSA-SHA256");
+    signer.update(signedInfo, "utf8");
+    signer.end();
+    const signatureValue = signer.sign(privateKeyPem, "base64");
+    const certPem = extrairCertificadoFinal(certificado);
+
+    const signature = [
+        '<Signature xmlns="http://www.w3.org/2000/09/xmldsig#">',
+        signedInfo,
+        `<SignatureValue>${signatureValue}</SignatureValue>`,
+        `<KeyInfo><X509Data><X509Certificate>${certificadoBase64(certPem)}</X509Certificate></X509Data></KeyInfo>`,
+        '</Signature>'
+    ].join("");
+
+    return xml.replace("</infDPS>", "</infDPS>" + signature);
+}
 
 class NfseService {
     async validar(vendaId, empresaId) {
@@ -21,6 +105,8 @@ class NfseService {
         pend(pendencias, !empresa?.certificadoDigital?.ativo, "Certificado A1 não configurado.", "certificado");
         pend(pendencias, digitos(empresa?.cnpj).length!==14, "CNPJ do prestador inválido.", "empresa");
         pend(pendencias, !fiscal?.codigoMunicipio, "Código IBGE do município não configurado.", "fiscal");
+        pend(pendencias, !fiscal?.inscricaoMunicipal, "Inscrição municipal não configurada.", "fiscal");
+        pend(pendencias, !fiscal?.cnaePrincipal, "CNAE principal não configurado.", "fiscal");
 
         const cliente=venda.cliente;
         const doc=digitos(cliente?.cpfCnpj);
@@ -37,7 +123,6 @@ class NfseService {
             pend(pendencias, !digitos(servico.nfseCodigoServicoNacional), `Serviço "${servico.nome}" está sem código nacional de serviço.`, "servico");
             pend(pendencias, !texto(servico.nfseDescricaoFiscal || servico.descricao || servico.nome), `Serviço "${servico.nome}" está sem descrição fiscal.`, "servico");
         }
-
         return { venda, itens, pronta: pendencias.length===0, pendencias };
     }
 
@@ -45,38 +130,19 @@ class NfseService {
         const fiscal=venda.empresa.configuracaoFiscal;
         return {
             ambiente:fiscal.ambiente,
-            prestador:{
-                cnpj:digitos(venda.empresa.cnpj),
-                inscricaoMunicipal:fiscal.inscricaoMunicipal||null,
-                codigoMunicipio:fiscal.codigoMunicipio,
-                nome:venda.empresa.razaoSocial
-            },
+            prestador:{ cnpj:digitos(venda.empresa.cnpj), inscricaoMunicipal:fiscal.inscricaoMunicipal||null, codigoMunicipio:fiscal.codigoMunicipio, nome:venda.empresa.razaoSocial },
             tomador:{
-                documento:digitos(venda.cliente.cpfCnpj),
-                nome:venda.cliente.nome,
-                email:venda.cliente.email||null,
+                documento:digitos(venda.cliente.cpfCnpj), nome:venda.cliente.nome, email:venda.cliente.email||null,
                 telefone:digitos(venda.cliente.telefone||venda.cliente.celular),
-                endereco:{
-                    cep:digitos(venda.cliente.cep),
-                    logradouro:venda.cliente.endereco||null,
-                    numero:venda.cliente.numero||null,
-                    complemento:venda.cliente.complemento||null,
-                    bairro:venda.cliente.bairro||null,
-                    cidade:venda.cliente.cidade||null,
-                    uf:venda.cliente.estado||null
-                }
+                endereco:{ cep:digitos(venda.cliente.cep), logradouro:venda.cliente.endereco||null, numero:venda.cliente.numero||null, complemento:venda.cliente.complemento||null, bairro:venda.cliente.bairro||null, cidade:venda.cliente.cidade||null, uf:venda.cliente.estado||null }
             },
             itens:itens.map(i=>({
-                id:i.id,
-                descricao:i.variacaoServico?.servico?.nfseDescricaoFiscal || i.descricao,
+                id:i.id, descricao:i.variacaoServico?.servico?.nfseDescricaoFiscal || i.descricao,
                 codigoServicoNacional:digitos(i.variacaoServico?.servico?.nfseCodigoServicoNacional),
                 codigoNbs:texto(i.variacaoServico?.servico?.nfseCodigoNbs)||null,
                 aliquotaIss:i.variacaoServico?.servico?.nfseAliquotaIss===null?null:numero(i.variacaoServico?.servico?.nfseAliquotaIss),
                 issRetido:Boolean(i.variacaoServico?.servico?.nfseIssRetido),
-                quantidade:numero(i.quantidade),
-                valorUnitario:numero(i.valorUnitario),
-                desconto:numero(i.desconto),
-                total:numero(i.total)
+                quantidade:numero(i.quantidade), valorUnitario:numero(i.valorUnitario), desconto:numero(i.desconto), total:numero(i.total)
             })),
             totalServicos:itens.reduce((s,i)=>s+numero(i.total),0),
             dataCompetencia:new Date().toISOString().slice(0,10)
@@ -97,9 +163,7 @@ class NfseService {
         const codigos=[...new Set(validacao.itens.map(i=>digitos(i.variacaoServico?.servico?.nfseCodigoServicoNacional)).filter(Boolean))];
         const convenio=await portalNacionalRepository.testar(empresaId);
         const servicos=[];
-        for(const codigo of codigos){
-            servicos.push({codigo,...await portalNacionalRepository.consultarServico(empresaId,codigo)});
-        }
+        for(const codigo of codigos) servicos.push({codigo,...await portalNacionalRepository.consultarServico(empresaId,codigo)});
         return {convenio,servicos,pendencias:validacao.pendencias};
     }
 
@@ -111,7 +175,7 @@ class NfseService {
         const doc=s.tomador.documento;
         const docTag=doc.length===11?`<CPF>${doc}</CPF>`:`<CNPJ>${doc}</CNPJ>`;
         const descricao=s.itens.map(i=>i.descricao).join(" | ");
-        return `<DPS xmlns="http://www.sped.fazenda.gov.br/nfse" versao="1.01"><infDPS Id="${id}"><tpAmb>${nota.ambiente==="PRODUCAO"?"1":"2"}</tpAmb><dhEmi>${agora}</dhEmi><verAplic>ElianSigs-1.0</verAplic><serie>${nota.serieDps}</serie><nDPS>${nota.numeroDps}</nDPS><dCompet>${s.dataCompetencia}</dCompet><tpEmit>1</tpEmit><cLocEmi>${s.prestador.codigoMunicipio}</cLocEmi><prest><CNPJ>${s.prestador.cnpj}</CNPJ>${s.prestador.inscricaoMunicipal?`<IM>${esc(s.prestador.inscricaoMunicipal)}</IM>`:""}</prest><toma>${docTag}<xNome>${esc(s.tomador.nome)}</xNome></toma><serv><locPrest><cLocPrestacao>${s.prestador.codigoMunicipio}</cLocPrestacao></locPrest><cServ><cTribNac>${primeiro.codigoServicoNacional}</cTribNac><xDescServ>${esc(descricao)}</xDescServ></cServ></serv><valores><vServPrest><vServ>${s.totalServicos.toFixed(2)}</vServ></vServPrest></valores></infDPS></DPS>`;
+        return `<?xml version="1.0" encoding="UTF-8"?><DPS xmlns="http://www.sped.fazenda.gov.br/nfse" versao="1.01"><infDPS xmlns="http://www.sped.fazenda.gov.br/nfse" Id="${id}"><tpAmb>${nota.ambiente==="PRODUCAO"?"1":"2"}</tpAmb><dhEmi>${agora}</dhEmi><verAplic>ElianSigs-1.0</verAplic><serie>${nota.serieDps}</serie><nDPS>${nota.numeroDps}</nDPS><dCompet>${s.dataCompetencia}</dCompet><tpEmit>1</tpEmit><cLocEmi>${s.prestador.codigoMunicipio}</cLocEmi><prest><CNPJ>${s.prestador.cnpj}</CNPJ><IM>${esc(s.prestador.inscricaoMunicipal)}</IM></prest><toma>${docTag}<xNome>${esc(s.tomador.nome)}</xNome></toma><serv><locPrest><cLocPrestacao>${s.prestador.codigoMunicipio}</cLocPrestacao></locPrest><cServ><cTribNac>${primeiro.codigoServicoNacional}</cTribNac><xDescServ>${esc(descricao)}</xDescServ></cServ></serv><valores><vServPrest><vServ>${s.totalServicos.toFixed(2)}</vServ></vServPrest></valores></infDPS></DPS>`;
     }
 
     async gerarDps(vendaId,empresaId){
@@ -119,25 +183,32 @@ class NfseService {
         if(!preparado.pronta) return preparado;
         const nota=await nfseRepository.buscarPorVenda(vendaId,empresaId);
         const xml=this.montarDpsBasica(nota);
-        const hash=crypto.createHash("sha256").update(xml).digest("hex");
-        const atualizada=await nfseRepository.atualizar(nota.id,{xmlDps:xml,motivoStatus:`DPS gerada para validação. SHA256 ${hash}`});
-        return {pronta:true,notaFiscalServico:atualizada,xmlDps:xml,assinaturaPendente:true};
+        const empresa=await prisma.empresa.findUnique({where:{id:empresaId},include:{certificadoDigital:true}});
+        if(!empresa?.certificadoDigital?.ativo) throw new Error("Certificado A1 não configurado.");
+        const certificado=descriptografarCertificado(empresa.certificadoDigital);
+        const xmlAssinado=assinarXmlDps(xml,certificado);
+        const hash=crypto.createHash("sha256").update(xmlAssinado).digest("hex");
+        const atualizada=await nfseRepository.atualizar(nota.id,{xmlDps:xmlAssinado,motivoStatus:`DPS assinada para transmissão. SHA256 ${hash}`});
+        return {pronta:true,notaFiscalServico:atualizada,xmlDps:xmlAssinado,assinaturaPendente:false};
     }
 
     async emitir(vendaId,empresaId){
         const gerada=await this.gerarDps(vendaId,empresaId);
         if(!gerada.pronta) return gerada;
-        return {
-            pronta:false,
-            pendencias:[{
-                destino:"nfse",
-                mensagem:"DPS montada, mas a transmissão permanece bloqueada até aplicar a assinatura XMLDSIG exigida pelo padrão nacional e validar o leiaute 1.01 completo."
-            }],
-            notaFiscalServico:gerada.notaFiscalServico
-        };
+        const resposta=await portalNacionalRepository.enviarDps(empresaId,gerada.xmlDps);
+        const ok=resposta.statusHttp>=200 && resposta.statusHttp<300;
+        const dados=resposta.resposta || {};
+        const atualizada=await nfseRepository.atualizar(gerada.notaFiscalServico.id,{
+            respostaApi:dados,
+            xmlNfse:typeof dados==="string"?dados:(dados?.nfseXml || dados?.xml || null),
+            status:ok?"AUTORIZADA":"REJEITADA",
+            motivoStatus:ok?"NFS-e recebida pela SEFIN Nacional.":JSON.stringify(dados).slice(0,4000),
+            transmitidaEm:new Date(),
+            autorizadaEm:ok?new Date():null
+        });
+        return {pronta:true,notaFiscalServico:atualizada,retorno:dados};
     }
 
     buscarPorVenda(vendaId,empresaId){ return nfseRepository.buscarPorVenda(vendaId,empresaId); }
 }
-
 module.exports=new NfseService();
