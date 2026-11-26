@@ -14,6 +14,25 @@ function numero(v){ return Number(v || 0); }
 function esc(v){ return texto(v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&apos;"); }
 function pend(lista, condicao, mensagem, destino){ if(condicao) lista.push({mensagem,destino}); }
 
+const formatoDataHoraDps = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+    timeZoneName: "longOffset"
+});
+
+function dataHoraDps(data) {
+    const { year, month, day, hour, minute, second, timeZoneName } =
+        Object.fromEntries(formatoDataHoraDps.formatToParts(data).map(({ type, value }) => [type, value]));
+    const offset = timeZoneName.replace(/^GMT/, "");
+    return `${year}-${month}-${day}T${hour}:${minute}:${second}${offset}`;
+}
+
 function canonicalizarXmlControlado(xml) {
     return String(xml)
         .replace(/^\s*<\?xml[^>]*\?>\s*/i, "")
@@ -174,7 +193,7 @@ class NfseService {
         const s=nota.dadosEmissao;
         const primeiro=s.itens[0];
         const id=`DPS${s.prestador.codigoMunicipio}2${s.prestador.cnpj}${String(nota.serieDps).padStart(5,"0")}${String(nota.numeroDps).padStart(15,"0")}`;
-        const agora=new Date().toISOString();
+        const agora=dataHoraDps(new Date());
         const doc=s.tomador.documento;
         const docTag=doc.length===11?`<CPF>${doc}</CPF>`:`<CNPJ>${doc}</CNPJ>`;
         const descricao=s.itens.map(i=>i.descricao).join(" | ");
