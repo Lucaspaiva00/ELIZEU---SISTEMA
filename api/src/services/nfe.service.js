@@ -15,7 +15,7 @@ class NfeService {
         if (!venda) throw new Error("Venda não encontrada.");
 
         const pendencias = [];
-        adicionarPendencia(pendencias, venda.status !== "FATURADA", "A venda precisa estar faturada antes da emissão da NF-e.", "venda");
+        adicionarPendencia(pendencias, venda.status !== "FATURADA" && !(previa && venda.status === "CONFIRMADA"), "A venda precisa estar faturada antes da emissão da NF-e.", "venda");
 
         const empresa = venda.empresa;
         const fiscal = empresa?.configuracaoFiscal;
