@@ -197,7 +197,7 @@ async function tornarPadrao(id) {
 
 async function desativarConta(id) {
     const conta = contasFinanceiras.find(item => item.id === id);
-    if (!confirm(`Deseja desativar a conta “${conta?.nome || "selecionada"}”? O histórico será preservado.`)) return;
+    if (!await confirmarAcao(`Deseja desativar a conta “${conta?.nome || "selecionada"}”? O histórico será preservado.`)) return;
 
     try {
         const resposta = await del(`/contas-financeiras/${id}`);

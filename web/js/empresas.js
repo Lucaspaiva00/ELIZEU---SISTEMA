@@ -141,7 +141,7 @@ async function salvarFiscal(evento) {
         ibsMunAliquotaPadrao: valor("ibsMunAliquotaPadrao") === "" ? null : Number(valor("ibsMunAliquotaPadrao")),
         ativo: document.getElementById("fiscalAtivo").checked
     };
-    if (dados.ambiente === "PRODUCAO" && !confirm("Confirma o ambiente de PRODUÇÃO? Antes disso valide uma NF-e em homologação e confirme a numeração atual com o contador/Omie.")) return;
+    if (dados.ambiente === "PRODUCAO" && !await confirmarAcao("Confirma o ambiente de PRODUÇÃO? Antes disso valide uma NF-e em homologação e confirme a numeração atual com o contador/Omie.")) return;
     const resposta = await put("/empresas/minha/fiscal", dados);
     if (!resposta?.sucesso) return mostrarMensagem(resposta?.mensagem || "Erro ao salvar configuração fiscal.");
     empresaAtual.configuracaoFiscal = resposta.configuracaoFiscal;
@@ -207,7 +207,7 @@ async function salvarCertificado(evento) {
 }
 
 async function removerCertificado() {
-    if (!confirm("Deseja remover o certificado digital armazenado?")) return;
+    if (!await confirmarAcao("Deseja remover o certificado digital armazenado?")) return;
     const resposta = await del("/empresas/minha/certificado");
     if (!resposta?.sucesso) return mostrarMensagem(resposta?.mensagem || "Erro ao remover certificado.");
     empresaAtual.certificadoDigital = null;

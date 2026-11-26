@@ -257,7 +257,7 @@ async function registrarPagamento(evento) {
 }
 
 async function cancelarConta(id) {
-    const motivo = prompt("Informe o motivo do cancelamento:"); if (!motivo?.trim()) return;
+    const motivo = await solicitarTexto("Informe o motivo do cancelamento:"); if (!motivo?.trim()) return;
     try { const resposta = await post(`/contas-pagar/${id}/cancelar`, { motivo: motivo.trim() }); if (!resposta?.sucesso) throw new Error(resposta?.mensagem || "Erro ao cancelar despesa."); mostrarAviso(resposta.mensagem || "Despesa cancelada."); await carregarDados(); }
     catch (erro) { mostrarAviso(erro.message, "error"); }
 }

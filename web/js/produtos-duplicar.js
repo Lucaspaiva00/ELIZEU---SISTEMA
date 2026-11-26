@@ -20,7 +20,7 @@ async function duplicarProduto(id, botao = null) {
 
     const nome = produto?.nome || "este produto";
 
-    const confirmou = confirm(
+    const confirmou = await confirmarAcao(
         `Duplicar "${nome}"?\n\n` +
         "Serão copiados dados cadastrais, categoria, marca, descrição, composição, margem, parâmetros fiscais, preços e variações.\n\n" +
         "Por segurança, o novo produto receberá outro código e novos SKUs. Código de barras/GTIN não serão repetidos e o estoque atual começará em zero."

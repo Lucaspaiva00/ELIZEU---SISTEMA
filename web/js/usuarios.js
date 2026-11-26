@@ -295,7 +295,7 @@ async function alternarStatusUsuario(id) {
 
     const acao = item.ativo ? "bloquear" : "ativar";
 
-    if (!confirm(`Deseja ${acao} o acesso de ${item.nome}?`)) return;
+    if (!await confirmarAcao(`Deseja ${acao} o acesso de ${item.nome}?`)) return;
 
     const resposta = await patch(`/usuarios/${id}/status`, { ativo: !item.ativo });
 

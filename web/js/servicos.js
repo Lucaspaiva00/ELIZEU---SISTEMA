@@ -212,7 +212,7 @@ function editarServico(id) {
 }
 
 async function excluirServico(id) {
-    if (!confirm("Deseja realmente excluir este serviço?")) return;
+    if (!await confirmarAcao("Deseja realmente excluir este serviço?")) return;
     const resposta = await del(`/servicos/${id}`);
     if (!resposta?.sucesso) return mostrarMensagem(resposta?.mensagem || "Não foi possível excluir o serviço.");
     await carregarServicos();

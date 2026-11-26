@@ -537,13 +537,13 @@ function abrirModalOrcamento() {
     modalOrcamento.classList.add("active");
 }
 
-function fecharModalOrcamento(forcar = false) {
+async function fecharModalOrcamento(forcar = false) {
     if (
         modalOrcamento.classList.contains("active") &&
         orcamentoAlterado &&
         !forcar
     ) {
-        const confirmou = window.confirm(
+        const confirmou = await confirmarAcao(
             "Existem alterações não salvas neste orçamento. Deseja sair e perder essas alterações?"
         );
         if (!confirmou) return false;
@@ -1942,7 +1942,7 @@ function fecharVisualizacaoOrcamento() {
 
 async function excluirOrcamento(id) {
 
-    if (!confirm(
+    if (!await confirmarAcao(
         "Deseja realmente excluir este orçamento?"
     )) {
 
@@ -2414,7 +2414,7 @@ async function gerarPdfOrcamento(id) {
         .join(" - ") || "NÃO INFORMADA — atualizar cadastro do cliente";
     // Uma cidade em branco jamais deve passar despercebida para a impressão.
     if (!cliente.cidade && !dadosCepCliente?.localidade) {
-        const imprimirMesmoAssim = window.confirm(
+        const imprimirMesmoAssim = await confirmarAcao(
             "A cidade deste cliente não está preenchida e não foi possível recuperá-la pelo CEP. " +
             "Corrija o cadastro para imprimir o endereço corretamente. Deseja imprimir mesmo assim?"
         );

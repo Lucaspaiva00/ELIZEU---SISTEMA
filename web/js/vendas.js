@@ -265,7 +265,7 @@ function fecharVenda() {
 }
 
 async function faturarVenda(id) {
-    if (!confirm("Faturar esta venda? Isso fará a baixa de estoque, gerará as contas a receber e lançará os custos internos em Contas a Pagar.")) return;
+    if (!await confirmarAcao("Faturar esta venda? Isso fará a baixa de estoque, gerará as contas a receber e lançará os custos internos em Contas a Pagar.")) return;
     const r = await put(`/vendas/${id}/faturar`, {});
     if (!r?.sucesso) return mostrarMensagem(r?.mensagem || "Erro ao faturar venda.");
     mostrarMensagem(r.mensagem || "Venda faturada. Contas a receber, custos internos em Contas a Pagar e estoque atualizados.");
@@ -279,7 +279,8 @@ function faturarVendaAtual() {
 
 async function cancelarVendaAtual() {
     if (!vendaAtualId) return;
-    const motivo = prompt("Motivo do cancelamento (opcional):") ?? null;
+    const motivo = await solicitarTexto("Motivo do cancelamento (opcional):");
+    if (motivo === null) return;
     if (motivo === null) return;
     const r = await put(`/vendas/${vendaAtualId}/cancelar`, { motivo });
     if (!r?.sucesso) return mostrarMensagem(r?.mensagem || "Erro ao cancelar venda.");
@@ -290,7 +291,7 @@ async function cancelarVendaAtual() {
 
 
 async function emitirNfe(id) {
-    if (!confirm("Emitir a NF-e dos MATERIAIS desta venda? Em homologação ela não possui valor fiscal. Os serviços serão tratados em uma NFS-e separada.")) return;
+    if (!await confirmarAcao("Emitir a NF-e dos MATERIAIS desta venda? Em homologação ela não possui valor fiscal. Os serviços serão tratados em uma NFS-e separada.")) return;
 
     const resposta = await post(`/vendas/${id}/nfe/emitir`, {});
 
@@ -344,10 +345,10 @@ function abrirXmlAtual() {
 
 async function cancelarNfeAtual() {
     if (!vendaAtualId) return;
-    const justificativa = prompt("Justificativa do cancelamento da NF-e (mínimo 15 caracteres):");
+    const justificativa = await solicitarTexto("Justificativa do cancelamento da NF-e (mínimo 15 caracteres):");
     if (justificativa === null) return;
     if (justificativa.trim().length < 15) return mostrarMensagem("A justificativa precisa ter pelo menos 15 caracteres.");
-    if (!confirm("Confirma o cancelamento desta NF-e autorizada?")) return;
+    if (!await confirmarAcao("Confirma o cancelamento desta NF-e autorizada?")) return;
     const resposta = await post(`/vendas/${vendaAtualId}/nfe/cancelar`, { justificativa: justificativa.trim() });
     if (!resposta?.sucesso) return mostrarMensagem(resposta?.mensagem || "Erro ao cancelar NF-e.");
     mostrarMensagem(resposta.mensagem || "Solicitação de cancelamento enviada.");

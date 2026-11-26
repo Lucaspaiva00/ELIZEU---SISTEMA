@@ -159,10 +159,10 @@ async function salvarCompra(){
 }
 
 async function cancelarCompra(id){
-  const motivo=prompt("Motivo do cancelamento da compra:");
+  const motivo=await solicitarTexto("Motivo do cancelamento da compra:");
   if(motivo===null)return;
   if(!motivo.trim()){mostrarMensagem("Informe o motivo do cancelamento.");return;}
-  if(!confirm("O estoque será estornado e os títulos ainda não pagos serão cancelados. Continuar?"))return;
+  if(!await confirmarAcao("O estoque será estornado e os títulos ainda não pagos serão cancelados. Continuar?"))return;
   const r=await post(`/compras/${id}/cancelar`,{motivo:motivo.trim()});
   if(!r?.sucesso){mostrarMensagem(r?.mensagem||"Erro ao cancelar compra.");return;}
   await carregarApoioCompra();await carregarCompras();mostrarMensagem(r.mensagem);

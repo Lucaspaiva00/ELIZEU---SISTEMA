@@ -343,7 +343,7 @@ async function registrarRecebimento(evento) {
 }
 
 async function cancelarConta(id) {
-    const motivo = window.prompt("Informe o motivo do cancelamento:");
+    const motivo = await solicitarTexto("Informe o motivo do cancelamento:");
     if (!motivo?.trim()) return;
     try {
         const resposta = await post(`/contas-receber/${id}/cancelar`, { motivo: motivo.trim() });

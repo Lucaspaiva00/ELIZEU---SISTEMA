@@ -19,143 +19,72 @@ function numero(valor) {
 
 }
 
-// =====================================================
-// MENSAGENS DO SISTEMA
-// Substitui o alert() nativo por uma mensagem visual,
-// não bloqueante e compatível com as chamadas existentes.
-// =====================================================
+// Diálogos compartilhados do ERP.
 let mensagemSistemaAtual = null;
-let mensagemSistemaTimer = null;
 
 function garantirEstilosMensagemSistema() {
     if (document.getElementById("estilosMensagemSistema")) return;
-
     const style = document.createElement("style");
     style.id = "estilosMensagemSistema";
     style.textContent = `
-        .mensagem-sistema-wrap {
-            position: fixed;
-            top: 22px;
-            right: 22px;
-            z-index: 99999;
-            width: min(430px, calc(100vw - 32px));
-            font-family: inherit;
-        }
-
         .mensagem-sistema {
-            display: flex;
-            align-items: flex-start;
-            gap: 12px;
-            background: #ffffff;
-            color: #1f2937;
-            border: 1px solid #e5e7eb;
-            border-radius: 12px;
-            box-shadow: 0 16px 40px rgba(15, 23, 42, .18);
-            padding: 15px 15px 14px;
-            animation: mensagemSistemaEntrar .18s ease-out;
+            width: min(460px, calc(100vw - 32px));
+            max-height: calc(100dvh - 32px);
+            box-sizing: border-box;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            padding: 22px;
+            color: #1e293b;
+            background: #fff;
+            box-shadow: 0 20px 55px rgba(15, 23, 42, .24);
         }
-
-        .mensagem-sistema.erro {
-            border-left: 4px solid #dc2626;
-        }
-
-        .mensagem-sistema.sucesso {
-            border-left: 4px solid #16a34a;
-        }
-
-        .mensagem-sistema.info {
-            border-left: 4px solid #2563eb;
-        }
-
-        .mensagem-sistema-icone {
-            flex: 0 0 34px;
-            width: 34px;
-            height: 34px;
-            border-radius: 50%;
-            display: grid;
-            place-items: center;
-            font-size: 15px;
-        }
-
-        .mensagem-sistema.erro .mensagem-sistema-icone {
-            background: #fef2f2;
-            color: #dc2626;
-        }
-
-        .mensagem-sistema.sucesso .mensagem-sistema-icone {
-            background: #f0fdf4;
-            color: #16a34a;
-        }
-
-        .mensagem-sistema.info .mensagem-sistema-icone {
-            background: #eff6ff;
-            color: #2563eb;
-        }
-
-        .mensagem-sistema-conteudo {
-            min-width: 0;
-            flex: 1;
-        }
-
-        .mensagem-sistema-titulo {
-            margin: 0 0 3px;
-            font-size: 14px;
-            font-weight: 700;
-            line-height: 1.35;
-        }
-
+        .mensagem-sistema::backdrop { background: rgba(15, 23, 42, .48); }
+        .mensagem-sistema-titulo { margin: 0 0 10px; font-size: 18px; }
+        .mensagem-sistema.erro .mensagem-sistema-titulo { color: #b91c1c; }
+        .mensagem-sistema.sucesso .mensagem-sistema-titulo { color: #15803d; }
         .mensagem-sistema-texto {
             margin: 0;
             color: #475569;
-            font-size: 13px;
-            line-height: 1.5;
+            line-height: 1.55;
+            white-space: pre-wrap;
             overflow-wrap: anywhere;
         }
-
+        .mensagem-sistema-campo {
+            width: 100%;
+            box-sizing: border-box;
+            margin-top: 14px;
+            padding: 10px;
+            border: 1px solid #94a3b8;
+            border-radius: 8px;
+            font: inherit;
+        }
         .mensagem-sistema-acoes {
             display: flex;
             justify-content: flex-end;
-            margin-top: 10px;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 20px;
         }
-
-        .mensagem-sistema-ok {
-            appearance: none;
+        .mensagem-sistema-acoes button {
             border: 0;
             border-radius: 8px;
-            background: #111827;
-            color: #ffffff;
-            padding: 7px 14px;
+            padding: 9px 15px;
             font: inherit;
-            font-size: 12px;
             font-weight: 600;
             cursor: pointer;
+            background: #e2e8f0;
+            color: #1e293b;
         }
-
-        .mensagem-sistema-ok:hover {
-            opacity: .9;
+        .mensagem-sistema-acoes button[type="submit"] {
+            background: #1d4ed8;
+            color: #fff;
         }
-
-        @keyframes mensagemSistemaEntrar {
-            from {
-                opacity: 0;
-                transform: translateY(-8px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        @media (max-width: 600px) {
-            .mensagem-sistema-wrap {
-                top: 14px;
-                right: 16px;
-                left: 16px;
-                width: auto;
-            }
+        .mensagem-sistema button:focus-visible,
+        .mensagem-sistema-campo:focus-visible {
+            outline: 2px solid #2563eb;
+            outline-offset: 2px;
         }
     `;
-
     document.head.appendChild(style);
 }
 
@@ -191,92 +120,104 @@ function inferirTipoMensagem(texto, tipoInformado) {
     return "info";
 }
 
-function fecharMensagemSistema(executarCallback = true) {
-    if (mensagemSistemaTimer) {
-        clearTimeout(mensagemSistemaTimer);
-        mensagemSistemaTimer = null;
+function abrirDialogoSistema(texto, opcoes = {}) {
+    garantirEstilosMensagemSistema();
+    const tipo = inferirTipoMensagem(texto, opcoes.tipo);
+    const titulos = { erro: "Verifique as informações", sucesso: "Tudo certo", info: "Informação" };
+    const dialogo = document.createElement("dialog");
+    dialogo.className = `mensagem-sistema ${tipo}`;
+    dialogo.innerHTML = `
+        <form>
+            <h2 class="mensagem-sistema-titulo"></h2>
+            <p class="mensagem-sistema-texto"></p>
+            <div class="mensagem-sistema-acoes"></div>
+        </form>
+    `;
+    const titulo = dialogo.querySelector("h2");
+    const descricao = dialogo.querySelector("p");
+    const formulario = dialogo.querySelector("form");
+    const acoes = dialogo.querySelector(".mensagem-sistema-acoes");
+    titulo.textContent = opcoes.titulo || titulos[tipo];
+    descricao.textContent = String(texto ?? "");
+    const identificador = `dialogo-sistema-${++sequenciaDialogoSistema}`;
+    titulo.id = `${identificador}-titulo`;
+    descricao.id = `${identificador}-descricao`;
+    dialogo.setAttribute("aria-labelledby", titulo.id);
+    dialogo.setAttribute("aria-describedby", descricao.id);
+    dialogo.addEventListener("keydown", evento => {
+        if (evento.key === "Escape") evento.stopPropagation();
+    });
+
+    let campo;
+    if (opcoes.campo) {
+        campo = document.createElement("input");
+        campo.type = "text";
+        campo.className = "mensagem-sistema-campo";
+        campo.setAttribute("aria-labelledby", descricao.id);
+        formulario.insertBefore(campo, acoes);
     }
 
-    if (!mensagemSistemaAtual) return;
-
-    const callback = mensagemSistemaAtual._aoFechar;
-    mensagemSistemaAtual.remove();
-    mensagemSistemaAtual = null;
-
-    if (executarCallback && typeof callback === "function") {
-        setTimeout(callback, 20);
+    let cancelar;
+    if (opcoes.cancelavel) {
+        cancelar = document.createElement("button");
+        cancelar.type = "button";
+        cancelar.textContent = "Cancelar";
+        cancelar.addEventListener("click", () => dialogo.close());
+        acoes.appendChild(cancelar);
     }
+    const confirmar = document.createElement("button");
+    confirmar.type = "submit";
+    confirmar.textContent = opcoes.textoBotao || "OK";
+    acoes.appendChild(confirmar);
+    (campo || cancelar || confirmar).autofocus = true;
+
+    const resultado = new Promise(resolve => {
+        formulario.addEventListener("submit", evento => {
+            evento.preventDefault();
+            dialogo.close("confirmado");
+        });
+        dialogo.addEventListener("close", () => {
+            dialogo.remove();
+            resolve(dialogo.returnValue === "confirmado" ? (campo ? campo.value : true) : null);
+        }, { once: true });
+    });
+
+    document.body.appendChild(dialogo);
+    dialogo.showModal();
+    return { dialogo, resultado };
 }
+
+let sequenciaDialogoSistema = 0;
 
 function mostrarMensagem(texto, opcoes = {}) {
     if (!document.body) return;
+    if (mensagemSistemaAtual?.open) mensagemSistemaAtual.close("substituido");
 
-    garantirEstilosMensagemSistema();
-    fecharMensagemSistema(false);
+    const { dialogo, resultado } = abrirDialogoSistema(texto, opcoes);
+    mensagemSistemaAtual = dialogo;
+    const timer = Number(opcoes.duracaoMs) > 0
+        ? setTimeout(() => dialogo.close(), Number(opcoes.duracaoMs))
+        : null;
+    void resultado.then(() => {
+        clearTimeout(timer);
+        if (mensagemSistemaAtual === dialogo) mensagemSistemaAtual = null;
+        if (dialogo.returnValue !== "substituido" && typeof opcoes.aoFechar === "function") {
+            setTimeout(opcoes.aoFechar, 20);
+        }
+    });
+}
 
-    const tipo = inferirTipoMensagem(texto, opcoes.tipo);
-    const titulos = {
-        erro: "Verifique as informações",
-        sucesso: "Tudo certo",
-        info: "Informação"
-    };
-    const icones = {
-        erro: "fa-triangle-exclamation",
-        sucesso: "fa-check",
-        info: "fa-circle-info"
-    };
+async function confirmarAcao(texto) {
+    const { resultado } = abrirDialogoSistema(texto, {
+        titulo: "Confirmar ação", textoBotao: "Confirmar", cancelavel: true
+    });
+    return (await resultado) === true;
+}
 
-    const wrap = document.createElement("div");
-    wrap.className = "mensagem-sistema-wrap";
-    wrap.setAttribute("role", tipo === "erro" ? "alert" : "status");
-    wrap.setAttribute("aria-live", tipo === "erro" ? "assertive" : "polite");
-    wrap._aoFechar = opcoes.aoFechar || null;
-
-    const caixa = document.createElement("div");
-    caixa.className = `mensagem-sistema ${tipo}`;
-
-    const icone = document.createElement("div");
-    icone.className = "mensagem-sistema-icone";
-    icone.innerHTML = `<i class="fas ${icones[tipo]}"></i>`;
-
-    const conteudo = document.createElement("div");
-    conteudo.className = "mensagem-sistema-conteudo";
-
-    const titulo = document.createElement("p");
-    titulo.className = "mensagem-sistema-titulo";
-    titulo.textContent = opcoes.titulo || titulos[tipo];
-
-    const mensagem = document.createElement("p");
-    mensagem.className = "mensagem-sistema-texto";
-    mensagem.textContent = String(texto ?? "");
-
-    const acoes = document.createElement("div");
-    acoes.className = "mensagem-sistema-acoes";
-
-    const botao = document.createElement("button");
-    botao.type = "button";
-    botao.className = "mensagem-sistema-ok";
-    botao.textContent = opcoes.textoBotao || "OK";
-    botao.addEventListener("click", () => fecharMensagemSistema(true));
-
-    acoes.appendChild(botao);
-    conteudo.append(titulo, mensagem, acoes);
-    caixa.append(icone, conteudo);
-    wrap.appendChild(caixa);
-    document.body.appendChild(wrap);
-
-    mensagemSistemaAtual = wrap;
-
-    if (opcoes.focarBotao !== false) {
-        setTimeout(() => botao.focus({ preventScroll: true }), 30);
-    }
-
-    if (Number(opcoes.duracaoMs) > 0) {
-        mensagemSistemaTimer = setTimeout(
-            () => fecharMensagemSistema(true),
-            Number(opcoes.duracaoMs)
-        );
-    }
+function solicitarTexto(texto) {
+    return abrirDialogoSistema(texto, {
+        titulo: "Informação necessária", textoBotao: "Continuar", cancelavel: true, campo: true
+    }).resultado;
 }
 
 // =====================================================

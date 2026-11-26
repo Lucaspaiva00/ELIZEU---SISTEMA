@@ -1843,7 +1843,7 @@ async function excluirProduto(id) {
 
     const nome = produto?.nome || "este produto";
 
-    const confirmou = confirm(
+    const confirmou = await confirmarAcao(
         `Deseja realmente excluir ${nome}?`
     );
 

@@ -764,7 +764,7 @@ async function excluirCliente(id) {
 
     const nome = cliente?.nome || "este cliente";
 
-    const confirmou = confirm(
+    const confirmou = await confirmarAcao(
         `Deseja realmente excluir ${nome}?`
     );
 

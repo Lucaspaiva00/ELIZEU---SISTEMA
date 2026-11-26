@@ -83,7 +83,7 @@ function editarFornecedor(id) {
 }
 
 async function excluirFornecedor(id) {
-    if(!confirm("Deseja remover este fornecedor?")) return;
+    if(!await confirmarAcao("Deseja remover este fornecedor?")) return;
     try { const r=await del(`/fornecedores/${id}`); if(!r?.sucesso) throw new Error(r?.mensagem||"Erro."); await carregarFornecedores(); mostrarMensagem(r.mensagem||"Fornecedor removido."); } catch(e){ mostrarMensagem(e.message); }
 }
 

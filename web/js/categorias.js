@@ -248,7 +248,7 @@ function editarCategoria(id) {
 
 async function excluirCategoria(id) {
 
-    if (!confirm("Deseja realmente excluir esta categoria?")) {
+    if (!await confirmarAcao("Deseja realmente excluir esta categoria?")) {
 
         return;
 
