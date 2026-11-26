@@ -87,6 +87,27 @@ class SefazGoService {
     const pfx = Buffer.from(certificado.arquivoBase64, "base64");
     const xml = assinarNfe(nfe, pfx, certificado.senha);
     if (antesDeEnviar) await antesDeEnviar(xml);
+    return this.enviarXmlAssinado({ xml, chave: nfe.chave, lote, ambiente, pfx, senha: certificado.senha });
+  }
+
+  async retransmitirProducao(empresaId, nota) {
+    const { xmlEnvio, chaveAcesso, ambiente, id } = nota;
+    if (ambiente !== "PRODUCAO" || !/^52\d{42}$/.test(chaveAcesso)
+      || !xmlEnvio?.includes(`Id="NFe${chaveAcesso}"`)
+      || !xmlEnvio.includes("<tpAmb>1</tpAmb>") || !xmlEnvio.includes("<Signature ")) {
+      throw new Error("O XML assinado armazenado não corresponde à NF-e de produção.");
+    }
+    const empresa = await prisma.empresa.findUnique({ where: { id: empresaId }, include: { certificadoDigital: true } });
+    if (!empresa?.certificadoDigital?.ativo) throw new Error("Certificado A1 não configurado.");
+    const certificado = descriptografarCertificado(empresa.certificadoDigital);
+    return this.enviarXmlAssinado({
+      xml: xmlEnvio, chave: chaveAcesso, lote: id, ambiente,
+      pfx: Buffer.from(certificado.arquivoBase64, "base64"), senha: certificado.senha
+    });
+  }
+
+  async enviarXmlAssinado({ xml, chave, lote, ambiente, pfx, senha }) {
+    const tpAmb = ambiente === "PRODUCAO" ? "1" : "2";
     const namespace = "http://www.portalfiscal.inf.br/nfe/wsdl/NFeAutorizacao4";
     const body = [
       '<soap12:Envelope xmlns:soap12="http://www.w3.org/2003/05/soap-envelope"><soap12:Body>',
@@ -97,7 +118,7 @@ class SefazGoService {
       url: ambiente === "PRODUCAO"
         ? "https://nfe.sefaz.go.gov.br/nfe/services/NFeAutorizacao4"
         : "https://homolog.sefaz.go.gov.br/nfe/services/NFeAutorizacao4",
-      pfx, passphrase: certificado.senha, body,
+      pfx, passphrase: senha, body,
       action: namespace + "/nfeAutorizacaoLote"
     });
     const protocolo = resposta.body.match(/<(?:[\w.-]+:)?infProt\b[^>]*>[\s\S]*?<\/(?:[\w.-]+:)?infProt>/)?.[0];
@@ -105,12 +126,12 @@ class SefazGoService {
     const motivo = extrair(protocolo || resposta.body, "xMotivo");
     const numeroProtocolo = extrair(protocolo, "nProt");
     const autorizada = resposta.status === 200 && codigo === "100"
-      && extrair(protocolo, "tpAmb") === tpAmb && extrair(protocolo, "chNFe") === nfe.chave
+      && extrair(protocolo, "tpAmb") === tpAmb && extrair(protocolo, "chNFe") === chave
       && /^\d{15}$/.test(numeroProtocolo || "");
     return {
       ...(ambiente === "PRODUCAO" ? { xmlRetorno: resposta.body } : {}),
       ambiente, autorizada, codigo, motivo, httpStatus: resposta.status,
-      chave: nfe.chave, protocolo: autorizada ? numeroProtocolo : null,
+      chave, protocolo: autorizada ? numeroProtocolo : null,
       recibo: extrair(resposta.body, "nRec")
     };
   }
