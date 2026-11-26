@@ -122,6 +122,54 @@ function filtrarVendas() {
     renderizarVendas(vendas.filter(v => String(v.numero).includes(q) || String(v.orcamento?.numero || "").includes(q) || String(v.cliente?.nome || "").toLowerCase().includes(q)));
 }
 
+function htmlNfse(nota) {
+    if (!nota) return '<p>Nenhuma NFS-e registrada para esta venda.</p>';
+
+    const retorno = nota.respostaApi;
+    const chave = retorno?.chaveAcesso;
+    const autorizada = nota.status === "AUTORIZADA" && chave && (nota.xmlNfse || retorno?.nfseXmlGZipB64);
+    const status = autorizada ? "Autorizada pela SEFIN Nacional" : ({
+        AUTORIZADA: "Autorização sem documento disponível",
+        REJEITADA: "Rejeitada pela SEFIN Nacional",
+        PRONTA_TRANSMISSAO: "Aguardando transmissão ou retorno",
+        PENDENTE_CONFIGURACAO: "Configuração pendente",
+        ERRO: "Erro na emissão"
+    }[nota.status] || nota.status);
+    const detalhes = [
+        ["Status", status],
+        ["Ambiente", nota.ambiente === "PRODUCAO" ? "Produção" : "Produção restrita / homologação"],
+        ["Série da DPS", nota.serieDps],
+        ["Número da DPS", nota.numeroDps],
+        ["Chave de acesso", chave],
+        ["Transmitida em", nota.transmitidaEm && new Date(nota.transmitidaEm).toLocaleString("pt-BR")],
+        ["Autorizada em", nota.autorizadaEm && new Date(nota.autorizadaEm).toLocaleString("pt-BR")]
+    ];
+    const painel = (titulo, valor, aberto = false) => valor
+        ? `<details${aberto ? " open" : ""}><summary>${titulo}</summary><pre style="white-space:pre-wrap;overflow-wrap:anywhere;">${esc(valor)}</pre></details>`
+        : "";
+    const respostaVisivel = retorno == null ? null : JSON.stringify(retorno, (campo, valor) =>
+        /nfseXmlGZipB64|token|senha|passphrase|private.?key|chave.?privada|certificado|authorization/i.test(campo) ? undefined : valor, 2);
+    return `
+        <dl>${detalhes.filter(([, valor]) => valor != null && valor !== "").map(([rotulo, valor]) =>
+            `<dt>${rotulo}</dt><dd>${esc(String(valor))}</dd>`).join("")}</dl>
+        ${painel("Resposta da SEFIN Nacional", respostaVisivel, !autorizada)}
+        ${retorno == null ? painel("Detalhe do status", nota.motivoStatus, true) : ""}
+        ${painel("XML da DPS assinada", nota.xmlDps)}
+        ${painel("XML da NFS-e autorizada", nota.xmlNfse)}
+    `;
+}
+
+async function carregarNfseVenda(id, area) {
+    const r = await get(`/vendas/${id}/nfse`);
+    if (vendaAtualId !== id || !area.isConnected) return;
+
+    area.innerHTML = r?.sucesso ? htmlNfse(r.notaFiscalServico)
+        : `<p>${esc(r?.mensagem || "Não foi possível consultar a NFS-e desta venda.")}</p>`;
+    if (r?.sucesso && r.notaFiscalServico?.status === "AUTORIZADA") {
+        document.getElementById("btnEmitirNfse").style.display = "none";
+    }
+}
+
 async function visualizarVenda(id) {
     const r = await get(`/vendas/${id}`);
     if (!r?.sucesso) return mostrarMensagem(r?.mensagem || "Venda não encontrada.");
@@ -188,6 +236,14 @@ async function visualizarVenda(id) {
     const nfe = v.notaFiscal;
     const temProdutos = (v.itens || []).some(i => i.tipo === "PRODUTO");
     const temServicos = (v.itens || []).some(i => i.tipo === "SERVICO");
+    const painelFiscal = fiscalStatus.closest("[data-modal-panel='fiscal']");
+    painelFiscal.querySelector("#viewVendaNfse")?.remove();
+    painelFiscal.querySelector(".modal-section-head p").textContent = "Acompanhe separadamente a NF-e de materiais e a NFS-e de serviços.";
+    painelFiscal.querySelector("#viewVendaFiscal").closest(".modal-section-card").hidden = !temProdutos && !nfe;
+    if (temServicos || v.notaFiscalServico) {
+        painelFiscal.insertAdjacentHTML("beforeend", '<section id="viewVendaNfse" class="modal-section-card"><h3>NFS-e Serviços</h3><div data-nfse-status aria-live="polite">Consultando NFS-e…</div></section>');
+        void carregarNfseVenda(v.id, painelFiscal.querySelector("[data-nfse-status]"));
+    }
     document.getElementById("btnEmitirNfe").style.display =
         v.status === "FATURADA" && temProdutos && (!nfe || ["PRONTA_TRANSMISSAO", "REJEITADA", "ERRO"].includes(nfe.status)) ? "inline-flex" : "none";
     document.getElementById("btnEmitirNfse").style.display =
@@ -316,8 +372,17 @@ async function emitirNfse(id) {
         return mostrarMensagem(resposta?.mensagem || "Erro ao preparar NFS-e.");
     }
 
-    mostrarMensagem("NFS-e de serviços enviada.");
+    const nota = resposta.notaFiscalServico;
+    const retorno = nota?.respostaApi || resposta.retorno;
+    const autorizada = nota?.status === "AUTORIZADA" && retorno?.chaveAcesso && (nota.xmlNfse || retorno.nfseXmlGZipB64);
+    const mensagem = autorizada ? "NFS-e autorizada pela SEFIN Nacional."
+        : nota?.status === "REJEITADA" ? "NFS-e rejeitada pela SEFIN Nacional. Consulte a resposta na aba Fiscal."
+        : "Autorização da NFS-e ainda não confirmada. Consulte a aba Fiscal.";
     await carregarVendas();
-    if (vendaAtualId === id) await visualizarVenda(id);
+    if (vendaAtualId === id) {
+        await visualizarVenda(id);
+        document.querySelector('[data-modal-tab="fiscal"]')?.click();
+    }
+    mostrarMensagem(mensagem);
 }
 function emitirNfseAtual(){ if(vendaAtualId) emitirNfse(vendaAtualId); }
