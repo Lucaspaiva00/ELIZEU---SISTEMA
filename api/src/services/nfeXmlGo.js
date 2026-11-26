@@ -101,7 +101,7 @@ function montarNfeHomologacao(nota, codigoNumerico, data = new Date()) {
         cUF: 52, cNF: codigoNumerico, natOp: documento.naturezaOperacao, mod: 55, serie: nota.serie,
         nNF: nota.numero, dhEmi, tpNF: 1, idDest: 1, cMunFG: origem.codigoMunicipio, tpImp: 1,
         tpEmis: 1, cDV: chave.at(-1), tpAmb: 2, finNFe: 1, indFinal: tributacaoPadrao.consumidorFinal ? 1 : 0,
-        indPres: tributacaoPadrao.presencaComprador, procEmi: 0, verProc: "ElianSigs-1.0"
+        indPres: tributacaoPadrao.presencaComprador, indIntermed: 0, procEmi: 0, verProc: "ElianSigs-1.0"
     });
     const emit = `<emit>${elemento("CNPJ", cnpj)}${elemento("xNome", emitente.razaoSocial)}${endereco("enderEmit", origem, origem.codigoMunicipio)}${elemento("IE", ie)}<CRT>1</CRT></emit>`;
     const indIE = ieDest ? 1 : String(destinatario.inscricaoEstadual || "").trim().toUpperCase() === "ISENTO" ? 2 : 9;
