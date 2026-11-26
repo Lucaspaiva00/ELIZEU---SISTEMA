@@ -317,6 +317,38 @@ async function visualizarVenda(id) {
     painelFiscal.querySelector("#viewVendaNfse")?.remove();
     painelFiscal.querySelector(".modal-section-head p").textContent = "Acompanhe separadamente a NF-e de materiais e a NFS-e de serviços.";
     painelFiscal.querySelector("#viewVendaFiscal").closest(".modal-section-card").hidden = !temProdutos && !nfe;
+    if (temProdutos && v.status === "FATURADA" && !nfe) {
+        const botaoPrevia = document.createElement("button");
+        botaoPrevia.type = "button";
+        botaoPrevia.className = "btn btn-light btn-sm";
+        botaoPrevia.style.marginTop = "10px";
+        botaoPrevia.textContent = "Gerar prévia da NF-e de homologação";
+        botaoPrevia.addEventListener("click", async () => {
+            botaoPrevia.disabled = true;
+            try {
+                const resposta = await get(`/vendas/${v.id}/nfe/previsualizar`);
+                if (vendaAtualId !== v.id || !botaoPrevia.isConnected) return;
+                if (!resposta?.sucesso) {
+                    return mostrarMensagem(resposta?.mensagem || "Não foi possível gerar a prévia da NF-e.", { tipo: "erro" });
+                }
+                if (!resposta.pronta) {
+                    fiscalPendencias.innerHTML = htmlPendenciasFiscal(resposta.pendencias);
+                    fiscalPendencias.style.display = "block";
+                    return;
+                }
+                fiscalPendencias.innerHTML = '<h4>Prévia XML · Homologação</h4><p>Sem assinatura, sem transmissão e sem reserva de numeração.</p>';
+                const xml = document.createElement("pre");
+                xml.style.whiteSpace = "pre-wrap";
+                xml.style.overflowWrap = "anywhere";
+                xml.textContent = resposta.xml;
+                fiscalPendencias.append(xml);
+                fiscalPendencias.style.display = "block";
+            } finally {
+                botaoPrevia.disabled = false;
+            }
+        });
+        fiscalStatus.append(botaoPrevia);
+    }
     if (temServicos || v.notaFiscalServico) {
         painelFiscal.insertAdjacentHTML("beforeend", '<section id="viewVendaNfse" class="modal-section-card"><h3>NFS-e Serviços</h3><div data-nfse-status aria-live="polite">Consultando NFS-e…</div></section>');
         void carregarNfseVenda(v.id, painelFiscal.querySelector("[data-nfse-status]"));
