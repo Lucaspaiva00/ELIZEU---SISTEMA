@@ -208,8 +208,9 @@ function regrasAcoesPagina(pagina) {
             ["faturarVenda(", "vendas.faturar"],
             ["faturarVendaAtual", "vendas.faturar"],
             ["cancelarVendaAtual", "vendas.cancelar"],
-            ["emitirNfe(", "fiscal.emitir"],
-            ["emitirNfeAtual", "fiscal.emitir"]
+            ["verificarPendenciasNfe", "fiscal.visualizar"],
+            ["emitirNfseAtual", "fiscal.emitir"],
+            ["abrirFiscalVenda(", "fiscal.visualizar"]
         ],
         "contas-receber.html": [
             ["abrirModalConta", "contas_receber.criar"],

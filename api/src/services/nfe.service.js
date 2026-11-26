@@ -1,37 +1,11 @@
 const nfeRepository = require("../repositories/nfe.repository");
-const focusNfeService = require("./focusNfe.service");
 const classificacaoRtc = require('../utils/classificacaoRtc');
 
 function texto(valor) { return String(valor ?? "").trim(); }
 function somenteDigitos(valor) { return texto(valor).replace(/\D/g, ""); }
 function numero(valor) { return Number(valor || 0); }
-function decimal(valor) { return numero(valor).toFixed(2); }
 function adicionarPendencia(lista, condicao, mensagem, destino) {
     if (condicao) lista.push({ mensagem, destino });
-}
-
-const PAGAMENTOS_FOCUS = {
-    DINHEIRO: "01",
-    CHEQUE: "02",
-    CARTAO_CREDITO: "03",
-    CARTAO_DEBITO: "04",
-    CREDITO_LOJA: "05",
-    BOLETO: "15",
-    PIX: "17",
-    TRANSFERENCIA: "18",
-    OUTRO: "99"
-};
-
-function statusInternoFocus(status) {
-    const mapa = {
-        processando_autorizacao: "TRANSMITINDO",
-        autorizado: "AUTORIZADA",
-        cancelado: "CANCELADA",
-        erro_autorizacao: "REJEITADA",
-        denegado: "REJEITADA",
-        erro_cancelamento: "ERRO"
-    };
-    return mapa[String(status || "").toLowerCase()] || "ERRO";
 }
 
 class NfeService {
@@ -45,7 +19,6 @@ class NfeService {
         const empresa = venda.empresa;
         const fiscal = empresa?.configuracaoFiscal;
         const certificado = empresa?.certificadoDigital;
-        const focus = empresa?.integracaoFocusNfe;
 
         adicionarPendencia(pendencias, !texto(empresa?.razaoSocial), "Razão social da empresa não informada.", "empresa");
         adicionarPendencia(pendencias, somenteDigitos(empresa?.cnpj).length !== 14, "CNPJ do emitente inválido ou não informado.", "empresa");
@@ -70,18 +43,10 @@ class NfeService {
             adicionarPendencia(pendencias, !texto(fiscal.cofinsSituacaoTributariaPadrao), "CST da COFINS não informado.", "fiscal");
         }
 
-        // O certificado é guardado no ERP para controle operacional. Na Focus ele também precisa estar cadastrado na empresa emitente.
         adicionarPendencia(pendencias, !certificado, "Certificado A1 não configurado no ERP.", "certificado");
         if (certificado) {
             adicionarPendencia(pendencias, !certificado.ativo, "Certificado A1 está inativo.", "certificado");
             adicionarPendencia(pendencias, certificado.validade && new Date(certificado.validade) < new Date(), "Certificado A1 está vencido.", "certificado");
-        }
-
-        adicionarPendencia(pendencias, !focus?.ativo, "Integração Focus NFe não configurada ou desativada.", "focus");
-        if (fiscal?.ambiente === "PRODUCAO") {
-            adicionarPendencia(pendencias, !focus?.tokenProducaoCriptografado, "Token Focus NFe de produção não configurado.", "focus");
-        } else {
-            adicionarPendencia(pendencias, !focus?.tokenHomologacaoCriptografado, "Token Focus NFe de homologação não configurado.", "focus");
         }
 
         const cliente = venda.cliente;
@@ -152,7 +117,8 @@ class NfeService {
         // Venda mista é suportada: a NF-e modelo 55 considera somente os itens de PRODUTO.
         // Os itens de SERVICO são emitidos separadamente pela NFS-e.
 
-        return { venda, pronta: pendencias.length === 0, pendencias };
+        adicionarPendencia(pendencias, true, "A transmissão direta da NF-e de materiais à SEFAZ ainda está indisponível.", "fiscal");
+        return { venda, pronta: false, pendencias };
     }
 
     montarSnapshot(venda) {
@@ -221,103 +187,6 @@ class NfeService {
         };
     }
 
-    montarPayloadFocus(nota) {
-        const s = nota.dadosEmissao;
-        // Protege também notas preparadas antes da atualização e chamadas diretas.
-        if (s.tributacaoPadrao?.rtcAtivo) throw new Error(classificacaoRtc.BLOQUEIO_EMISSAO);
-        if (s.itens?.some(item => item.isSituacaoTributaria || item.isClassificacaoTributaria || item.isAliquota != null)) {
-            throw new Error('Emissão com Imposto Seletivo indisponível até implementar e homologar seu cálculo e payload.');
-        }
-        const e = s.emitente;
-        const d = s.destinatario;
-        const t = s.tributacaoPadrao;
-        const docDest = somenteDigitos(d.cpfCnpj);
-        const mesmoEstado = texto(e.endereco.uf).toUpperCase() === texto(d.endereco.uf).toUpperCase();
-        const valorProdutos = s.itens.reduce((acc, item) => acc + (item.quantidade * item.valorUnitario), 0);
-
-        const payload = {
-            natureza_operacao: s.documento.naturezaOperacao,
-            data_emissao: new Date().toISOString(),
-            data_entrada_saida: new Date().toISOString(),
-            tipo_documento: "1",
-            finalidade_emissao: "1",
-            local_destino: mesmoEstado ? "1" : "2",
-            consumidor_final: t.consumidorFinal ? "1" : "0",
-            presenca_comprador: String(t.presencaComprador ?? 9),
-            modalidade_frete: String(t.modalidadeFrete ?? 9),
-            serie: String(nota.serie),
-            numero: String(nota.numero),
-
-            cnpj_emitente: e.cnpj,
-            inscricao_estadual_emitente: e.inscricaoEstadual,
-            nome_emitente: e.razaoSocial,
-            nome_fantasia_emitente: e.nomeFantasia || e.razaoSocial,
-            logradouro_emitente: e.endereco.logradouro,
-            numero_emitente: e.endereco.numero,
-            complemento_emitente: e.endereco.complemento || undefined,
-            bairro_emitente: e.endereco.bairro,
-            codigo_municipio_emitente: e.endereco.codigoMunicipio,
-            municipio_emitente: e.endereco.cidade,
-            uf_emitente: e.endereco.uf,
-            cep_emitente: e.endereco.cep,
-            telefone_emitente: e.telefone || undefined,
-            regime_tributario_emitente: Number(e.crt),
-
-            nome_destinatario: d.nome,
-            inscricao_estadual_destinatario: d.inscricaoEstadual || undefined,
-            indicador_inscricao_estadual_destinatario: d.inscricaoEstadual ? "1" : "9",
-            telefone_destinatario: d.telefone || undefined,
-            email_destinatario: d.email || undefined,
-            logradouro_destinatario: d.endereco.logradouro,
-            numero_destinatario: d.endereco.numero,
-            complemento_destinatario: d.endereco.complemento || undefined,
-            bairro_destinatario: d.endereco.bairro,
-            municipio_destinatario: d.endereco.cidade,
-            uf_destinatario: d.endereco.uf,
-            pais_destinatario: "Brasil",
-            codigo_pais_destinatario: "1058",
-            cep_destinatario: d.endereco.cep,
-
-            valor_produtos: decimal(valorProdutos),
-            valor_frete: decimal(s.venda.frete),
-            valor_seguro: "0.00",
-            valor_desconto: decimal(s.venda.desconto),
-            valor_outras_despesas: decimal(s.venda.outrasDespesas),
-            valor_total: decimal(s.venda.total),
-            informacoes_adicionais_contribuinte: s.informacoesComplementares || undefined,
-
-            items: s.itens.map(item => ({
-                numero_item: String(item.numeroItem),
-                codigo_produto: texto(item.codigo || item.sku),
-                descricao: item.descricao,
-                cfop: texto(item.cfop),
-                unidade_comercial: texto(item.unidade || "UN").toLowerCase(),
-                quantidade_comercial: String(item.quantidade),
-                valor_unitario_comercial: decimal(item.valorUnitario),
-                valor_unitario_tributavel: decimal(item.valorUnitario),
-                unidade_tributavel: texto(item.unidade || "UN").toLowerCase(),
-                codigo_ncm: item.ncm,
-                quantidade_tributavel: String(item.quantidade),
-                valor_bruto: decimal(item.quantidade * item.valorUnitario),
-                valor_desconto: item.desconto ? decimal(item.desconto) : undefined,
-                icms_situacao_tributaria: texto(t.icmsSituacaoTributaria),
-                icms_origem: texto(item.origemMercadoria),
-                pis_situacao_tributaria: texto(t.pisSituacaoTributaria),
-                cofins_situacao_tributaria: texto(t.cofinsSituacaoTributaria)
-            })),
-            formas_pagamento: [{
-                forma_pagamento: PAGAMENTOS_FOCUS[s.venda.formaPagamento] || "99",
-                valor_pagamento: decimal(s.venda.total)
-            }]
-        };
-
-        if (docDest.length === 11) payload.cpf_destinatario = docDest;
-        if (docDest.length === 14) payload.cnpj_destinatario = docDest;
-
-        // Remove undefined para manter o JSON limpo.
-        return JSON.parse(JSON.stringify(payload));
-    }
-
     async preparar(vendaId, empresaId) {
         const validacao = await this.validar(vendaId, empresaId);
         if (!validacao.pronta) return { pronta: false, pendencias: validacao.pendencias, notaFiscal: validacao.venda.notaFiscal || null };
@@ -327,84 +196,19 @@ class NfeService {
         return { pronta: true, pendencias: [], notaFiscal, existente: false };
     }
 
-    async sincronizarResposta(nota, resultado) {
-        const r = resultado?.dados || {};
-        const statusFocus = r.status || r.codigo || null;
-        const status = statusInternoFocus(statusFocus);
-        const motivo = r.mensagem_sefaz || r.mensagem || (Array.isArray(r.erros) ? r.erros.map(e => e.mensagem).join(" | ") : null);
-
-        const dados = {
-            status,
-            statusFocus: statusFocus ? String(statusFocus) : null,
-            chaveAcesso: r.chave_nfe || r.chave_acesso || nota.chaveAcesso || null,
-            protocolo: r.protocolo || r.protocolo_autorizacao || nota.protocolo || null,
-            caminhoDanfe: focusNfeService.urlRecurso(nota.ambiente, r.caminho_danfe || r.url_danfe) || nota.caminhoDanfe || null,
-            caminhoXml: focusNfeService.urlRecurso(nota.ambiente, r.caminho_xml_nota_fiscal || r.caminho_xml) || nota.caminhoXml || null,
-            motivoStatus: motivo,
-            respostaFocus: r
-        };
-
-        if (status === "TRANSMITINDO") dados.transmitidaEm = nota.transmitidaEm || new Date();
-        if (status === "AUTORIZADA") { dados.transmitidaEm = nota.transmitidaEm || new Date(); dados.autorizadaEm = nota.autorizadaEm || new Date(); }
-        if (status === "CANCELADA") dados.canceladaEm = nota.canceladaEm || new Date();
-
-        return nfeRepository.atualizar(nota.id, dados);
-    }
-
     async emitir(vendaId, empresaId) {
-        const preparado = await this.preparar(vendaId, empresaId);
-        if (!preparado.pronta) return preparado;
-
-        let nota = await nfeRepository.buscarPorVenda(vendaId, empresaId);
-        if (nota.status === "AUTORIZADA") return { pronta: true, notaFiscal: nota, existente: true, autorizada: true };
-        if (nota.status === "CANCELADA") throw new Error("Esta NF-e já foi cancelada e não pode ser retransmitida.");
-
-        const referencia = nota.referenciaFocus || `elian-${empresaId}-venda-${vendaId}-nfe-${nota.id}`;
-        if (!nota.referenciaFocus) nota = await nfeRepository.atualizar(nota.id, { referenciaFocus: referencia });
-
-        if (nota.status === "TRANSMITINDO") return this.consultar(vendaId, empresaId);
-
-        // Uma nota antiga pode ter snapshot sem RTC e a configuração atual já estar ativa.
-        if (nota.dadosEmissao?.tributacaoPadrao?.rtcAtivo) {
-            return { pronta: false, pendencias: [{ mensagem: classificacaoRtc.BLOQUEIO_EMISSAO, destino: 'fiscal' }], notaFiscal: nota };
-        }
-
-        const payload = this.montarPayloadFocus(nota);
-        nota = await nfeRepository.atualizar(nota.id, { status: "TRANSMITINDO", transmitidaEm: new Date(), motivoStatus: null });
-        const resultado = await focusNfeService.emitir(empresaId, nota.ambiente, referencia, payload);
-
-        if ([401, 403].includes(resultado.httpStatus)) {
-            await nfeRepository.atualizar(nota.id, { status: "ERRO", motivoStatus: "Token Focus NFe recusado." });
-            throw new Error("A Focus NFe recusou o token deste ambiente.");
-        }
-
-        const atualizada = await this.sincronizarResposta(nota, resultado);
-        return { pronta: true, notaFiscal: atualizada, respostaFocus: resultado.dados };
+        const { venda, pendencias } = await this.validar(vendaId, empresaId);
+        return { pronta: false, pendencias, notaFiscal: venda.notaFiscal || null };
     }
 
     async consultar(vendaId, empresaId) {
-        const nota = await nfeRepository.buscarPorVenda(vendaId, empresaId);
-        if (!nota) throw new Error("Ainda não existe NF-e preparada para esta venda.");
-        if (!nota.referenciaFocus) throw new Error("Esta NF-e ainda não foi transmitida para a Focus NFe.");
-
-        const resultado = await focusNfeService.consultar(empresaId, nota.ambiente, nota.referenciaFocus);
-        if ([401, 403].includes(resultado.httpStatus)) throw new Error("A Focus NFe recusou o token deste ambiente.");
-        const atualizada = await this.sincronizarResposta(nota, resultado);
-        return { notaFiscal: atualizada, respostaFocus: resultado.dados };
+        const { notaFiscal } = await this.buscarPorVenda(vendaId, empresaId);
+        if (!notaFiscal) throw new Error("Ainda não existe NF-e para esta venda.");
+        return { notaFiscal };
     }
 
-    async cancelar(vendaId, empresaId, justificativa) {
-        const nota = await nfeRepository.buscarPorVenda(vendaId, empresaId);
-        if (!nota) throw new Error("NF-e não encontrada.");
-        if (nota.status !== "AUTORIZADA") throw new Error("Somente uma NF-e autorizada pode ser cancelada.");
-        const motivo = texto(justificativa);
-        if (motivo.length < 15) throw new Error("A justificativa de cancelamento deve possuir pelo menos 15 caracteres.");
-        if (!nota.referenciaFocus) throw new Error("Referência Focus NFe não encontrada.");
-
-        const resultado = await focusNfeService.cancelar(empresaId, nota.ambiente, nota.referenciaFocus, motivo);
-        if ([401, 403].includes(resultado.httpStatus)) throw new Error("A Focus NFe recusou o token deste ambiente.");
-        const atualizada = await this.sincronizarResposta(nota, resultado);
-        return { notaFiscal: atualizada, respostaFocus: resultado.dados };
+    async cancelar() {
+        throw new Error("O cancelamento direto da NF-e na SEFAZ ainda está indisponível.");
     }
 
     async buscarPorVenda(vendaId, empresaId) {

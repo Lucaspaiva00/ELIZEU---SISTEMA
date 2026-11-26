@@ -237,7 +237,7 @@ async function visualizarVenda(id) {
         fiscalPendencias.style.display = "none";
         fiscalPendencias.innerHTML = "";
     } else if (v.status === "FATURADA") {
-        fiscalStatus.innerHTML = '<strong>NF-e ainda não emitida.</strong><div class="text-muted" style="margin-top:6px;">Ao emitir, o ERP valida cadastro, tributação e token Focus antes de transmitir.</div>';
+        fiscalStatus.innerHTML = '<strong>NF-e ainda não emitida.</strong><div class="text-muted" style="margin-top:6px;">A transmissão direta de NF-e à SEFAZ ainda está indisponível.</div>';
         fiscalPendencias.style.display = "none";
         fiscalPendencias.innerHTML = "";
     } else {
@@ -261,11 +261,8 @@ async function visualizarVenda(id) {
         v.status === "FATURADA" && temProdutos && (!nfe || ["PRONTA_TRANSMISSAO", "REJEITADA", "ERRO"].includes(nfe.status)) ? "inline-flex" : "none";
     document.getElementById("btnEmitirNfse").style.display =
         v.status === "FATURADA" && temServicos && (!v.notaFiscalServico || ["PRONTA_TRANSMISSAO", "REJEITADA", "ERRO","PENDENTE_CONFIGURACAO"].includes(v.notaFiscalServico.status)) ? "inline-flex" : "none";
-    document.getElementById("btnConsultarNfe").style.display =
-        nfe?.referenciaFocus && !["CANCELADA"].includes(nfe.status) ? "inline-flex" : "none";
     document.getElementById("btnDanfeNfe").style.display = nfe?.caminhoDanfe ? "inline-flex" : "none";
     document.getElementById("btnXmlNfe").style.display = nfe?.caminhoXml ? "inline-flex" : "none";
-    document.getElementById("btnCancelarNfe").style.display = nfe?.status === "AUTORIZADA" ? "inline-flex" : "none";
 
     document.getElementById("btnFaturarVenda").style.display = v.status === "CONFIRMADA" ? "inline-flex" : "none";
     document.getElementById("btnCancelarVenda").style.display = v.status === "CONFIRMADA" ? "inline-flex" : "none";
@@ -303,46 +300,18 @@ async function cancelarVendaAtual() {
 }
 
 
-async function emitirNfe(id) {
-    if (!await confirmarAcao("Emitir a NF-e dos MATERIAIS desta venda? Em homologação ela não possui valor fiscal. Os serviços serão tratados em uma NFS-e separada.")) return;
-
-    const resposta = await post(`/vendas/${id}/nfe/emitir`, {});
-
-    if (!resposta?.sucesso) {
-        const pendencias = resposta?.pendencias || [];
-        if (vendaAtualId === id && pendencias.length) {
-            const area = document.getElementById("viewVendaFiscalPendencias");
-            area.innerHTML = htmlPendenciasFiscal(pendencias);
-            area.style.display = "block";
-        }
-        if (pendencias.length) {
-            const resumo = pendencias.slice(0, 7).map(p => `• ${p.mensagem}`).join("\n");
-            const restante = pendencias.length > 7 ? `\n• +${pendencias.length - 7} pendência(s)` : "";
-            return mostrarMensagem(`NF-e bloqueada até corrigir:\n${resumo}${restante}`);
-        }
-        return mostrarMensagem(resposta?.mensagem || "Erro ao emitir NF-e.");
-    }
-
-    const nfe = resposta.notaFiscal;
-    mostrarMensagem(nfe?.status === "AUTORIZADA"
-        ? `NF-e nº ${nfe.numero} autorizada pela SEFAZ.`
-        : `NF-e nº ${nfe?.numero || ""} enviada. Status: ${nfe?.status || "processando"}.`);
-
-    await carregarVendas();
-    if (vendaAtualId === id) await visualizarVenda(id);
+async function verificarPendenciasNfe() {
+    const id = vendaAtualId;
+    if (!id) return;
+    const resposta = await get(`/vendas/${id}/nfe/validar`);
+    if (vendaAtualId !== id) return;
+    if (!resposta?.sucesso) return mostrarMensagem(resposta?.mensagem || "Erro ao verificar a NF-e.");
+    const area = document.getElementById("viewVendaFiscalPendencias");
+    const pendencias = resposta.pendencias || [];
+    area.innerHTML = htmlPendenciasFiscal(pendencias);
+    area.style.display = pendencias.length ? "block" : "none";
+    document.querySelector('#modalVenda [data-modal-tab="fiscal"]')?.click();
 }
-
-function emitirNfeAtual() { if (vendaAtualId) emitirNfe(vendaAtualId); }
-
-async function consultarNfe(id) {
-    const resposta = await post(`/vendas/${id}/nfe/consultar`, {});
-    if (!resposta?.sucesso) return mostrarMensagem(resposta?.mensagem || "Erro ao consultar NF-e.");
-    mostrarMensagem(`NF-e atualizada: ${resposta.notaFiscal?.status || "sem status"}.`);
-    await carregarVendas();
-    if (vendaAtualId === id) await visualizarVenda(id);
-}
-
-function consultarNfeAtual() { if (vendaAtualId) consultarNfe(vendaAtualId); }
 
 function notaAtual() { return vendas.find(item => item.id === vendaAtualId)?.notaFiscal || null; }
 function abrirDanfeAtual() {
@@ -355,21 +324,6 @@ function abrirXmlAtual() {
     if (!url) return mostrarMensagem("XML ainda não disponível.");
     window.open(url, "_blank", "noopener,noreferrer");
 }
-
-async function cancelarNfeAtual() {
-    if (!vendaAtualId) return;
-    const justificativa = await solicitarTexto("Justificativa do cancelamento da NF-e (mínimo 15 caracteres):");
-    if (justificativa === null) return;
-    if (justificativa.trim().length < 15) return mostrarMensagem("A justificativa precisa ter pelo menos 15 caracteres.");
-    if (!await confirmarAcao("Confirma o cancelamento desta NF-e autorizada?")) return;
-    const resposta = await post(`/vendas/${vendaAtualId}/nfe/cancelar`, { justificativa: justificativa.trim() });
-    if (!resposta?.sucesso) return mostrarMensagem(resposta?.mensagem || "Erro ao cancelar NF-e.");
-    mostrarMensagem(resposta.mensagem || "Solicitação de cancelamento enviada.");
-    await carregarVendas();
-    await visualizarVenda(vendaAtualId);
-}
-
-
 
 async function emitirNfse(id) {
     const parametros = await get(`/vendas/${id}/nfse/parametros`);

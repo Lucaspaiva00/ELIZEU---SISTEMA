@@ -12,14 +12,6 @@ function includeVendaFiscal() {
                         validade: true,
                         ativo: true
                     }
-                },
-                integracaoFocusNfe: {
-                    select: {
-                        id: true,
-                        ativo: true,
-                        tokenHomologacaoCriptografado: true,
-                        tokenProducaoCriptografado: true
-                    }
                 }
             }
         },

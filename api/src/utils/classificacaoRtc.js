@@ -32,6 +32,6 @@ function pendenciasProduto(produto) {
     return pendencias;
 }
 
-const BLOQUEIO_EMISSAO = 'Emissão IBS/CBS indisponível: o cálculo por operação, os grupos e totais do payload Focus ainda precisam ser implementados e homologados. A classificação cadastral não autoriza transmissão fiscal.';
+const BLOQUEIO_EMISSAO = 'Emissão IBS/CBS indisponível: o cálculo por operação, os grupos e totais do XML da NF-e ainda precisam ser implementados e homologados. A classificação cadastral não autoriza transmissão fiscal.';
 
 module.exports = { catalogo, vigente, listar, validar, pendenciasProduto, BLOQUEIO_EMISSAO };

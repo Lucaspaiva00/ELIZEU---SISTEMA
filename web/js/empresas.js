@@ -1,5 +1,4 @@
 let empresaAtual = null;
-let focusAtual = null;
 let portalNacionalAtual = null;
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -31,18 +30,6 @@ async function carregarEmpresa() {
     atualizarStatusFiscal();
 }
 
-async function carregarFocus() {
-    try {
-        const resposta = await get("/empresas/minha/focus");
-        if (!resposta?.sucesso) return;
-        focusAtual = resposta.configuracao;
-        preencherFocus(focusAtual);
-        atualizarStatusFiscal();
-    } catch (erro) {
-        console.error("Focus NFe:", erro);
-    }
-}
-
 function definir(id, valor) { const campo = document.getElementById(id); if (campo) campo.value = valor ?? ""; }
 
 function preencherEmpresa(empresa) {
@@ -62,22 +49,6 @@ function preencherFiscal(fiscal) {
     document.getElementById("rtcAtivo").checked = Boolean(fiscal.rtcAtivo);
 }
 
-function preencherFocus(focus) {
-    document.getElementById("focusAtivo").checked = focus?.ativo !== false;
-    document.getElementById("tokenFocusHomologacao").value = "";
-    document.getElementById("tokenFocusProducao").value = "";
-    document.getElementById("statusTokenHomologacao").textContent = focus?.homologacaoConfigurada
-        ? `Configurado${focus.ultimaValidacaoHomologacao ? ` • testado em ${new Date(focus.ultimaValidacaoHomologacao).toLocaleString("pt-BR")}` : " • ainda não testado"}.`
-        : "Não configurado.";
-    document.getElementById("statusTokenProducao").textContent = focus?.producaoConfigurada
-        ? `Configurado${focus.ultimaValidacaoProducao ? ` • testado em ${new Date(focus.ultimaValidacaoProducao).toLocaleString("pt-BR")}` : " • ainda não testado"}.`
-        : "Não configurado.";
-    const badge = document.getElementById("focusBadge");
-    const ok = focus?.homologacaoConfigurada || focus?.producaoConfigurada;
-    badge.className = `badge ${ok ? "badge-success" : "badge-warning"}`;
-    badge.textContent = ok ? "Token configurado" : "Não configurado";
-}
-
 function preencherCertificado(certificado) {
     const atual = document.getElementById("certificadoAtual");
     const badge = document.getElementById("certificadoBadge");
@@ -95,11 +66,10 @@ function atualizarStatusFiscal() {
     const fiscal = empresaAtual?.configuracaoFiscal;
     const certificado = empresaAtual?.certificadoDigital;
     const ambiente = fiscal?.ambiente || "HOMOLOGACAO";
-    const tokenOk = ambiente === "PRODUCAO" ? focusAtual?.producaoConfigurada : focusAtual?.homologacaoConfigurada;
     elemento.className = "fiscal-status";
-    if (fiscal?.ativo && certificado && tokenOk) {
+    if (fiscal?.ativo && certificado?.ativo && (!certificado.validade || new Date(certificado.validade) >= new Date())) {
         elemento.classList.add("ready");
-        elemento.querySelector("span:last-child").textContent = ambiente === "PRODUCAO" ? "Fiscal + Focus prontos em produção" : "Fiscal + Focus prontos em homologação";
+        elemento.querySelector("span:last-child").textContent = ambiente === "PRODUCAO" ? "Cadastro fiscal ativo em produção" : "Cadastro fiscal ativo em homologação";
     } else {
         elemento.classList.add("pending");
         elemento.querySelector("span:last-child").textContent = "Configuração fiscal pendente";
@@ -147,34 +117,6 @@ async function salvarFiscal(evento) {
     empresaAtual.configuracaoFiscal = resposta.configuracaoFiscal;
     atualizarStatusFiscal();
     mostrarMensagem("Configuração fiscal salva com sucesso.");
-}
-
-async function salvarFocus(evento) {
-    evento.preventDefault();
-    const tokenHomologacao = valor("tokenFocusHomologacao");
-    const tokenProducao = valor("tokenFocusProducao");
-    const resposta = await put("/empresas/minha/focus", {
-        tokenHomologacao,
-        tokenProducao,
-        ativo: document.getElementById("focusAtivo").checked
-    });
-    if (!resposta?.sucesso) return mostrarMensagem(resposta?.mensagem || "Erro ao salvar a Focus NFe.");
-    focusAtual = resposta.configuracao;
-    preencherFocus(focusAtual);
-    atualizarStatusFiscal();
-    mostrarMensagem("Tokens Focus NFe salvos. Agora teste primeiro a homologação.");
-}
-
-async function testarFocus(ambiente) {
-    const precisaSalvar = ambiente === "HOMOLOGACAO" ? valor("tokenFocusHomologacao") : valor("tokenFocusProducao");
-    if (precisaSalvar) {
-        mostrarMensagem("Salve o token antes de testar. Por segurança, o teste usa somente o token já criptografado no servidor.");
-        return;
-    }
-    const resposta = await post("/empresas/minha/focus/testar", { ambiente });
-    if (!resposta?.sucesso) return mostrarMensagem(resposta?.mensagem || "Não foi possível validar o token Focus NFe.");
-    await carregarFocus();
-    mostrarMensagem(resposta.mensagem);
 }
 
 function lerArquivoBase64(arquivo) {
