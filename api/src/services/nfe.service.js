@@ -1,4 +1,4 @@
-const { montarNfeHomologacao } = require("./nfeXmlGo");
+const { montarNfe, montarNfeHomologacao } = require("./nfeXmlGo");
 const { createHash } = require("node:crypto");
 const sefazGoService = require("./sefazGo.service");
 const nfeRepository = require("../repositories/nfe.repository");
@@ -130,7 +130,7 @@ class NfeService {
         // Venda mista é suportada: a NF-e modelo 55 considera somente os itens de PRODUTO.
         // Os itens de SERVICO são emitidos separadamente pela NFS-e.
 
-        adicionarPendencia(pendencias, !previa, "A transmissão direta da NF-e de materiais à SEFAZ ainda está indisponível.", "transmissao");
+        adicionarPendencia(pendencias, !previa && fiscal?.ambiente !== "PRODUCAO", "Selecione o ambiente de produção para emitir uma NF-e real.", "fiscal");
         return { venda, pronta: pendencias.length === 0, pendencias };
     }
 
@@ -232,13 +232,43 @@ class NfeService {
         if (!validacao.pronta) return { pronta: false, pendencias: validacao.pendencias, notaFiscal: validacao.venda.notaFiscal || null };
         if (validacao.venda.notaFiscal) return { pronta: true, pendencias: [], notaFiscal: validacao.venda.notaFiscal, existente: true };
         const snapshot = this.montarSnapshot(validacao.venda);
+        const fiscal = validacao.venda.empresa.configuracaoFiscal;
+        const previa = { ambiente: "PRODUCAO", serie: fiscal.serieNfe, numero: fiscal.proximoNumeroNfe, dadosEmissao: snapshot };
+        montarNfe(previa, codigoNumericoNfe(validacao.venda, previa.numero));
         const notaFiscal = await nfeRepository.criarPreparada(validacao.venda, snapshot);
         return { pronta: true, pendencias: [], notaFiscal, existente: false };
     }
 
     async emitir(vendaId, empresaId) {
-        const { venda, pendencias } = await this.validar(vendaId, empresaId);
-        return { pronta: false, pendencias, notaFiscal: venda.notaFiscal || null };
+        const venda = await nfeRepository.buscarVenda(vendaId, empresaId);
+        if (!venda) throw new Error("Venda não encontrada.");
+        const fiscal = venda.empresa?.configuracaoFiscal;
+        if (fiscal?.ativo !== true || fiscal.ambiente !== "PRODUCAO") {
+            throw new Error("Ative explicitamente a configuração fiscal em Produção antes de emitir uma NF-e real.");
+        }
+        const preparado = await this.preparar(vendaId, empresaId);
+        if (!preparado.pronta) return preparado;
+        const nota = preparado.notaFiscal;
+        if (nota.status === "AUTORIZADA" && nota.ambiente === "PRODUCAO") return preparado;
+        if (nota.ambiente !== "PRODUCAO" || nota.status !== "PRONTA_TRANSMISSAO") {
+            throw new Error("Já existe uma tentativa para esta venda. Confira o estado fiscal antes de qualquer reenvio.");
+        }
+        const nfe = montarNfe(nota, codigoNumericoNfe({ id: vendaId, empresaId }, nota.numero));
+        const retorno = await sefazGoService.autorizar(empresaId, nfe, nota.id, "PRODUCAO", xmlEnvio =>
+            nfeRepository.iniciarTransmissao(nota.id, {
+                xmlEnvio, chaveAcesso: nfe.chave, motivoStatus: "Enviando à SEFAZ Goiás. Confira o retorno antes de qualquer novo envio."
+            })
+        );
+        const rejeitada = retorno.httpStatus === 200 && /^\d{3}$/.test(retorno.codigo || "")
+            && !retorno.recibo && !["100", "103", "104", "105", "106", "204", "539"].includes(retorno.codigo);
+        const status = retorno.autorizada ? "AUTORIZADA" : rejeitada ? "REJEITADA" : "TRANSMITINDO";
+        const motivoStatus = [retorno.codigo, retorno.motivo, retorno.recibo && `Recibo ${retorno.recibo}`].filter(Boolean).join(" · ")
+            || `HTTP ${retorno.httpStatus}. A autorização ainda precisa ser consultada na SEFAZ.`;
+        const notaFiscal = await nfeRepository.atualizar(nota.id, {
+            status, motivoStatus, xmlRetorno: retorno.xmlRetorno,
+            ...(retorno.autorizada ? { protocolo: retorno.protocolo, autorizadaEm: new Date() } : {})
+        });
+        return { pronta: true, notaFiscal };
     }
 
     async consultar(vendaId, empresaId) {
