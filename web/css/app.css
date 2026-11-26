@@ -213,13 +213,48 @@ textarea {
 
 }
 
-.sidebar-section-title {
-    padding: 22px 25px 8px;
-    color: #64748b;
-    font-size: 10px;
-    font-weight: 800;
-    letter-spacing: .12em;
-    text-transform: uppercase;
+.sidebar-menu summary {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 25px;
+    color: #d1d5db;
+    cursor: pointer;
+    list-style: none;
+}
+
+.sidebar-menu summary::-webkit-details-marker {
+    display: none;
+}
+
+.sidebar-menu summary:hover {
+    background: var(--sidebar-hover);
+    color: white;
+}
+
+.sidebar-menu summary:focus-visible,
+.sidebar-menu a:focus-visible {
+    outline: 2px solid #dbeafe;
+    outline-offset: -3px;
+}
+
+.sidebar-menu summary .submenu-chevron {
+    margin-left: auto;
+    font-size: 11px;
+}
+
+.sidebar-menu details[open] > summary .submenu-chevron {
+    transform: rotate(180deg);
+}
+
+.sidebar-submenu {
+    padding: 0 0 5px;
+    list-style: none;
+}
+
+.sidebar-submenu a {
+    padding: 10px 20px 10px 42px;
+    font-size: 14px;
 }
 
 /* ===========================================
