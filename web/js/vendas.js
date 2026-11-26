@@ -342,6 +342,37 @@ async function visualizarVenda(id) {
                 xml.style.overflowWrap = "anywhere";
                 xml.textContent = resposta.xml;
                 fiscalPendencias.append(xml);
+                if (v.status === "CONFIRMADA" && window.temPermissao?.("fiscal.emitir")) {
+                    const testar = document.createElement("button");
+                    testar.type = "button";
+                    testar.className = "btn btn-primary btn-sm";
+                    testar.textContent = "Transmitir teste em homologação";
+                    const resultado = document.createElement("p");
+                    resultado.setAttribute("aria-live", "polite");
+                    testar.addEventListener("click", async () => {
+                        testar.disabled = true;
+                        try {
+                            if (!await confirmarAcao("Transmitir à SEFAZ Goiás em homologação, sem valor fiscal?")) return;
+                            const retorno = await post(`/vendas/${v.id}/nfe/testar-autorizacao`, {});
+                            if (!testar.isConnected || vendaAtualId !== v.id) return;
+                            if (!retorno?.sucesso || !retorno.pronta) {
+                                resultado.textContent = retorno?.mensagem || retorno?.pendencias?.map(item => item.mensagem).join(" ") || "Erro ao transmitir o teste.";
+                                return;
+                            }
+                            resultado.textContent = [
+                                retorno.autorizada ? "NF-e autorizada em homologação" : "Autorização não confirmada",
+                                retorno.httpStatus && `HTTP ${retorno.httpStatus}`,
+                                retorno.codigo && `SEFAZ ${retorno.codigo}`, retorno.motivo,
+                                retorno.protocolo && `Protocolo ${retorno.protocolo}`,
+                                retorno.recibo && `Recibo ${retorno.recibo}`
+                            ].filter(Boolean).join(" · ");
+                            if (retorno.autorizada || retorno.recibo) testar.dataset.transmitida = "1";
+                        } finally {
+                            testar.disabled = testar.dataset.transmitida === "1";
+                        }
+                    });
+                    fiscalPendencias.append(testar, resultado);
+                }
                 fiscalPendencias.style.display = "block";
             } finally {
                 botaoPrevia.disabled = false;
