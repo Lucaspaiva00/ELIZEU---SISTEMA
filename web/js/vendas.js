@@ -172,12 +172,76 @@ function htmlNfse(nota) {
     `;
 }
 
+function exibirDadosObra(area, obra = {}) {
+    const formulario = document.createElement("form");
+    formulario.id = "formDadosObraNfse";
+    formulario.className = "modal-section-card";
+    formulario.innerHTML = `
+        <h3>Dados da obra</h3>
+        <p>Informe o município onde a obra foi executada e uma forma de identificá-la.</p>
+        <div class="form-group">
+            <label for="nfseObraMunicipio">Código IBGE do município da obra</label>
+            <input id="nfseObraMunicipio" class="form-control" name="codigoMunicipio" inputmode="numeric" pattern="[1-9][0-9]{6}" maxlength="7" required>
+        </div>
+        <div class="form-group">
+            <label for="nfseObraTipo">Forma de identificação</label>
+            <select id="nfseObraTipo" class="form-control" name="tipo" required>
+                <option value="">Selecione</option>
+                <option value="cObra">CNO ou CEI</option>
+                <option value="cCIB">CIB do imóvel</option>
+                <option value="end">Endereço da obra</option>
+            </select>
+        </div>
+        <fieldset data-obra-codigo hidden disabled>
+            <div class="form-group">
+                <label for="nfseObraCodigo">CNO ou CEI</label>
+                <input id="nfseObraCodigo" class="form-control" name="codigo" required>
+            </div>
+        </fieldset>
+        <fieldset data-obra-endereco hidden disabled>
+            <div class="row">
+                <div class="col form-group"><label for="nfseObraCep">CEP</label><input id="nfseObraCep" class="form-control" name="cep" inputmode="numeric" pattern="[0-9]{5}-?[0-9]{3}" maxlength="9" required></div>
+                <div class="col form-group"><label for="nfseObraRua">Logradouro</label><input id="nfseObraRua" class="form-control" name="logradouro" maxlength="255" required></div>
+                <div class="col form-group"><label for="nfseObraNumero">Número</label><input id="nfseObraNumero" class="form-control" name="numero" maxlength="60" required></div>
+            </div>
+            <div class="row">
+                <div class="col form-group"><label for="nfseObraBairro">Bairro</label><input id="nfseObraBairro" class="form-control" name="bairro" maxlength="60" required></div>
+                <div class="col form-group"><label for="nfseObraComplemento">Complemento</label><input id="nfseObraComplemento" class="form-control" name="complemento" maxlength="156"></div>
+            </div>
+        </fieldset>
+    `;
+    const tipo = formulario.elements.namedItem("tipo");
+    const grupoCodigo = formulario.querySelector("[data-obra-codigo]");
+    const grupoEndereco = formulario.querySelector("[data-obra-endereco]");
+    const codigo = formulario.elements.namedItem("codigo");
+    const ajustarCampos = () => {
+        const endereco = tipo.value === "end";
+        grupoEndereco.hidden = grupoEndereco.disabled = !endereco;
+        grupoCodigo.hidden = grupoCodigo.disabled = !tipo.value || endereco;
+        const cib = tipo.value === "cCIB";
+        grupoCodigo.querySelector("label").textContent = cib ? "CIB do imóvel" : "CNO ou CEI";
+        codigo.maxLength = cib ? 8 : 30;
+        codigo.pattern = cib ? "[A-Za-z0-9]{8}" : ".{1,30}";
+    };
+    for (const [chave, valor] of Object.entries(obra)) {
+        const campo = formulario.elements.namedItem(chave);
+        if (campo) campo.value = valor ?? "";
+    }
+    tipo.addEventListener("change", ajustarCampos);
+    formulario.addEventListener("submit", evento => evento.preventDefault());
+    ajustarCampos();
+    area.append(formulario);
+}
+
 async function carregarNfseVenda(id, area) {
-    const r = await get(`/vendas/${id}/nfse`);
+    const r = await get(`/vendas/${id}/nfse/validar`);
     if (vendaAtualId !== id || !area.isConnected) return;
 
     area.innerHTML = r?.sucesso ? htmlNfse(r.notaFiscalServico)
         : `<p>${esc(r?.mensagem || "Não foi possível consultar a NFS-e desta venda.")}</p>`;
+    if (r?.sucesso && r.obraObrigatoria && r.notaFiscalServico?.status !== "AUTORIZADA") {
+        exibirDadosObra(area, r.notaFiscalServico?.dadosEmissao?.obra);
+    }
     if (r?.sucesso && r.notaFiscalServico?.status === "AUTORIZADA") {
         document.getElementById("btnEmitirNfse").style.display = "none";
     }
@@ -326,12 +390,19 @@ function abrirXmlAtual() {
 }
 
 async function emitirNfse(id) {
+    const formulario = document.getElementById("formDadosObraNfse");
+    let obra;
+    if (formulario) {
+        document.querySelector('#modalVenda [data-modal-tab="fiscal"]')?.click();
+        if (!formulario.reportValidity()) return;
+        obra = Object.fromEntries(new FormData(formulario));
+    }
     const parametros = await get(`/vendas/${id}/nfse/parametros`);
     if (!parametros?.sucesso) {
         return mostrarMensagem(parametros?.mensagem || "Não foi possível consultar os parâmetros da NFS-e.");
     }
 
-    const resposta = await post(`/vendas/${id}/nfse/emitir`, {});
+    const resposta = await post(`/vendas/${id}/nfse/emitir`, { obra });
     if (!resposta?.sucesso) {
         const pendencias = resposta?.pendencias || [];
         if (pendencias.length) {

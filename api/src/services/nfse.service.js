@@ -114,6 +114,39 @@ function assinarXmlDps(xml, certificado) {
     return xml.replace("</infDPS>", "</infDPS>" + signature);
 }
 
+const codigosComObra = new Set([
+    "070201", "070202", "070401", "070501", "070502", "070601", "070602",
+    "070701", "070801", "071701", "071901", "141403", "141404"
+]);
+
+function normalizarObra(obra) {
+    if (!obra || typeof obra !== "object") return null;
+    const codigoMunicipio = texto(obra.codigoMunicipio);
+    if (!/^[1-9]\d{6}$/.test(codigoMunicipio)) return null;
+    if (obra.tipo === "cObra" || obra.tipo === "cCIB") {
+        const codigo = texto(obra.codigo);
+        if (obra.tipo === "cObra" ? !codigo || codigo.length > 30 : !/^[A-Za-z0-9]{8}$/.test(codigo)) return null;
+        return { tipo: obra.tipo, codigoMunicipio, codigo };
+    }
+    if (obra.tipo !== "end") return null;
+    const cep = digitos(obra.cep);
+    const logradouro = texto(obra.logradouro);
+    const numero = texto(obra.numero);
+    const bairro = texto(obra.bairro);
+    const complemento = texto(obra.complemento);
+    if (cep.length !== 8 || !logradouro || !numero || !bairro
+        || logradouro.length > 255 || numero.length > 60 || bairro.length > 60 || complemento.length > 156) return null;
+    return { tipo: "end", codigoMunicipio, cep, logradouro, numero, bairro, complemento };
+}
+
+function xmlObra(obra) {
+    if (!obra) return "";
+    if (obra.tipo === "cObra") return `<obra><cObra>${esc(obra.codigo)}</cObra></obra>`;
+    if (obra.tipo === "cCIB") return `<obra><cCIB>${esc(obra.codigo)}</cCIB></obra>`;
+    const complemento = obra.complemento ? `<xCpl>${esc(obra.complemento)}</xCpl>` : "";
+    return `<obra><end><CEP>${obra.cep}</CEP><xLgr>${esc(obra.logradouro)}</xLgr><nro>${esc(obra.numero)}</nro>${complemento}<xBairro>${esc(obra.bairro)}</xBairro></end></obra>`;
+}
+
 const opcaoSimplesPorRegime = {
     MEI: 2,
     SIMPLES_NACIONAL: 3,
@@ -122,7 +155,7 @@ const opcaoSimplesPorRegime = {
 };
 
 class NfseService {
-    async validar(vendaId, empresaId) {
+    async validar(vendaId, empresaId, dadosObra) {
         const venda = await nfseRepository.buscarVenda(vendaId, empresaId);
         if(!venda) throw new Error("Venda não encontrada.");
         const pendencias=[];
@@ -156,7 +189,10 @@ class NfseService {
             pend(pendencias, !texto(servico.nfseCodigoNbs), `Serviço "${servico.nome}" está sem NBS 2.0.`, "servico");
             pend(pendencias, !texto(servico.nfseDescricaoFiscal || servico.descricao || servico.nome), `Serviço "${servico.nome}" está sem descrição fiscal.`, "servico");
         }
-        return { venda, itens, pronta: pendencias.length===0, pendencias };
+        const obraObrigatoria = codigosServico.some(codigo => codigosComObra.has(codigo));
+        const obra = obraObrigatoria ? normalizarObra(dadosObra ?? venda.notaFiscalServico?.dadosEmissao?.obra) : null;
+        pend(pendencias, obraObrigatoria && !obra, "Preencha os dados da obra na aba Fiscal: município e CNO/CEI, CIB ou endereço completo da obra.", "obra");
+        return { venda, itens, obraObrigatoria, obra, pronta: pendencias.length===0, pendencias };
     }
 
     montarSnapshot(venda,itens){
@@ -170,7 +206,7 @@ class NfseService {
                 endereco:{ cep:digitos(venda.cliente.cep), logradouro:venda.cliente.endereco||null, numero:venda.cliente.numero||null, complemento:venda.cliente.complemento||null, bairro:venda.cliente.bairro||null, cidade:venda.cliente.cidade||null, uf:venda.cliente.estado||null }
             },
             itens:itens.map(i=>({
-                id:i.id, descricao:i.variacaoServico?.servico?.nfseDescricaoFiscal || i.descricao,
+                id:i.id, descricao:i.variacaoServico?.servico?.nfseDescricaoFiscal || i.descricao || i.variacaoServico?.servico?.nome,
                 codigoServicoNacional:digitos(i.variacaoServico?.servico?.nfseCodigoServicoNacional),
                 codigoNbs:texto(i.variacaoServico?.servico?.nfseCodigoNbs)||null,
                 aliquotaIss:i.variacaoServico?.servico?.nfseAliquotaIss===null?null:numero(i.variacaoServico?.servico?.nfseAliquotaIss),
@@ -182,11 +218,20 @@ class NfseService {
         };
     }
 
-    async preparar(vendaId,empresaId){
-        const validacao=await this.validar(vendaId,empresaId);
+    async preparar(vendaId,empresaId,dadosObra){
+        const validacao=await this.validar(vendaId,empresaId,dadosObra);
         if(!validacao.pronta) return {pronta:false,pendencias:validacao.pendencias,notaFiscalServico:validacao.venda.notaFiscalServico||null};
-        if(validacao.venda.notaFiscalServico) return {pronta:true,existente:true,notaFiscalServico:validacao.venda.notaFiscalServico};
+        let existente = validacao.venda.notaFiscalServico;
+        if (existente) {
+            if (existente.status !== "AUTORIZADA" && validacao.obra && dadosObra != null) {
+                existente = await nfseRepository.atualizar(existente.id, {
+                    dadosEmissao: { ...existente.dadosEmissao, obra: validacao.obra }
+                });
+            }
+            return { pronta:true, existente:true, notaFiscalServico:existente };
+        }
         const snapshot=this.montarSnapshot(validacao.venda,validacao.itens);
+        if (validacao.obra) snapshot.obra = validacao.obra;
         const nota=await nfseRepository.criarPreparada(validacao.venda,snapshot);
         return {pronta:true,existente:false,notaFiscalServico:nota};
     }
@@ -226,13 +271,13 @@ class NfseService {
         const retencaoIss = primeiro.issRetido ? 2 : 1;
         const aliquota = primeiro.aliquotaIss > 0 ? `<pAliq>${primeiro.aliquotaIss.toFixed(2)}</pAliq>` : "";
         const tributos = `<trib><tribMun><tribISSQN>1</tribISSQN><tpRetISSQN>${retencaoIss}</tpRetISSQN>${aliquota}</tribMun><totTrib><indTotTrib>0</indTotTrib></totTrib></trib>`;
-        return `<?xml version="1.0" encoding="UTF-8"?><DPS xmlns="http://www.sped.fazenda.gov.br/nfse" versao="1.01"><infDPS xmlns="http://www.sped.fazenda.gov.br/nfse" Id="${id}"><tpAmb>${nota.ambiente==="PRODUCAO"?"1":"2"}</tpAmb><dhEmi>${agora}</dhEmi><verAplic>ElianSigs-1.0</verAplic><serie>${nota.serieDps}</serie><nDPS>${nota.numeroDps}</nDPS><dCompet>${s.dataCompetencia}</dCompet><tpEmit>1</tpEmit>${homologacao ? "<finNFSe>0</finNFSe>" : ""}<cLocEmi>${s.prestador.codigoMunicipio}</cLocEmi><prest><CNPJ>${s.prestador.cnpj}</CNPJ>${inscricaoMunicipal}${regime}</prest><toma>${docTag}<xNome>${esc(s.tomador.nome)}</xNome></toma>${homologacao ? "<indDest>0</indDest>" : ""}<serv><locPrest><cLocPrestacao>${s.prestador.codigoMunicipio}</cLocPrestacao></locPrest><cServ><cTribNac>${primeiro.codigoServicoNacional}</cTribNac>${classificacaoServico}</cServ></serv><valores><vServPrest><vServ>${s.totalServicos.toFixed(2)}</vServ></vServPrest>${tributos}</valores></infDPS></DPS>`;
+        return `<?xml version="1.0" encoding="UTF-8"?><DPS xmlns="http://www.sped.fazenda.gov.br/nfse" versao="1.01"><infDPS xmlns="http://www.sped.fazenda.gov.br/nfse" Id="${id}"><tpAmb>${nota.ambiente==="PRODUCAO"?"1":"2"}</tpAmb><dhEmi>${agora}</dhEmi><verAplic>ElianSigs-1.0</verAplic><serie>${nota.serieDps}</serie><nDPS>${nota.numeroDps}</nDPS><dCompet>${s.dataCompetencia}</dCompet><tpEmit>1</tpEmit>${homologacao ? "<finNFSe>0</finNFSe>" : ""}<cLocEmi>${s.prestador.codigoMunicipio}</cLocEmi><prest><CNPJ>${s.prestador.cnpj}</CNPJ>${inscricaoMunicipal}${regime}</prest><toma>${docTag}<xNome>${esc(s.tomador.nome)}</xNome></toma>${homologacao ? "<indDest>0</indDest>" : ""}<serv><locPrest><cLocPrestacao>${s.obra?.codigoMunicipio || s.prestador.codigoMunicipio}</cLocPrestacao></locPrest><cServ><cTribNac>${primeiro.codigoServicoNacional}</cTribNac>${classificacaoServico}</cServ>${xmlObra(s.obra)}</serv><valores><vServPrest><vServ>${s.totalServicos.toFixed(2)}</vServ></vServPrest>${tributos}</valores></infDPS></DPS>`;
     }
 
-    async gerarDps(vendaId,empresaId){
-        const preparado=await this.preparar(vendaId,empresaId);
+    async gerarDps(vendaId,empresaId,dadosObra){
+        const preparado=await this.preparar(vendaId,empresaId,dadosObra);
         if(!preparado.pronta) return preparado;
-        const nota=await nfseRepository.buscarPorVenda(vendaId,empresaId);
+        const nota=preparado.notaFiscalServico;
         if (nota.status === "AUTORIZADA") throw new Error("Esta NFS-e já foi autorizada.");
         const empresa=await prisma.empresa.findUnique({
             where:{id:empresaId},include:{certificadoDigital:true,configuracaoFiscal:true}
@@ -246,8 +291,8 @@ class NfseService {
         return {pronta:true,notaFiscalServico:atualizada,xmlDps:xmlAssinado,assinaturaPendente:false};
     }
 
-    async emitir(vendaId,empresaId){
-        const gerada=await this.gerarDps(vendaId,empresaId);
+    async emitir(vendaId,empresaId,dadosObra){
+        const gerada=await this.gerarDps(vendaId,empresaId,dadosObra);
         if(!gerada.pronta) return gerada;
         const resposta=await portalNacionalRepository.enviarDps(empresaId, gerada.xmlDps, gerada.notaFiscalServico.ambiente);
         const dados=resposta.resposta || {};
