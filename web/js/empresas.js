@@ -3,11 +3,40 @@ let portalNacionalAtual = null;
 
 document.addEventListener("DOMContentLoaded", async () => {
     configurarAbas();
+    configurarTesteSefazGo();
     document.getElementById("formEmpresa").addEventListener("submit", salvarEmpresa);
     document.getElementById("formFiscal").addEventListener("submit", salvarFiscal);
     document.getElementById("formCertificado").addEventListener("submit", salvarCertificado);
     await Promise.all([carregarEmpresa(), carregarPortalNacional()]);
 });
+
+function configurarTesteSefazGo() {
+    const acoes = document.querySelector("#formFiscal .panel-actions");
+    if (!acoes) return;
+    const botao = document.createElement("button");
+    botao.type = "button";
+    botao.className = "btn btn-light";
+    botao.textContent = "Testar SEFAZ Goiás em homologação";
+    botao.addEventListener("click", async () => {
+        botao.disabled = true;
+        try {
+            const resposta = await get("/empresas/minha/nfe/sefaz/status?ambiente=HOMOLOGACAO");
+            if (!resposta?.sucesso) {
+                return mostrarMensagem(resposta?.mensagem || "Não foi possível consultar a SEFAZ Goiás.", { tipo: "erro" });
+            }
+            const informacoes = [
+                resposta.operante ? "Serviço de NF-e operante em homologação." : "A consulta não confirmou que o serviço está operante.",
+                resposta.statusHttp && `HTTP ${resposta.statusHttp}`,
+                resposta.cStat && `Código SEFAZ ${resposta.cStat}`,
+                resposta.xMotivo
+            ].filter(Boolean);
+            mostrarMensagem(informacoes.join("\n"), { tipo: resposta.operante ? "sucesso" : "erro" });
+        } finally {
+            botao.disabled = false;
+        }
+    });
+    acoes.prepend(botao);
+}
 
 function configurarAbas() {
     document.querySelectorAll(".empresa-tab").forEach((botao) => {
