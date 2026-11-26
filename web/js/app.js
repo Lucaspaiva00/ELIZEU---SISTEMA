@@ -157,16 +157,8 @@ function aplicarPermissoesMenu(usuario = usuarioAtualLocal()) {
         item.hidden = !permitido;
     });
 
-    document.querySelectorAll("#sidebar .sidebar-section-title").forEach((titulo) => {
-        let proximo = titulo.nextElementSibling;
-        let possuiItemVisivel = false;
-
-        while (proximo && !proximo.classList.contains("sidebar-section-title")) {
-            if (!proximo.hidden) possuiItemVisivel = true;
-            proximo = proximo.nextElementSibling;
-        }
-
-        titulo.hidden = !possuiItemVisivel;
+    document.querySelectorAll("#sidebar .sidebar-group").forEach(grupo => {
+        grupo.hidden = !grupo.querySelector(".sidebar-submenu li:not([hidden])");
     });
 }
 
