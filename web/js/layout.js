@@ -81,6 +81,9 @@ async function carregarLayout() {
 
         if (linkAtual) {
             linkAtual.classList.add("active");
+            linkAtual.setAttribute("aria-current", "page");
+            const grupoAtual = linkAtual.closest("details");
+            if (grupoAtual) grupoAtual.open = true;
         }
 
         if (typeof window.aplicarPermissoesMenu === "function") {
