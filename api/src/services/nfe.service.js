@@ -274,7 +274,17 @@ class NfeService {
     async consultar(vendaId, empresaId) {
         const { notaFiscal } = await this.buscarPorVenda(vendaId, empresaId);
         if (!notaFiscal) throw new Error("Ainda não existe NF-e para esta venda.");
-        return { notaFiscal };
+        if (!notaFiscal.chaveAcesso) throw new Error("Esta NF-e ainda não possui chave de acesso.");
+        const { xmlRetorno, ...consulta } = await sefazGoService.consultarProtocolo(empresaId, notaFiscal.chaveAcesso, notaFiscal.ambiente);
+        if (!consulta.autorizada || notaFiscal.status !== "TRANSMITINDO") return { notaFiscal, consulta };
+        const atualizada = await nfeRepository.atualizar(notaFiscal.id, {
+            status: "AUTORIZADA",
+            protocolo: consulta.protocolo,
+            autorizadaEm: new Date(),
+            motivoStatus: [consulta.codigo, consulta.motivo].filter(Boolean).join(" · "),
+            xmlRetorno
+        });
+        return { notaFiscal: atualizada, consulta };
     }
 
     async cancelar() {
