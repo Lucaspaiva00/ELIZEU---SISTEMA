@@ -7,6 +7,7 @@ const { executarBootstrapFiscal } = require("./services/bootstrapFiscal.service"
 const portalNacionalRepository = require("./repositories/portalNacional.repository");
 const nfeDistribuicaoService = require("./services/nfeDistribuicao.service");
 const sefazGoService = require("./services/sefazGo.service");
+const nfseService = require("./services/nfse.service");
 
 const PORT = process.env.PORT || 3000;
 
@@ -41,6 +42,22 @@ async function iniciarServidor() {
                 }));
             } catch (erro) {
                 console.error("[NFS-e Nacional] Teste SEFIN falhou:", erro.message);
+            }
+        }
+
+
+        if (process.env.NFS_E_TESTAR_VENDA_ID) {
+            try {
+                const empresaIdFiscal = Number(process.env.FISCAL_BOOTSTRAP_EMPRESA_ID || 0);
+                const vendaIdFiscal = Number(process.env.NFS_E_TESTAR_VENDA_ID || 0);
+                const testeVenda = await nfseService.validar(vendaIdFiscal, empresaIdFiscal);
+                console.log("[NFS-e Nacional] Validação venda teste:", JSON.stringify({
+                    vendaId: vendaIdFiscal,
+                    pronta: testeVenda.pronta,
+                    pendencias: testeVenda.pendencias
+                }));
+            } catch (erro) {
+                console.error("[NFS-e Nacional] Validação venda teste falhou:", erro.message);
             }
         }
 
