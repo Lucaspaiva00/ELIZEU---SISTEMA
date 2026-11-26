@@ -99,6 +99,13 @@ function renderizarVendas(lista) {
     for (const v of lista) {
         const st = statusVenda[v.status] || { texto: v.status, classe: "badge-secondary" };
         const fiscal = fiscalVenda(v);
+        const materiais = (v.itens || []).some(item => item.tipo === "PRODUTO");
+        const servicos = (v.itens || []).some(item => item.tipo === "SERVICO");
+        const notaServico = v.notaFiscalServico;
+        const fiscalServico = notaServico ? statusNfe[notaServico.status] : null;
+        const badges = [];
+        if (materiais || v.notaFiscal) badges.push(`<span class="badge ${fiscal.classe}">NF-e · ${esc(fiscal.texto.replace(/^NF-e /, ""))}</span>`);
+        if (servicos || notaServico) badges.push(`<span class="badge ${fiscalServico?.classe || fiscal.classe}">NFS-e · ${esc(fiscalServico?.texto.replace(/^NF-e /, "") || notaServico?.status || (v.status === "FATURADA" ? "Não emitida" : "—"))}</span>`);
         tbody.innerHTML += `<tr>
             <td><strong>#${String(v.numero).padStart(5, "0")}</strong></td>
             <td>${v.orcamento?.numero ? `#${String(v.orcamento.numero).padStart(5, "0")}` : "—"}</td>
@@ -106,14 +113,20 @@ function renderizarVendas(lista) {
             <td>${fmtData(v.dataVenda)}</td>
             <td><strong>${fmtMoeda(v.total)}</strong></td>
             <td><span class="badge ${st.classe}">${st.texto}</span></td>
-            <td><span class="badge ${fiscal.classe}">${fiscal.texto}</span></td>
+            <td>${badges.join(" ") || '<span class="badge badge-secondary">—</span>'}</td>
             <td><div class="table-actions">
                 <button class="btn btn-light" onclick="visualizarVenda(${v.id})" title="Visualizar"><i class="fas fa-eye"></i></button>
                 ${v.status === "CONFIRMADA" ? `<button class="btn btn-success" onclick="faturarVenda(${v.id})" title="Faturar"><i class="fas fa-file-invoice-dollar"></i></button>` : ""}
-                ${v.status === "FATURADA" && !v.notaFiscal ? `<button class="btn btn-primary" onclick="emitirNfe(${v.id})" title="Emitir NF-e"><i class="fas fa-file-invoice"></i></button>` : ""}
+                ${v.status === "FATURADA" ? `<button class="btn btn-primary" onclick="abrirFiscalVenda(${v.id})" title="Abrir aba Fiscal" aria-label="Abrir aba Fiscal"><i class="fas fa-file-invoice" aria-hidden="true"></i></button>` : ""}
             </div></td>
         </tr>`;
     }
+}
+
+async function abrirFiscalVenda(id) {
+    await visualizarVenda(id);
+    if (vendaAtualId !== id) return;
+    document.querySelector('#modalVenda [data-modal-tab="fiscal"]')?.click();
 }
 
 function filtrarVendas() {
