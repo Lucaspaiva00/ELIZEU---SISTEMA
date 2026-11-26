@@ -19,6 +19,15 @@ router.post("/:id/nfe/testar-autorizacao", auth, autorizar("fiscal.emitir"), asy
         return res.status(422).json({ sucesso: false, mensagem: erro.message });
     }
 });
+router.post("/:id/nfe/retransmitir", auth, autorizar("fiscal.emitir"), async (req, res) => {
+    if (req.body?.confirmado !== true) return res.status(400).json({ sucesso: false, mensagem: "Confirme o reenvio da mesma NF-e." });
+    try {
+        const resultado = await nfeService.retransmitir(Number(req.params.id), req.usuario.empresaId);
+        return res.json({ sucesso: true, notaFiscal: resultado.notaFiscal });
+    } catch (erro) {
+        return res.status(422).json({ sucesso: false, mensagem: erro.message });
+    }
+});
 router.get("/:id/nfe/previsualizar", auth, autorizar("fiscal.visualizar"), async (req, res) => {
     try {
         const resultado = await nfeService.previsualizar(Number(req.params.id), req.usuario.empresaId);
