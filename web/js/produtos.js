@@ -15,6 +15,7 @@ const formProduto = document.getElementById("formProduto");
 const modalEstoquePrincipal = document.getElementById("modalEstoquePrincipal");
 
 document.addEventListener("DOMContentLoaded", async () => {
+    configurarSalvamentoClassificacaoFiscal();
     await carregarClassificacoesRtc();
     await carregarCategorias();
     await carregarProdutos();
@@ -95,6 +96,35 @@ function preencherCategorias() {
         option.textContent = categoria.nome;
 
         select.appendChild(option);
+    });
+}
+
+function configurarSalvamentoClassificacaoFiscal() {
+    const ncm = document.getElementById("ncm");
+    const origem = document.getElementById("origemMercadoria");
+    const grupo = origem?.closest(".form-group");
+    if (!ncm || !grupo) return;
+    const botao = document.createElement("button");
+    botao.type = "button";
+    botao.className = "btn btn-light";
+    botao.textContent = "Salvar apenas NCM e origem";
+    grupo.after(botao);
+    botao.addEventListener("click", async () => {
+        const id = produtoEditandoId;
+        if (!id) return mostrarMensagem("Cadastre o produto antes de salvar somente os dados fiscais.");
+        botao.disabled = true;
+        try {
+            const resposta = await put(`/produtos/${id}/classificacao-fiscal`, {
+                ncm: ncm.value.trim(),
+                origemMercadoria: origem.value
+            });
+            if (!resposta?.sucesso) return mostrarMensagem(resposta?.mensagem || "Erro ao salvar a classificação fiscal.", { tipo: "erro" });
+            await carregarProdutos();
+            if (produtoEditandoId === id) fecharModalProduto();
+            mostrarMensagem("Classificação fiscal salva com sucesso.");
+        } finally {
+            botao.disabled = false;
+        }
     });
 }
 
