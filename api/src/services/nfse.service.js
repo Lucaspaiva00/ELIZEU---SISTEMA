@@ -206,7 +206,9 @@ class NfseService {
             try { xmlNfse=require("zlib").gunzipSync(Buffer.from(dados.nfseXmlGZipB64,"base64")).toString("utf8"); } catch (_) { xmlNfse=null; }
         }
         const atualizada=await nfseRepository.atualizar(gerada.notaFiscalServico.id,{
-            respostaApi:dados,
+            respostaApi:typeof dados === "object" && !Array.isArray(dados)
+                ? { ...dados, statusHttp: resposta.statusHttp }
+                : { statusHttp: resposta.statusHttp, resposta: dados },
             xmlNfse,
             status:sucesso?"AUTORIZADA":"REJEITADA",
             motivoStatus:sucesso?`NFS-e autorizada pela SEFIN Nacional. Chave ${dados.chaveAcesso}.`:JSON.stringify(dados).slice(0,4000),
