@@ -301,7 +301,7 @@ async function visualizarVenda(id) {
         fiscalPendencias.style.display = "none";
         fiscalPendencias.innerHTML = "";
     } else if (v.status === "FATURADA") {
-        fiscalStatus.innerHTML = '<strong>NF-e ainda não emitida.</strong><div class="text-muted" style="margin-top:6px;">A transmissão direta de NF-e à SEFAZ ainda está indisponível.</div>';
+        fiscalStatus.innerHTML = '<strong>NF-e ainda não emitida.</strong><div class="text-muted" style="margin-top:6px;">Confira as pendências antes de transmitir a NF-e à SEFAZ.</div>';
         fiscalPendencias.style.display = "none";
         fiscalPendencias.innerHTML = "";
     } else {
@@ -405,6 +405,38 @@ async function visualizarVenda(id) {
             }
         });
         fiscalStatus.append(emitir);
+    }
+    if (nfe?.chaveAcesso && window.temPermissao?.("fiscal.visualizar")) {
+        const consultar = document.createElement("button");
+        consultar.type = "button";
+        consultar.className = "btn btn-light btn-sm";
+        consultar.style.marginTop = "10px";
+        consultar.textContent = "Consultar situação na SEFAZ";
+        consultar.addEventListener("click", async () => {
+            consultar.disabled = true;
+            try {
+                const resposta = await post(`/vendas/${v.id}/nfe/consultar`, {});
+                if (vendaAtualId !== v.id) return;
+                if (!resposta?.sucesso) {
+                    return mostrarMensagem(resposta?.mensagem || "Não foi possível consultar a SEFAZ.", { tipo: "erro" });
+                }
+                const consulta = resposta.consulta;
+                if (!consulta) return mostrarMensagem("A consulta à SEFAZ ainda está sendo publicada.");
+                await carregarVendas();
+                if (vendaAtualId === v.id) await abrirFiscalVenda(v.id);
+                mostrarMensagem([
+                    consulta.httpStatus && `HTTP ${consulta.httpStatus}`,
+                    consulta.codigo && `SEFAZ ${consulta.codigo}`,
+                    consulta.motivo,
+                    consulta.autorizada && `Protocolo ${consulta.protocolo}`
+                ].filter(Boolean).join("\n") || "A SEFAZ não retornou um status fiscal.", {
+                    tipo: consulta.autorizada ? "sucesso" : "info"
+                });
+            } finally {
+                consultar.disabled = false;
+            }
+        });
+        fiscalStatus.append(consultar);
     }
     if (temServicos || v.notaFiscalServico) {
         painelFiscal.insertAdjacentHTML("beforeend", '<section id="viewVendaNfse" class="modal-section-card"><h3>NFS-e Serviços</h3><div data-nfse-status aria-live="polite">Consultando NFS-e…</div></section>');
