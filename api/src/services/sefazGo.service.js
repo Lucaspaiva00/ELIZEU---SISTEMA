@@ -107,6 +107,38 @@ class SefazGoService {
     };
   }
 
+  async consultarProtocolo(empresaId, chave, ambiente) {
+    if (!/^52\d{42}$/.test(chave) || !["HOMOLOGACAO", "PRODUCAO"].includes(ambiente)) {
+      throw new Error("Chave ou ambiente da NF-e inválido.");
+    }
+    const empresa = await prisma.empresa.findUnique({ where: { id: empresaId }, include: { certificadoDigital: true } });
+    if (!empresa?.certificadoDigital?.ativo) throw new Error("Certificado A1 não configurado.");
+    const certificado = descriptografarCertificado(empresa.certificadoDigital);
+    const tpAmb = ambiente === "PRODUCAO" ? "1" : "2";
+    const ns = "http://www.portalfiscal.inf.br/nfe/wsdl/NFeConsultaProtocolo4";
+    const host = tpAmb === "1" ? "nfe.sefaz.go.gov.br" : "homolog.sefaz.go.gov.br";
+    const body = [
+      '<soap12:Envelope xmlns:soap12="http://www.w3.org/2003/05/soap-envelope"><soap12:Body>',
+      `<nfeDadosMsg xmlns="${ns}"><consSitNFe xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00">`,
+      `<tpAmb>${tpAmb}</tpAmb><xServ>CONSULTAR</xServ><chNFe>${chave}</chNFe>`,
+      '</consSitNFe></nfeDadosMsg></soap12:Body></soap12:Envelope>'
+    ].join("");
+    const resposta = await request({
+      url: `https://${host}/nfe/services/NFeConsultaProtocolo4`,
+      pfx: Buffer.from(certificado.arquivoBase64, "base64"), passphrase: certificado.senha,
+      body, action: ns + "/nfeConsultaNF"
+    });
+    const retorno = resposta.body.match(/<(?:[\w.-]+:)?retConsSitNFe\b[^>]*>[\s\S]*?<\/(?:[\w.-]+:)?retConsSitNFe>/)?.[0];
+    const infProt = retorno?.match(/<(?:[\w.-]+:)?infProt\b[^>]*>[\s\S]*?<\/(?:[\w.-]+:)?infProt>/)?.[0];
+    const codigo = extrair(retorno, "cStat");
+    const motivo = extrair(retorno, "xMotivo");
+    const protocolo = extrair(infProt, "nProt");
+    const autorizada = resposta.status === 200 && codigo === "100" && extrair(infProt, "cStat") === "100"
+      && extrair(infProt, "chNFe") === chave && extrair(infProt, "tpAmb") === tpAmb
+      && /^\d{15}$/.test(protocolo || "");
+    return { codigo, motivo, autorizada, protocolo, xmlRetorno: resposta.body, httpStatus: resposta.status };
+  }
+
   async testarStatus(empresaId,ambiente="HOMOLOGACAO"){
     const empresa=await prisma.empresa.findUnique({where:{id:empresaId},include:{certificadoDigital:true}});
     if(!empresa?.certificadoDigital?.ativo) throw new Error("Certificado A1 não configurado.");
