@@ -1,4 +1,5 @@
 const { montarNfeHomologacao } = require("./nfeXmlGo");
+const sefazGoService = require("./sefazGo.service");
 const nfeRepository = require("../repositories/nfe.repository");
 const classificacaoRtc = require('../utils/classificacaoRtc');
 
@@ -186,6 +187,17 @@ class NfeService {
             }),
             informacoesComplementares: fiscal.informacoesComplementares || null
         };
+    }
+
+    async testarAutorizacao(vendaId, empresaId) {
+        const { venda, pronta, pendencias } = await this.validar(vendaId, empresaId, { previa: true });
+        if (!pronta) return { pronta: false, pendencias };
+        if (venda.status !== "CONFIRMADA" || venda.notaFiscal) {
+            throw new Error("Use uma venda de teste aguardando faturamento e sem nota registrada.");
+        }
+        const nota = { ambiente: "HOMOLOGACAO", serie: 889, numero: venda.id, dadosEmissao: this.montarSnapshot(venda) };
+        const nfe = montarNfeHomologacao(nota, String(venda.id).slice(-8).padStart(8, "0"));
+        return { pronta: true, ...await sefazGoService.autorizarHomologacao(empresaId, nfe, venda.id) };
     }
 
     async previsualizar(vendaId, empresaId) {
