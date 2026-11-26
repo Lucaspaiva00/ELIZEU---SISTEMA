@@ -28,6 +28,9 @@ function garantirEstilosMensagemSistema() {
     style.id = "estilosMensagemSistema";
     style.textContent = `
         .mensagem-sistema {
+            position: fixed;
+            inset: 0;
+            margin: auto;
             width: min(460px, calc(100vw - 32px));
             max-height: calc(100dvh - 32px);
             box-sizing: border-box;
