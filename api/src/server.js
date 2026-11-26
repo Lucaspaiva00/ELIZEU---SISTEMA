@@ -30,6 +30,20 @@ async function iniciarServidor() {
             }
         }
 
+
+        if (process.env.NFS_E_TESTAR_SEFIN === "1") {
+            try {
+                const empresaIdFiscal = Number(process.env.FISCAL_BOOTSTRAP_EMPRESA_ID || 0);
+                const teste = await portalNacionalRepository.testarSefin(empresaIdFiscal);
+                console.log("[NFS-e Nacional] Teste SEFIN restrita:", JSON.stringify({
+                    statusHttp: teste.statusHttp,
+                    resposta: teste.resposta
+                }));
+            } catch (erro) {
+                console.error("[NFS-e Nacional] Teste SEFIN falhou:", erro.message);
+            }
+        }
+
         if (process.env.NFE_TESTAR_SEFAZ_GO === "1") {
             try {
                 const empresaIdFiscal = Number(process.env.FISCAL_BOOTSTRAP_EMPRESA_ID || 0);
