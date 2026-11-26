@@ -65,13 +65,20 @@ function assinarNfe(nfe, pfx, senha) {
 }
 
 class SefazGoService {
-  async autorizarHomologacao(empresaId, nfe, lote) {
-    if (!nfe.infNFe.includes("<tpAmb>2</tpAmb>")) throw new Error("Somente XML de homologação pode ser enviado neste fluxo.");
+  autorizarHomologacao(empresaId, nfe, lote) {
+    return this.autorizar(empresaId, nfe, lote, "HOMOLOGACAO");
+  }
+
+  async autorizar(empresaId, nfe, lote, ambiente, antesDeEnviar) {
+    if (!["HOMOLOGACAO", "PRODUCAO"].includes(ambiente)) throw new Error("Ambiente de autorização inválido.");
+    const tpAmb = ambiente === "PRODUCAO" ? "1" : "2";
+    if (!nfe.infNFe.includes(`<tpAmb>${tpAmb}</tpAmb>`)) throw new Error("Ambiente do XML diverge do autorizador.");
     const empresa = await prisma.empresa.findUnique({ where: { id: empresaId }, include: { certificadoDigital: true } });
     if (!empresa?.certificadoDigital?.ativo) throw new Error("Certificado A1 não configurado.");
     const certificado = descriptografarCertificado(empresa.certificadoDigital);
     const pfx = Buffer.from(certificado.arquivoBase64, "base64");
     const xml = assinarNfe(nfe, pfx, certificado.senha);
+    if (antesDeEnviar) await antesDeEnviar(xml);
     const namespace = "http://www.portalfiscal.inf.br/nfe/wsdl/NFeAutorizacao4";
     const body = [
       '<soap12:Envelope xmlns:soap12="http://www.w3.org/2003/05/soap-envelope"><soap12:Body>',
@@ -79,7 +86,9 @@ class SefazGoService {
       `<idLote>${lote}</idLote><indSinc>1</indSinc>${xml}</enviNFe></nfeDadosMsg></soap12:Body></soap12:Envelope>`
     ].join("");
     const resposta = await request({
-      url: "https://homolog.sefaz.go.gov.br/nfe/services/NFeAutorizacao4",
+      url: ambiente === "PRODUCAO"
+        ? "https://nfe.sefaz.go.gov.br/nfe/services/NFeAutorizacao4"
+        : "https://homolog.sefaz.go.gov.br/nfe/services/NFeAutorizacao4",
       pfx, passphrase: certificado.senha, body,
       action: namespace + "/nfeAutorizacaoLote"
     });
@@ -88,10 +97,11 @@ class SefazGoService {
     const motivo = extrair(protocolo || resposta.body, "xMotivo");
     const numeroProtocolo = extrair(protocolo, "nProt");
     const autorizada = resposta.status === 200 && codigo === "100"
-      && extrair(protocolo, "tpAmb") === "2" && extrair(protocolo, "chNFe") === nfe.chave
+      && extrair(protocolo, "tpAmb") === tpAmb && extrair(protocolo, "chNFe") === nfe.chave
       && /^\d{15}$/.test(numeroProtocolo || "");
     return {
-      ambiente: "HOMOLOGACAO", autorizada, codigo, motivo, httpStatus: resposta.status,
+      ...(ambiente === "PRODUCAO" ? { xmlRetorno: resposta.body } : {}),
+      ambiente, autorizada, codigo, motivo, httpStatus: resposta.status,
       chave: nfe.chave, protocolo: autorizada ? numeroProtocolo : null,
       recibo: extrair(resposta.body, "nRec")
     };
