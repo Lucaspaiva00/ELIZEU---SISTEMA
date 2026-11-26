@@ -64,11 +64,12 @@ function montarItem(item, indice) {
     };
 }
 
-function montarNfeHomologacao(nota, codigoNumerico, data = new Date()) {
+function montarNfe(nota, codigoNumerico, data = new Date()) {
     const { emitente, destinatario, tributacaoPadrao, documento, itens, venda } = nota.dadosEmissao;
     const origem = emitente.endereco;
     const destino = destinatario.endereco;
-    if (nota.ambiente !== "HOMOLOGACAO") throw new Error("Este leiaute de NF-e está habilitado somente para homologação.");
+    if (!["HOMOLOGACAO", "PRODUCAO"].includes(nota.ambiente)) throw new Error("Ambiente da NF-e inválido.");
+    const homologacao = nota.ambiente === "HOMOLOGACAO";
     if (origem.uf !== "GO" || destino.uf !== "GO" || !/^52\d{5}$/.test(origem.codigoMunicipio)) {
         throw new Error("O primeiro fluxo cobre vendas internas em Goiás.");
     }
@@ -100,12 +101,12 @@ function montarNfeHomologacao(nota, codigoNumerico, data = new Date()) {
     const ide = montarGrupo("ide", {
         cUF: 52, cNF: codigoNumerico, natOp: documento.naturezaOperacao, mod: 55, serie: nota.serie,
         nNF: nota.numero, dhEmi, tpNF: 1, idDest: 1, cMunFG: origem.codigoMunicipio, tpImp: 1,
-        tpEmis: 1, cDV: chave.at(-1), tpAmb: 2, finNFe: 1, indFinal: tributacaoPadrao.consumidorFinal ? 1 : 0,
+        tpEmis: 1, cDV: chave.at(-1), tpAmb: homologacao ? 2 : 1, finNFe: 1, indFinal: tributacaoPadrao.consumidorFinal ? 1 : 0,
         indPres: tributacaoPadrao.presencaComprador, indIntermed: 0, procEmi: 0, verProc: "ElianSigs-1.0"
     });
     const emit = `<emit>${elemento("CNPJ", cnpj)}${elemento("xNome", emitente.razaoSocial)}${endereco("enderEmit", origem, origem.codigoMunicipio)}${elemento("IE", ie)}<CRT>1</CRT></emit>`;
     const indIE = ieDest ? 1 : String(destinatario.inscricaoEstadual || "").trim().toUpperCase() === "ISENTO" ? 2 : 9;
-    const dest = `<dest>${elemento(doc.length === 14 ? "CNPJ" : "CPF", doc)}<xNome>NF-E EMITIDA EM AMBIENTE DE HOMOLOGACAO - SEM VALOR FISCAL</xNome>${endereco("enderDest", destino, cMunDest)}${elemento("indIEDest", indIE)}${ieDest ? elemento("IE", ieDest) : ""}</dest>`;
+    const dest = `<dest>${elemento(doc.length === 14 ? "CNPJ" : "CPF", doc)}${elemento("xNome", homologacao ? "NF-E EMITIDA EM AMBIENTE DE HOMOLOGACAO - SEM VALOR FISCAL" : destinatario.nome)}${endereco("enderDest", destino, cMunDest)}${elemento("indIEDest", indIE)}${ieDest ? elemento("IE", ieDest) : ""}</dest>`;
     const produtos = itens.map(montarItem);
     const bruto = produtos.reduce((soma, item) => soma + item.bruto, 0);
     const desconto = produtos.reduce((soma, item) => soma + item.desconto, 0);
@@ -120,4 +121,9 @@ function montarNfeHomologacao(nota, codigoNumerico, data = new Date()) {
     return { chave, xml: `<NFe xmlns="${NS}">${infNFe}</NFe>`, infNFe };
 }
 
-module.exports = { montarNfeHomologacao, chaveNfe };
+function montarNfeHomologacao(nota, codigoNumerico, data) {
+    if (nota.ambiente !== "HOMOLOGACAO") throw new Error("A prévia é exclusiva de homologação.");
+    return montarNfe(nota, codigoNumerico, data);
+}
+
+module.exports = { montarNfe, montarNfeHomologacao, chaveNfe };
