@@ -13,10 +13,15 @@ async function executarBootstrapFiscal() {
     const estado = String(process.env.FISCAL_BOOTSTRAP_ESTADO || "").trim().toUpperCase();
     const codigoMunicipio = String(process.env.FISCAL_BOOTSTRAP_CODIGO_MUNICIPIO || "").trim();
     const ie = String(process.env.FISCAL_BOOTSTRAP_IE || "").trim();
+    const im = String(process.env.FISCAL_BOOTSTRAP_IM || "").trim();
+    const cnae = String(process.env.FISCAL_BOOTSTRAP_CNAE || "").trim();
     const cep = String(process.env.FISCAL_BOOTSTRAP_CEP || "").replace(/\D/g, "");
     const endereco = String(process.env.FISCAL_BOOTSTRAP_ENDERECO || "").trim();
     const numero = String(process.env.FISCAL_BOOTSTRAP_NUMERO || "").trim();
     const bairro = String(process.env.FISCAL_BOOTSTRAP_BAIRRO || "").trim();
+    const pisCst = String(process.env.FISCAL_BOOTSTRAP_PIS_CST || "").trim();
+    const cofinsCst = String(process.env.FISCAL_BOOTSTRAP_COFINS_CST || "").trim();
+    const proximoNumeroNfe = Number(process.env.FISCAL_BOOTSTRAP_PROXIMO_NUMERO_NFE || 0);
 
     if (!empresaId || !cnpj) return;
 
@@ -49,9 +54,14 @@ async function executarBootstrapFiscal() {
                 regimeTributario: "SIMPLES_NACIONAL",
                 crt: 1,
                 serieNfe: 1,
+                ...(proximoNumeroNfe > 0 ? { proximoNumeroNfe } : {}),
                 cfopPadrao: "5101",
                 naturezaOperacao: "Venda de Producao do Estabelecimento",
                 icmsSituacaoTributariaPadrao: "102",
+                ...(pisCst ? { pisSituacaoTributariaPadrao: pisCst } : {}),
+                ...(cofinsCst ? { cofinsSituacaoTributariaPadrao: cofinsCst } : {}),
+                inscricaoMunicipal: im || undefined,
+                cnaePrincipal: cnae || undefined,
                 modalidadeFrete: 9,
                 consumidorFinal: true,
                 ativo: false
@@ -63,10 +73,14 @@ async function executarBootstrapFiscal() {
                 regimeTributario: "SIMPLES_NACIONAL",
                 crt: 1,
                 serieNfe: 1,
-                proximoNumeroNfe: 1,
+                proximoNumeroNfe: proximoNumeroNfe > 0 ? proximoNumeroNfe : 1,
                 cfopPadrao: "5101",
                 naturezaOperacao: "Venda de Producao do Estabelecimento",
                 icmsSituacaoTributariaPadrao: "102",
+                pisSituacaoTributariaPadrao: pisCst || null,
+                cofinsSituacaoTributariaPadrao: cofinsCst || null,
+                inscricaoMunicipal: im || null,
+                cnaePrincipal: cnae || null,
                 modalidadeFrete: 9,
                 consumidorFinal: true,
                 ativo: false
