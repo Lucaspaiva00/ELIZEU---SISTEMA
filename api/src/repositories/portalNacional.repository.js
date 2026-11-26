@@ -90,7 +90,7 @@ class PortalNacionalRepository {
         const codigo = String(codigoServico || "").replace(/\D/g, "");
         if (!codigo) throw new Error("Informe o código nacional do serviço.");
 
-        const url = `${baseUrl(fiscal.ambiente || "HOMOLOGACAO")}/parametros_municipais/${fiscal.codigoMunicipio}/${codigo}`;
+        const url = `${baseUrl(fiscal.ambiente || "HOMOLOGACAO")}/parametrizacao/${fiscal.codigoMunicipio}/${codigo}`;
         const resposta = await requisicaoJson({ url, pfx, passphrase: certificado.senha });
         return { ambiente: fiscal.ambiente || "HOMOLOGACAO", url, statusHttp: resposta.status, resposta: resposta.dados };
     }
@@ -109,7 +109,7 @@ class PortalNacionalRepository {
     async testar(empresaId) {
         const { fiscal, certificado, pfx } = await this.dadosEmpresa(empresaId);
         const ambiente = fiscal.ambiente || "HOMOLOGACAO";
-        const url = `${baseUrl(ambiente)}/parametros_municipais/${fiscal.codigoMunicipio}/convenio`;
+        const url = `${baseUrl(ambiente)}/parametrizacao/${fiscal.codigoMunicipio}/convenio`;
         const resposta = await requisicaoJson({ url, pfx, passphrase: certificado.senha });
 
         return {
