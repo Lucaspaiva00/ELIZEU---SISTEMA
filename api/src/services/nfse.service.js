@@ -37,7 +37,8 @@ function canonicalizarXmlControlado(xml) {
     return String(xml)
         .replace(/^\s*<\?xml[^>]*\?>\s*/i, "")
         .replace(/\r\n?/g, "\n")
-        .replace(/>\s+</g, "><")
+        .replace(/&quot;/g, '"')
+        .replace(/&apos;/g, "'")
         .trim();
 }
 
@@ -68,7 +69,9 @@ function extrairChavePrivada(certificado) {
 }
 
 function certificadoBase64(pem) {
-    return pem.replace(/-----BEGIN CERTIFICATE-----/g, "").replace(/-----END CERTIFICATE-----/g, "").replace(/\s+/g, "");
+    const blocoPem = pem.match(/-----BEGIN CERTIFICATE-----[\s\S]+?-----END CERTIFICATE-----/)?.[0];
+    if (!blocoPem) throw new Error("Certificado público A1 não encontrado no arquivo.");
+    return new crypto.X509Certificate(blocoPem).raw.toString("base64");
 }
 
 function assinarXmlDps(xml, certificado) {
@@ -83,11 +86,11 @@ function assinarXmlDps(xml, certificado) {
     const digestValue = crypto.createHash("sha256").update(infDps, "utf8").digest("base64");
     const signedInfo = [
         '<SignedInfo xmlns="http://www.w3.org/2000/09/xmldsig#">',
-        '<CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>',
-        '<SignatureMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#rsa-sha256"/>',
+        '<CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"></CanonicalizationMethod>',
+        '<SignatureMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#rsa-sha256"></SignatureMethod>',
         `<Reference URI="#${id}">`,
-        '<Transforms><Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/><Transform Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/></Transforms>',
-        '<DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/>',
+        '<Transforms><Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"></Transform><Transform Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"></Transform></Transforms>',
+        '<DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"></DigestMethod>',
         `<DigestValue>${digestValue}</DigestValue>`,
         '</Reference>',
         '</SignedInfo>'
