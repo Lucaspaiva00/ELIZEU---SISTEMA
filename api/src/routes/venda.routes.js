@@ -11,6 +11,14 @@ router.get("/", auth, autorizar("vendas.visualizar"), controller.listar);
 router.put("/:id/faturar", auth, autorizar("vendas.faturar"), controller.faturar);
 router.put("/:id/cancelar", auth, autorizar("vendas.cancelar"), controller.cancelar);
 router.get("/:id/nfe", auth, autorizar("fiscal.visualizar"), nfeController.buscar);
+router.post("/:id/nfe/testar-autorizacao", auth, autorizar("fiscal.emitir"), async (req, res) => {
+    try {
+        const resultado = await nfeService.testarAutorizacao(Number(req.params.id), req.usuario.empresaId);
+        return res.json({ sucesso: true, ...resultado });
+    } catch (erro) {
+        return res.status(422).json({ sucesso: false, mensagem: erro.message });
+    }
+});
 router.get("/:id/nfe/previsualizar", auth, autorizar("fiscal.visualizar"), async (req, res) => {
     try {
         const resultado = await nfeService.previsualizar(Number(req.params.id), req.usuario.empresaId);
