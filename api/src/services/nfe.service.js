@@ -1,4 +1,5 @@
 const { montarNfeHomologacao } = require("./nfeXmlGo");
+const { createHash } = require("node:crypto");
 const sefazGoService = require("./sefazGo.service");
 const nfeRepository = require("../repositories/nfe.repository");
 const classificacaoRtc = require('../utils/classificacaoRtc');
@@ -8,6 +9,16 @@ function somenteDigitos(valor) { return texto(valor).replace(/\D/g, ""); }
 function numero(valor) { return Number(valor || 0); }
 function adicionarPendencia(lista, condicao, mensagem, destino) {
     if (condicao) lista.push({ mensagem, destino });
+}
+
+function codigoNumericoNfe(venda, numero) {
+    const sequencias = new Set(["01234567", "12345678", "23456789", "34567890", "45678901", "56789012", "67890123", "78901234", "89012345", "90123456"]);
+    const hash = createHash("sha256").update(`homologacao|${venda.empresaId}|${venda.id}`).digest();
+    let valor = hash.readUInt32BE() % 90000000 + 10000000;
+    while (valor === Number(numero) || /^(\d)\1{7}$/.test(String(valor)) || sequencias.has(String(valor))) {
+        valor = valor === 99999999 ? 10000000 : valor + 1;
+    }
+    return String(valor);
 }
 
 class NfeService {
@@ -196,7 +207,7 @@ class NfeService {
             throw new Error("Use uma venda de teste aguardando faturamento e sem nota registrada.");
         }
         const nota = { ambiente: "HOMOLOGACAO", serie: 889, numero: venda.id, dadosEmissao: this.montarSnapshot(venda) };
-        const nfe = montarNfeHomologacao(nota, String(venda.id).slice(-8).padStart(8, "0"));
+        const nfe = montarNfeHomologacao(nota, codigoNumericoNfe(venda, nota.numero));
         return { pronta: true, ...await sefazGoService.autorizarHomologacao(empresaId, nfe, venda.id) };
     }
 
@@ -211,7 +222,7 @@ class NfeService {
             numero: fiscal.proximoNumeroNfe,
             dadosEmissao: this.montarSnapshot(venda)
         };
-        const codigoPrevia = String(venda.id).slice(-8).padStart(8, "0");
+        const codigoPrevia = codigoNumericoNfe(venda, nota.numero);
         const { xml } = montarNfeHomologacao(nota, codigoPrevia);
         return { pronta: true, ambiente: nota.ambiente, xml };
     }
