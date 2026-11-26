@@ -78,7 +78,9 @@ function montarNfeHomologacao(nota, codigoNumerico, data = new Date()) {
         || Number(venda.desconto) || Number(venda.frete) || Number(venda.outrasDespesas)) {
         throw new Error("A configuração e os valores da venda precisam corresponder à operação simples de referência.");
     }
-    const cMunDest = destino.codigoMunicipio || (origem.cidade.trim().toUpperCase() === destino.cidade.trim().toUpperCase() ? origem.codigoMunicipio : null);
+    const normalizarMunicipio = nome => String(nome ?? "").normalize("NFD").replace(/\p{Diacritic}/gu, "").trim().toUpperCase();
+    const mesmoMunicipio = normalizarMunicipio(origem.cidade) === normalizarMunicipio(destino.cidade);
+    const cMunDest = destino.codigoMunicipio || (mesmoMunicipio ? origem.codigoMunicipio : null);
     if (!/^52\d{5}$/.test(cMunDest || "")) throw new Error("Informe o código IBGE do município do destinatário em Goiás.");
     if (!itens.length || itens.length > 990 || !/^\d{8}$/.test(codigoNumerico)
         || !Number.isInteger(nota.serie) || nota.serie < 1 || nota.serie > 889
