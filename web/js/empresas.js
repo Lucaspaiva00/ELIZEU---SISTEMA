@@ -26,7 +26,7 @@ function configurarTesteSefazGo() {
             }
             const informacoes = [
                 resposta.operante ? "Serviço de NF-e operante em homologação." : "A consulta não confirmou que o serviço está operante.",
-                resposta.statusHttp && `HTTP ${resposta.statusHttp}`,
+                resposta.httpStatus && `HTTP ${resposta.httpStatus}`,
                 resposta.cStat && `Código SEFAZ ${resposta.cStat}`,
                 resposta.xMotivo
             ].filter(Boolean);
