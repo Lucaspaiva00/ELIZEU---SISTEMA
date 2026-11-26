@@ -209,6 +209,11 @@ class NfseService {
         const docTag=doc.length===11?`<CPF>${doc}</CPF>`:`<CNPJ>${doc}</CNPJ>`;
         const descricao=s.itens.map(i=>i.descricao).join(" | ");
         const homologacao = nota.ambiente === "HOMOLOGACAO";
+        const rejeicaoInscricao = Array.isArray(nota.respostaApi?.erros)
+            && nota.respostaApi.erros.some(erro => erro.Codigo === "E0120");
+        const prestadorAnterior = nota.xmlDps?.match(/<prest>[\s\S]*?<\/prest>/)?.[0];
+        const omitirInscricao = rejeicaoInscricao || (prestadorAnterior && !prestadorAnterior.includes("<IM>"));
+        const inscricaoMunicipal = omitirInscricao ? "" : `<IM>${esc(s.prestador.inscricaoMunicipal)}</IM>`;
         const opcaoSimples = opcaoSimplesPorRegime[regimeTributario];
         if (!opcaoSimples) throw new Error("Regime tributário não configurado para a DPS.");
         const apuracaoSimples = opcaoSimples === 3
@@ -221,7 +226,7 @@ class NfseService {
         const retencaoIss = primeiro.issRetido ? 2 : 1;
         const aliquota = primeiro.aliquotaIss > 0 ? `<pAliq>${primeiro.aliquotaIss.toFixed(2)}</pAliq>` : "";
         const tributos = `<trib><tribMun><tribISSQN>1</tribISSQN><tpRetISSQN>${retencaoIss}</tpRetISSQN>${aliquota}</tribMun><totTrib><indTotTrib>0</indTotTrib></totTrib></trib>`;
-        return `<?xml version="1.0" encoding="UTF-8"?><DPS xmlns="http://www.sped.fazenda.gov.br/nfse" versao="1.01"><infDPS xmlns="http://www.sped.fazenda.gov.br/nfse" Id="${id}"><tpAmb>${nota.ambiente==="PRODUCAO"?"1":"2"}</tpAmb><dhEmi>${agora}</dhEmi><verAplic>ElianSigs-1.0</verAplic><serie>${nota.serieDps}</serie><nDPS>${nota.numeroDps}</nDPS><dCompet>${s.dataCompetencia}</dCompet><tpEmit>1</tpEmit>${homologacao ? "<finNFSe>0</finNFSe>" : ""}<cLocEmi>${s.prestador.codigoMunicipio}</cLocEmi><prest><CNPJ>${s.prestador.cnpj}</CNPJ><IM>${esc(s.prestador.inscricaoMunicipal)}</IM>${regime}</prest><toma>${docTag}<xNome>${esc(s.tomador.nome)}</xNome></toma>${homologacao ? "<indDest>0</indDest>" : ""}<serv><locPrest><cLocPrestacao>${s.prestador.codigoMunicipio}</cLocPrestacao></locPrest><cServ><cTribNac>${primeiro.codigoServicoNacional}</cTribNac>${classificacaoServico}</cServ></serv><valores><vServPrest><vServ>${s.totalServicos.toFixed(2)}</vServ></vServPrest>${tributos}</valores></infDPS></DPS>`;
+        return `<?xml version="1.0" encoding="UTF-8"?><DPS xmlns="http://www.sped.fazenda.gov.br/nfse" versao="1.01"><infDPS xmlns="http://www.sped.fazenda.gov.br/nfse" Id="${id}"><tpAmb>${nota.ambiente==="PRODUCAO"?"1":"2"}</tpAmb><dhEmi>${agora}</dhEmi><verAplic>ElianSigs-1.0</verAplic><serie>${nota.serieDps}</serie><nDPS>${nota.numeroDps}</nDPS><dCompet>${s.dataCompetencia}</dCompet><tpEmit>1</tpEmit>${homologacao ? "<finNFSe>0</finNFSe>" : ""}<cLocEmi>${s.prestador.codigoMunicipio}</cLocEmi><prest><CNPJ>${s.prestador.cnpj}</CNPJ>${inscricaoMunicipal}${regime}</prest><toma>${docTag}<xNome>${esc(s.tomador.nome)}</xNome></toma>${homologacao ? "<indDest>0</indDest>" : ""}<serv><locPrest><cLocPrestacao>${s.prestador.codigoMunicipio}</cLocPrestacao></locPrest><cServ><cTribNac>${primeiro.codigoServicoNacional}</cTribNac>${classificacaoServico}</cServ></serv><valores><vServPrest><vServ>${s.totalServicos.toFixed(2)}</vServ></vServPrest>${tributos}</valores></infDPS></DPS>`;
     }
 
     async gerarDps(vendaId,empresaId){
