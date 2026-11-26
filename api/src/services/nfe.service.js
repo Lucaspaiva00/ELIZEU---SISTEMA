@@ -259,6 +259,36 @@ class NfeService {
                 xmlEnvio, chaveAcesso: nfe.chave, motivoStatus: "Enviando à SEFAZ Goiás. Confira o retorno antes de qualquer novo envio."
             })
         );
+        return this.registrarRetorno(nota, retorno);
+    }
+
+    async retransmitir(vendaId, empresaId) {
+        const venda = await nfeRepository.buscarVenda(vendaId, empresaId);
+        const fiscal = venda?.empresa?.configuracaoFiscal;
+        if (fiscal?.ativo !== true || fiscal.ambiente !== "PRODUCAO") {
+            throw new Error("A configuração fiscal precisa estar ativa em Produção.");
+        }
+        const nota = venda.notaFiscal;
+        if (venda.status !== "FATURADA" || nota?.status !== "TRANSMITINDO" || nota.ambiente !== "PRODUCAO"
+            || !nota.xmlEnvio || !nota.chaveAcesso || !nota.transmitidaEm) {
+            throw new Error("A retransmissão exige uma venda faturada com XML original e tentativa pendente em produção.");
+        }
+        if (Date.now() - new Date(nota.transmitidaEm).getTime() < 60000) {
+            throw new Error("A última transmissão ainda pode estar em andamento. Aguarde um minuto e consulte a situação.");
+        }
+
+        const { consulta, notaFiscal } = await this.consultar(vendaId, empresaId);
+        if (consulta.autorizada) return { pronta: true, notaFiscal };
+        if (consulta.httpStatus !== 200 || consulta.codigo !== "217") {
+            throw new Error([consulta.codigo, consulta.motivo].filter(Boolean).join(" · ")
+                || "A SEFAZ não confirmou que a chave está ausente.");
+        }
+        await nfeRepository.iniciarRetransmissao(nota);
+        const retorno = await sefazGoService.retransmitirProducao(empresaId, nota);
+        return this.registrarRetorno(nota, retorno);
+    }
+
+    async registrarRetorno(nota, retorno) {
         const rejeitada = retorno.httpStatus === 200 && /^\d{3}$/.test(retorno.codigo || "")
             && !retorno.recibo && !["100", "103", "104", "105", "106", "204", "539"].includes(retorno.codigo);
         const status = retorno.autorizada ? "AUTORIZADA" : rejeitada ? "REJEITADA" : "TRANSMITINDO";
