@@ -77,6 +77,21 @@ class NfeRepository {
         if (count !== 1) throw new Error("Já existe uma tentativa registrada para esta NF-e.");
     }
 
+    async iniciarRetransmissao(nota) {
+        const { count } = await prisma.notaFiscal.updateMany({
+            where: {
+                id: nota.id, empresaId: nota.empresaId, chaveAcesso: nota.chaveAcesso,
+                ambiente: "PRODUCAO", status: "TRANSMITINDO", atualizadoEm: nota.atualizadoEm,
+                empresa: { configuracaoFiscal: { is: { ativo: true, ambiente: "PRODUCAO" } } }
+            },
+            data: {
+                transmitidaEm: new Date(),
+                motivoStatus: "Retransmitindo à SEFAZ o XML originalmente assinado."
+            }
+        });
+        if (count !== 1) throw new Error("A nota ou a configuração mudou. Consulte a situação antes de tentar novamente.");
+    }
+
     atualizar(notaId, dados) {
         return prisma.notaFiscal.update({ where: { id: notaId }, data: dados });
     }
