@@ -317,7 +317,7 @@ async function visualizarVenda(id) {
     painelFiscal.querySelector("#viewVendaNfse")?.remove();
     painelFiscal.querySelector(".modal-section-head p").textContent = "Acompanhe separadamente a NF-e de materiais e a NFS-e de serviços.";
     painelFiscal.querySelector("#viewVendaFiscal").closest(".modal-section-card").hidden = !temProdutos && !nfe;
-    if (temProdutos && v.status === "FATURADA" && !nfe) {
+    if (temProdutos && ["CONFIRMADA", "FATURADA"].includes(v.status) && !nfe) {
         const botaoPrevia = document.createElement("button");
         botaoPrevia.type = "button";
         botaoPrevia.className = "btn btn-light btn-sm";
