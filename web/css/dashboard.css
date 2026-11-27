@@ -199,3 +199,57 @@
 @media (max-width: 640px) {
     .managerial-kpis { grid-template-columns: 1fr; }
 }
+
+.dashboard-tabs {
+    display: flex;
+    gap: 6px;
+    margin: 0 0 24px;
+    padding: 5px;
+    overflow-x: auto;
+    background: #eaf0f8;
+    border-radius: 12px;
+}
+
+.dashboard-tabs button {
+    flex: 1 0 auto;
+    min-height: 42px;
+    padding: 8px 14px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: #425570;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.dashboard-tabs button[aria-selected="true"] {
+    background: #fff;
+    color: #1646a2;
+    box-shadow: 0 2px 5px #203c6a1a;
+}
+
+.dashboard-tabs button:focus-visible,
+.dashboard-panel:focus-visible {
+    outline: 2px solid #205de0;
+    outline-offset: -2px;
+}
+
+.dashboard-panel[hidden],
+.dashboard-filter[hidden],
+#periodoDescricao[hidden] {
+    display: none;
+}
+
+.dashboard-panel-caixa > .dashboard-grid-main {
+    grid-template-columns: 1fr;
+}
+
+.dashboard-panel-vendas > .dashboard-card,
+.dashboard-panel-operacao > .dashboard-card {
+    margin-top: 18px;
+}
+
+.dashboard-panel #painelDespesasFixas {
+    margin-top: 0;
+}

@@ -437,3 +437,44 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("filtroPeriodo").addEventListener("change", carregarDashboard);
     carregarDashboard();
 });
+
+function configurarAbasDashboard() {
+    const lista = document.querySelector(".dashboard-tabs");
+    const abas = Array.from(lista.querySelectorAll('[role="tab"]'));
+    const filtro = document.querySelector(".dashboard-filter");
+    const periodo = document.getElementById("periodoDescricao");
+
+    function ativar(aba, focar = false) {
+        for (const item of abas) {
+            const ativo = aba === item;
+            item.setAttribute("aria-selected", String(ativo));
+            item.tabIndex = ativo ? 0 : -1;
+            document.getElementById(item.getAttribute("aria-controls")).hidden = !ativo;
+        }
+        const usaFiltro = !["aba-despesas-fixas", "aba-operacao"].includes(aba.id);
+        filtro.hidden = !usaFiltro;
+        periodo.hidden = !usaFiltro;
+        if (focar) aba.focus();
+        requestAnimationFrame(() => {
+            if (aba.id === "aba-visao-geral") graficoFluxo?.resize();
+            if (aba.id === "aba-caixa") graficoProjecao?.resize();
+        });
+    }
+
+    for (const [i, aba] of abas.entries()) {
+        aba.addEventListener("click", () => ativar(aba));
+        aba.addEventListener("keydown", evento => {
+            const destinos = {
+                ArrowLeft: abas[(i - 1 + abas.length) % abas.length],
+                ArrowRight: abas[(i + 1) % abas.length],
+                Home: abas[0],
+                End: abas.at(-1)
+            };
+            if (!destinos[evento.key]) return;
+            evento.preventDefault();
+            ativar(destinos[evento.key], true);
+        });
+    }
+}
+
+document.addEventListener("DOMContentLoaded", configurarAbasDashboard);

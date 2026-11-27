@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard Financeiro | Elian Sigs</title>
     <link rel="stylesheet" href="../css/app.css">
-    <link rel="stylesheet" href="../css/dashboard.css">
+    <link rel="stylesheet" href="../css/dashboard.css?v=abas-1">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
 </head>
 
@@ -20,7 +20,6 @@
             <section class="content dashboard-content">
                 <div class="page-header dashboard-header">
                     <div>
-                        <span class="page-eyebrow">Visão consolidada</span>
                         <h1 class="page-title">Dashboard financeiro</h1>
                         <p class="page-subtitle" id="periodoDescricao">Acompanhe a saúde financeira da empresa.</p>
                     </div>
@@ -44,6 +43,16 @@
 
                 <div id="dashboardErro" class="dashboard-error d-none"></div>
 
+                <div class="dashboard-tabs" role="tablist" aria-label="Áreas do dashboard">
+                    <button type="button" id="aba-visao-geral" role="tab" aria-controls="painel-visao-geral" aria-selected="true" tabindex="0">Visão geral</button>
+                    <button type="button" id="aba-caixa" role="tab" aria-controls="painel-caixa" aria-selected="false" tabindex="-1">Caixa</button>
+                    <button type="button" id="aba-vendas" role="tab" aria-controls="painel-vendas" aria-selected="false" tabindex="-1">Vendas</button>
+                    <button type="button" id="aba-rentabilidade" role="tab" aria-controls="painel-rentabilidade" aria-selected="false" tabindex="-1">Rentabilidade</button>
+                    <button type="button" id="aba-despesas-fixas" role="tab" aria-controls="painel-despesas-fixas" aria-selected="false" tabindex="-1">Despesas fixas</button>
+                    <button type="button" id="aba-operacao" role="tab" aria-controls="painel-operacao" aria-selected="false" tabindex="-1">Operação</button>
+                </div>
+
+                <div class="dashboard-panel dashboard-panel-visao-geral" id="painel-visao-geral" role="tabpanel" aria-labelledby="aba-visao-geral" tabindex="0">
                 <section class="financial-kpis" aria-label="Indicadores financeiros">
                     <article class="financial-kpi financial-kpi-primary">
                         <div class="financial-kpi-top">
@@ -86,7 +95,6 @@
                     </article>
                 </section>
 
-                <section class="dashboard-grid dashboard-grid-main">
                     <article class="dashboard-card chart-card chart-card-wide">
                         <div class="dashboard-card-header">
                             <div>
@@ -100,7 +108,10 @@
                         </div>
                         <div class="chart-container"><canvas id="graficoFluxo"></canvas></div>
                     </article>
+                </div>
 
+                <div class="dashboard-panel dashboard-panel-caixa" id="painel-caixa" role="tabpanel" aria-labelledby="aba-caixa" tabindex="0" hidden>
+                <section class="dashboard-grid dashboard-grid-main">
                     <article class="dashboard-card titles-card">
                         <div class="dashboard-card-header">
                             <div>
@@ -196,7 +207,62 @@
                         <div id="listaMovimentacoes" class="movement-list"></div>
                     </article>
                 </section>
+                </div>
 
+                <div class="dashboard-panel dashboard-panel-vendas" id="painel-vendas" role="tabpanel" aria-labelledby="aba-vendas" tabindex="0" hidden>
+                    <div class="commercial-kpis">
+                        <article class="mini-kpi"><span class="mini-kpi-icon"><i class="fas fa-cart-shopping"></i></span><div><small>Vendas no período</small><strong id="kpiVendasPeriodo">R$ 0,00</strong><span id="kpiQuantidadeVendas">0 vendas realizadas</span></div></article>
+                        <article class="mini-kpi"><span class="mini-kpi-icon"><i class="fas fa-ticket"></i></span><div><small>Ticket médio</small><strong id="kpiTicketMedio">R$ 0,00</strong><span>Valor médio por venda</span></div></article>
+                        <article class="mini-kpi"><span class="mini-kpi-icon"><i class="fas fa-file-signature"></i></span><div><small>Orçamentos</small><strong id="kpiOrcamentosPeriodo">0</strong><span id="kpiOrcamentosAprovados">0 aprovados</span><span id="kpiOrcamentosEmAberto">0 em aberto</span></div></article>
+                        <article class="mini-kpi"><span class="mini-kpi-icon"><i class="fas fa-bullseye"></i></span><div><small>Taxa de conversão</small><strong id="kpiConversao">0%</strong><span>Orçamentos aprovados</span></div></article>
+                    </div>
+
+                    <div class="dashboard-grid managerial-tables">
+                        <article class="dashboard-card">
+                            <div class="dashboard-card-header"><div><h2>Produtos/serviços mais vendidos</h2><p>Ranking por valor vendido no período</p></div><span class="header-icon"><i class="fas fa-ranking-star"></i></span></div>
+                            <div class="table-responsive"><table class="table"><thead><tr><th>Item</th><th>Qtd.</th><th>Valor</th></tr></thead><tbody id="tabelaProdutosMaisVendidos"></tbody></table></div>
+                        </article>
+                        <article class="dashboard-card">
+                            <div class="dashboard-card-header"><div><h2>Clientes que mais compram</h2><p>Ranking por faturamento no período</p></div><span class="header-icon"><i class="fas fa-users"></i></span></div>
+                            <div class="table-responsive"><table class="table"><thead><tr><th>Cliente</th><th>Vendas</th><th>Valor</th><th>Lucro est.</th></tr></thead><tbody id="tabelaClientesMaisCompram"></tbody></table></div>
+                        </article>
+                    </div>
+
+                        <article class="dashboard-card">
+                            <div class="dashboard-card-header"><div><h2>Últimos orçamentos</h2><p>Propostas comerciais recentes</p></div></div>
+                            <div class="table-responsive">
+                                <table class="table"><thead><tr><th>Número</th><th>Cliente</th><th>Total</th><th>Data</th></tr></thead><tbody id="tabelaOrcamentos"></tbody></table>
+                            </div>
+                        </article>
+                </div>
+
+                <div class="dashboard-panel dashboard-panel-rentabilidade" id="painel-rentabilidade" role="tabpanel" aria-labelledby="aba-rentabilidade" tabindex="0" hidden>
+                <section class="managerial-section">
+                    <div class="section-heading">
+                        <div>
+                            <span class="page-eyebrow">Rentabilidade gerencial</span>
+                            <h2>Lucro estimado x realizado</h2>
+                        </div>
+                        <span>Vendas, custos, recebimentos e margem do período</span>
+                    </div>
+
+                    <div class="managerial-kpis">
+                        <article class="mini-kpi"><span class="mini-kpi-icon"><i class="fas fa-chart-column"></i></span><div><small>Faturamento</small><strong id="kpiGerencialFaturamento">R$ 0,00</strong><span>Vendas do período</span></div></article>
+                        <article class="mini-kpi"><span class="mini-kpi-icon icon-danger"><i class="fas fa-box-open"></i></span><div><small>Custo total estimado</small><strong id="kpiCustoTotalEstimado">R$ 0,00</strong><span>Itens + despesas internas</span></div></article>
+                        <article class="mini-kpi"><span class="mini-kpi-icon icon-success"><i class="fas fa-sack-dollar"></i></span><div><small>Lucro estimado</small><strong id="kpiLucroEstimadoGerencial">R$ 0,00</strong><span id="kpiMargemEstimadaGerencial">Margem 0%</span></div></article>
+                        <article class="mini-kpi"><span class="mini-kpi-icon"><i class="fas fa-hand-holding-dollar"></i></span><div><small>Recebido das vendas</small><strong id="kpiValorRecebidoGerencial">R$ 0,00</strong><span>Baixas do Contas a Receber</span></div></article>
+                        <article class="mini-kpi"><span class="mini-kpi-icon icon-danger"><i class="fas fa-money-bill-transfer"></i></span><div><small>Custos internos pagos</small><strong id="kpiCustosPagosGerencial">R$ 0,00</strong><span>Baixas do Contas a Pagar</span></div></article>
+                        <article class="mini-kpi managerial-highlight"><span class="mini-kpi-icon icon-success"><i class="fas fa-coins"></i></span><div><small>Lucro realizado</small><strong id="kpiLucroRealizadoGerencial">R$ 0,00</strong><span id="kpiMargemRealizadaGerencial">Margem 0%</span></div></article>
+                    </div>
+
+                    <article class="dashboard-card managerial-profit-table">
+                        <div class="dashboard-card-header"><div><h2>Rentabilidade por venda</h2><p>Compare estimativa, recebimentos e resultado efetivamente realizado</p></div><span class="header-icon"><i class="fas fa-chart-line"></i></span></div>
+                        <div class="table-responsive"><table class="table"><thead><tr><th>Venda</th><th>Cliente</th><th>Total</th><th>Lucro estimado</th><th>Recebido</th><th>Custos pagos</th><th>Lucro realizado</th><th>Margem real</th></tr></thead><tbody id="tabelaRentabilidadeVendas"></tbody></table></div>
+                    </article>
+                </section>
+                </div>
+
+                <div class="dashboard-panel dashboard-panel-despesas-fixas" id="painel-despesas-fixas" role="tabpanel" aria-labelledby="aba-despesas-fixas" tabindex="0" hidden>
                 <section class="dashboard-card" id="painelDespesasFixas" hidden aria-labelledby="tituloDespesasFixas">
                     <style>
                         #painelDespesasFixas { margin-block: 20px; }
@@ -240,58 +306,9 @@
                         </details>
                     </div>
                 </section>
+                </div>
 
-                <section class="managerial-section">
-                    <div class="section-heading">
-                        <div>
-                            <span class="page-eyebrow">Rentabilidade gerencial</span>
-                            <h2>Lucro estimado x realizado</h2>
-                        </div>
-                        <span>Vendas, custos, recebimentos e margem do período</span>
-                    </div>
-
-                    <div class="managerial-kpis">
-                        <article class="mini-kpi"><span class="mini-kpi-icon"><i class="fas fa-chart-column"></i></span><div><small>Faturamento</small><strong id="kpiGerencialFaturamento">R$ 0,00</strong><span>Vendas do período</span></div></article>
-                        <article class="mini-kpi"><span class="mini-kpi-icon icon-danger"><i class="fas fa-box-open"></i></span><div><small>Custo total estimado</small><strong id="kpiCustoTotalEstimado">R$ 0,00</strong><span>Itens + despesas internas</span></div></article>
-                        <article class="mini-kpi"><span class="mini-kpi-icon icon-success"><i class="fas fa-sack-dollar"></i></span><div><small>Lucro estimado</small><strong id="kpiLucroEstimadoGerencial">R$ 0,00</strong><span id="kpiMargemEstimadaGerencial">Margem 0%</span></div></article>
-                        <article class="mini-kpi"><span class="mini-kpi-icon"><i class="fas fa-hand-holding-dollar"></i></span><div><small>Recebido das vendas</small><strong id="kpiValorRecebidoGerencial">R$ 0,00</strong><span>Baixas do Contas a Receber</span></div></article>
-                        <article class="mini-kpi"><span class="mini-kpi-icon icon-danger"><i class="fas fa-money-bill-transfer"></i></span><div><small>Custos internos pagos</small><strong id="kpiCustosPagosGerencial">R$ 0,00</strong><span>Baixas do Contas a Pagar</span></div></article>
-                        <article class="mini-kpi managerial-highlight"><span class="mini-kpi-icon icon-success"><i class="fas fa-coins"></i></span><div><small>Lucro realizado</small><strong id="kpiLucroRealizadoGerencial">R$ 0,00</strong><span id="kpiMargemRealizadaGerencial">Margem 0%</span></div></article>
-                    </div>
-
-                    <div class="dashboard-grid managerial-tables">
-                        <article class="dashboard-card">
-                            <div class="dashboard-card-header"><div><h2>Produtos/serviços mais vendidos</h2><p>Ranking por valor vendido no período</p></div><span class="header-icon"><i class="fas fa-ranking-star"></i></span></div>
-                            <div class="table-responsive"><table class="table"><thead><tr><th>Item</th><th>Qtd.</th><th>Valor</th></tr></thead><tbody id="tabelaProdutosMaisVendidos"></tbody></table></div>
-                        </article>
-                        <article class="dashboard-card">
-                            <div class="dashboard-card-header"><div><h2>Clientes que mais compram</h2><p>Ranking por faturamento no período</p></div><span class="header-icon"><i class="fas fa-users"></i></span></div>
-                            <div class="table-responsive"><table class="table"><thead><tr><th>Cliente</th><th>Vendas</th><th>Valor</th><th>Lucro est.</th></tr></thead><tbody id="tabelaClientesMaisCompram"></tbody></table></div>
-                        </article>
-                    </div>
-
-                    <article class="dashboard-card managerial-profit-table">
-                        <div class="dashboard-card-header"><div><h2>Rentabilidade por venda</h2><p>Compare estimativa, recebimentos e resultado efetivamente realizado</p></div><span class="header-icon"><i class="fas fa-chart-line"></i></span></div>
-                        <div class="table-responsive"><table class="table"><thead><tr><th>Venda</th><th>Cliente</th><th>Total</th><th>Lucro estimado</th><th>Recebido</th><th>Custos pagos</th><th>Lucro realizado</th><th>Margem real</th></tr></thead><tbody id="tabelaRentabilidadeVendas"></tbody></table></div>
-                    </article>
-                </section>
-
-                <section class="commercial-section">
-                    <div class="section-heading">
-                        <div>
-                            <span class="page-eyebrow">Visão comercial</span>
-                            <h2>Vendas e operação</h2>
-                        </div>
-                        <span>Indicadores complementares do negócio</span>
-                    </div>
-
-                    <div class="commercial-kpis">
-                        <article class="mini-kpi"><span class="mini-kpi-icon"><i class="fas fa-cart-shopping"></i></span><div><small>Vendas no período</small><strong id="kpiVendasPeriodo">R$ 0,00</strong><span id="kpiQuantidadeVendas">0 vendas realizadas</span></div></article>
-                        <article class="mini-kpi"><span class="mini-kpi-icon"><i class="fas fa-ticket"></i></span><div><small>Ticket médio</small><strong id="kpiTicketMedio">R$ 0,00</strong><span>Valor médio por venda</span></div></article>
-                        <article class="mini-kpi"><span class="mini-kpi-icon"><i class="fas fa-file-signature"></i></span><div><small>Orçamentos</small><strong id="kpiOrcamentosPeriodo">0</strong><span id="kpiOrcamentosAprovados">0 aprovados</span><span id="kpiOrcamentosEmAberto">0 em aberto</span></div></article>
-                        <article class="mini-kpi"><span class="mini-kpi-icon"><i class="fas fa-bullseye"></i></span><div><small>Taxa de conversão</small><strong id="kpiConversao">0%</strong><span>Orçamentos aprovados</span></div></article>
-                    </div>
-
+                <div class="dashboard-panel dashboard-panel-operacao" id="painel-operacao" role="tabpanel" aria-labelledby="aba-operacao" tabindex="0" hidden>
                     <div class="operational-kpis">
                         <article><i class="fas fa-user-friends"></i><div><span>Clientes</span><strong id="kpiClientes">0</strong></div></article>
                         <article><i class="fas fa-truck-field"></i><div><span>Fornecedores</span><strong id="kpiFornecedores">0</strong></div></article>
@@ -304,21 +321,13 @@
                         <article><i class="fas fa-coins"></i><div><span>Valor total orçado</span><strong id="kpiValor">R$ 0,00</strong></div></article>
                     </div>
 
-                    <div class="dashboard-grid operational-tables">
-                        <article class="dashboard-card">
-                            <div class="dashboard-card-header"><div><h2>Últimos orçamentos</h2><p>Propostas comerciais recentes</p></div></div>
-                            <div class="table-responsive">
-                                <table class="table"><thead><tr><th>Número</th><th>Cliente</th><th>Total</th><th>Data</th></tr></thead><tbody id="tabelaOrcamentos"></tbody></table>
-                            </div>
-                        </article>
                         <article class="dashboard-card">
                             <div class="dashboard-card-header"><div><h2>Alertas de estoque</h2><p>Itens próximos ou abaixo do mínimo</p></div></div>
                             <div class="table-responsive">
                                 <table class="table"><thead><tr><th>Produto</th><th>Código</th><th>Atual</th><th>Mínimo</th><th>Custo médio</th></tr></thead><tbody id="tabelaEstoqueBaixo"></tbody></table>
                             </div>
                         </article>
-                    </div>
-                </section>
+                </div>
             </section>
         </main>
     </div>
@@ -329,7 +338,7 @@
     <script src="../js/utils.js"></script>
     <script src="../js/app.js"></script>
     <script src="../js/menu.js"></script>
-    <script src="../js/dashboard.js"></script>
+    <script src="../js/dashboard.js?v=abas-1"></script>
     <script src="../js/despesas-fixas.js"></script>
 </body>
 
