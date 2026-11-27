@@ -86,8 +86,19 @@
         </section>
     </main>
 </div>
-<dialog id="editarVendaDialog" aria-labelledby="tituloEdicaoVenda" style="width:min(980px,95vw);max-height:90vh;border:1px solid #dbe1ea;border-radius:14px;padding:24px;">
+<dialog id="editarVendaDialog" aria-labelledby="tituloEdicaoVenda">
     <style>
+        #editarVendaDialog {
+            position: fixed;
+            inset: 0;
+            margin: auto;
+            width: min(980px, calc(100% - 32px));
+            max-height: calc(100dvh - 32px);
+            overflow: auto;
+            border: 1px solid #dbe1ea;
+            border-radius: 14px;
+            padding: clamp(16px, 3vw, 24px);
+        }
         #editarVendaDialog::backdrop { background:#15233f99; }
         #editarVendaDialog section { margin:16px 0; }
         #editarVendaDialog label { display:grid; gap:4px; }
