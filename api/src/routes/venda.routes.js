@@ -8,6 +8,8 @@ const nfeService = require("../services/nfe.service");
 const nfseController = require("../controllers/nfse.controller");
 
 router.get("/", auth, autorizar("vendas.visualizar"), controller.listar);
+router.get("/catalogo-edicao", auth, autorizar("vendas.faturar"), controller.catalogoEdicao);
+router.put("/:id", auth, autorizar("vendas.faturar"), controller.editar);
 router.put("/:id/faturar", auth, autorizar("vendas.faturar"), controller.faturar);
 router.put("/:id/cancelar", auth, autorizar("vendas.cancelar"), controller.cancelar);
 router.get("/:id/nfe", auth, autorizar("fiscal.visualizar"), nfeController.buscar);

@@ -11,6 +11,14 @@ class VendaService {
         return venda;
     }
 
+    catalogoEdicao(empresaId) {
+        return vendaRepository.catalogoEdicao(empresaId);
+    }
+
+    editar(id, dados) {
+        return vendaRepository.editar(id, dados);
+    }
+
     faturar(id, dados) {
         return vendaRepository.faturar(id, dados);
     }

@@ -21,6 +21,29 @@ class VendaController {
         }
     }
 
+    async catalogoEdicao(req, res) {
+        try {
+            const catalogo = await vendaService.catalogoEdicao(req.usuario.empresaId);
+            return res.json({ sucesso: true, ...catalogo });
+        } catch (error) {
+            return res.status(400).json({ sucesso: false, mensagem: error.message });
+        }
+    }
+
+    async editar(req, res) {
+        try {
+            const resultado = await vendaService.editar(Number(req.params.id), {
+                empresaId: req.usuario.empresaId, usuarioId: req.usuario.id, entrada: req.body || {}
+            });
+            return res.json({ sucesso: true, ...resultado });
+        } catch (error) {
+            const mensagem = error.code === "P2034"
+                ? "A venda ou os lançamentos mudaram durante a edição. Reabra a venda e tente novamente."
+                : error.message;
+            return res.status(422).json({ sucesso: false, mensagem });
+        }
+    }
+
     async faturar(req, res) {
         try {
             const vendaId = Number(req.params.id);

@@ -490,6 +490,10 @@ async function visualizarVenda(id) {
     btnXml.onclick = () => baixarDocumentoNfe(nfe, v.id, "xml", btnXml);
     btnCancelar.onclick = () => cancelarNfeVenda(nfe, v.id, btnCancelar);
 
+    const btnEditar = document.getElementById("btnEditarVendaFaturada");
+    btnEditar.hidden = v.status !== "FATURADA" || !window.temPermissao?.("vendas.faturar");
+    btnEditar.style.display = btnEditar.hidden ? "none" : "inline-flex";
+    btnEditar.onclick = () => abrirEdicaoVenda(v.id, btnEditar);
     document.getElementById("btnFaturarVenda").style.display = v.status === "CONFIRMADA" ? "inline-flex" : "none";
     document.getElementById("btnCancelarVenda").style.display = v.status === "CONFIRMADA" ? "inline-flex" : "none";
     document.getElementById("modalVenda").classList.add("active");

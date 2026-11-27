@@ -22,6 +22,12 @@ class NfseRepository {
 
     async criarPreparada(venda, dadosEmissao) {
         return prisma.$transaction(async tx => {
+            const versao = await tx.venda.updateMany({
+                where: { id: venda.id, empresaId: venda.empresaId, atualizadoEm: venda.atualizadoEm },
+                data: { atualizadoEm: new Date() }
+            });
+            if (versao.count !== 1) throw new Error("A venda mudou. Confira os dados fiscais e tente novamente.");
+
             const fiscal = await tx.configuracaoFiscal.findUnique({ where: { empresaId: venda.empresaId } });
             const numeroDps = fiscal.proximoNumeroDps;
             const nota = await tx.notaFiscalServico.create({

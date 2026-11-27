@@ -80,17 +80,48 @@
                         </section>
                         <section class="modal-tab-panel" data-modal-panel="fiscal"><div class="modal-section-card"><div class="modal-section-head"><div><h3>Situação fiscal</h3><p>Status e pendências da NF-e.</p></div></div><div id="viewVendaFiscal" class="card"><div class="card-body"><div id="viewVendaFiscalStatus">Nenhuma NF-e preparada.</div><div id="viewVendaFiscalPendencias" style="display:none;margin-top:12px;"></div></div></div></div></section>
                     </div>
-                    <div class="modal-footer"><button class="btn btn-light" onclick="fecharVenda()">Fechar</button><button id="btnCancelarVenda" class="btn btn-danger" onclick="cancelarVendaAtual()"><i class="fas fa-ban"></i> Cancelar venda</button><button id="btnDanfeNfe" class="btn btn-light" style="display:none"><i class="fas fa-file-pdf"></i> Baixar DANFE (PDF)</button><button id="btnXmlNfe" class="btn btn-light" style="display:none"><i class="fas fa-code"></i> Baixar XML</button><button id="btnCancelarNfe" class="btn btn-danger" style="display:none"><i class="fas fa-ban"></i> Cancelar NF-e</button><button id="btnEmitirNfse" class="btn btn-primary" style="display:none" onclick="emitirNfseAtual()"><i class="fas fa-file-signature"></i> Emitir NFS-e Serviços</button><button id="btnEmitirNfe" class="btn btn-primary" style="display:none" onclick="verificarPendenciasNfe()"><i class="fas fa-file-invoice"></i> Pendências da NF-e Materiais</button><button id="btnFaturarVenda" class="btn btn-success" onclick="faturarVendaAtual()"><i class="fas fa-file-invoice-dollar"></i> Faturar venda</button></div>
+                    <div class="modal-footer"><button class="btn btn-light" onclick="fecharVenda()">Fechar</button><button id="btnEditarVendaFaturada" class="btn btn-primary" hidden>Editar venda</button><button id="btnCancelarVenda" class="btn btn-danger" onclick="cancelarVendaAtual()"><i class="fas fa-ban"></i> Cancelar venda</button><button id="btnDanfeNfe" class="btn btn-light" style="display:none"><i class="fas fa-file-pdf"></i> Baixar DANFE (PDF)</button><button id="btnXmlNfe" class="btn btn-light" style="display:none"><i class="fas fa-code"></i> Baixar XML</button><button id="btnCancelarNfe" class="btn btn-danger" style="display:none"><i class="fas fa-ban"></i> Cancelar NF-e</button><button id="btnEmitirNfse" class="btn btn-primary" style="display:none" onclick="emitirNfseAtual()"><i class="fas fa-file-signature"></i> Emitir NFS-e Serviços</button><button id="btnEmitirNfe" class="btn btn-primary" style="display:none" onclick="verificarPendenciasNfe()"><i class="fas fa-file-invoice"></i> Pendências da NF-e Materiais</button><button id="btnFaturarVenda" class="btn btn-success" onclick="faturarVendaAtual()"><i class="fas fa-file-invoice-dollar"></i> Faturar venda</button></div>
                 </div>
             </div>
         </section>
     </main>
 </div>
+<dialog id="editarVendaDialog" aria-labelledby="tituloEdicaoVenda" style="width:min(980px,95vw);max-height:90vh;border:1px solid #dbe1ea;border-radius:14px;padding:24px;">
+    <style>
+        #editarVendaDialog::backdrop { background:#15233f99; }
+        #editarVendaDialog section { margin:16px 0; }
+        #editarVendaDialog label { display:grid; gap:4px; }
+        .edicao-venda-linha, #camposEdicaoVenda { display:grid; grid-template-columns:repeat(auto-fit,minmax(145px,1fr)); gap:10px; align-items:end; margin:8px 0; }
+        .edicao-venda-linha { padding:10px; border:1px solid #dbe1ea; border-radius:8px; }
+        #decisaoEdicaoVenda { padding:12px; border:1px solid #a9bdd9; margin-bottom:12px; }
+        #erroEdicaoVenda { color:#b42318; }
+    </style>
+    <form id="formEdicaoVenda">
+        <h2 id="tituloEdicaoVenda">Editar venda</h2>
+        <div id="camposEdicaoVenda"></div>
+        <section aria-label="Itens da venda">
+            <h3>Itens da venda</h3>
+            <div id="itensEdicaoVenda"></div>
+            <label>Catálogo<select id="catalogoEdicaoVenda" class="form-control"></select></label>
+            <button type="button" id="adicionarItemEdicaoVenda" class="btn btn-light">Adicionar item</button>
+        </section>
+        <section aria-label="Custos internos">
+            <h3>Custos internos</h3>
+            <div id="custosEdicaoVenda"></div>
+            <button type="button" id="adicionarCustoEdicaoVenda" class="btn btn-light">Adicionar custo</button>
+        </section>
+        <fieldset id="decisaoEdicaoVenda" hidden></fieldset>
+        <p id="erroEdicaoVenda" role="alert"></p>
+        <button type="button" id="fecharEdicaoVenda" class="btn btn-light">Fechar</button>
+        <button type="submit" id="salvarEdicaoVenda" class="btn btn-primary">Salvar alterações</button>
+    </form>
+</dialog>
 <script src="../js/layout.js"></script>
 <script src="../js/api.js"></script>
 <script src="../js/utils.js"></script>
 <script src="../js/app.js"></script>
 <script src="../js/menu.js"></script>
 <script src="../js/vendas.js"></script>
+<script src="../js/edicao-venda.js"></script>
 </body>
 </html>

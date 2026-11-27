@@ -43,6 +43,12 @@ class NfeRepository {
             const existente = await tx.notaFiscal.findUnique({ where: { vendaId: venda.id } });
             if (existente) return existente;
 
+            const versao = await tx.venda.updateMany({
+                where: { id: venda.id, empresaId: venda.empresaId, atualizadoEm: venda.atualizadoEm },
+                data: { atualizadoEm: new Date() }
+            });
+            if (versao.count !== 1) throw new Error("A venda mudou. Confira os dados fiscais e tente novamente.");
+
             const fiscal = await tx.configuracaoFiscal.update({
                 where: { empresaId: venda.empresaId, ambiente: "PRODUCAO", ativo: true },
                 data: { proximoNumeroNfe: { increment: 1 } }

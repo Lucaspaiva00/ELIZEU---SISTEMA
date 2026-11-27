@@ -1,5 +1,6 @@
 const { Prisma } = require("@prisma/client");
 const prisma = require("../config/prisma");
+const editarVenda = require("./edicaoVenda");
 
 function adicionarDias(data, dias) {
     const resultado = new Date(data);
@@ -255,6 +256,38 @@ class VendaRepository {
         });
 
         return enriquecerVenda(venda);
+    }
+
+    async catalogoEdicao(empresaId) {
+        const [clientes, produtos, servicos] = await Promise.all([
+            prisma.cliente.findMany({ where: { empresaId }, select: { id: true, nome: true }, orderBy: { nome: "asc" } }),
+            prisma.produto.findMany({
+                where: { empresaId, ativo: true }, orderBy: { nome: "asc" },
+                select: { nome: true, variacoes: { where: { ativo: true }, select: {
+                    id: true, sku: true, tamanho: true, saida: true, descricao: true, precoVenda: true, precoCusto: true
+                } } }
+            }),
+            prisma.servico.findMany({
+                where: { empresaId, ativo: true }, orderBy: { nome: "asc" },
+                select: { nome: true, variacoes: { where: { ativo: true }, select: {
+                    id: true, codigo: true, descricao: true, precoVenda: true, precoCusto: true
+                } } }
+            })
+        ]);
+        return { clientes, produtos, servicos };
+    }
+
+    async editar(id, { empresaId, usuarioId, entrada }) {
+        return prisma.$transaction(async tx => {
+            const venda = await tx.venda.findFirst({ where: { id, empresaId }, include: includeVenda() });
+            if (!venda) throw new Error("Venda não encontrada.");
+            const resultado = await editarVenda(tx, venda, entrada, usuarioId, {
+                dividirValor, calcularVencimento, gerarContasPagarCustosInternos
+            });
+            if (resultado.decisaoFinanceira) return resultado;
+            const atualizada = await tx.venda.findUnique({ where: { id }, include: includeVenda() });
+            return { venda: enriquecerVenda(atualizada) };
+        }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, timeout: 20000 });
     }
 
     async faturar(id, dados) {
