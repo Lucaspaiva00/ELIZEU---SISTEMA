@@ -171,7 +171,8 @@ formEdicaoVenda.onsubmit = async event => {
     erro.textContent = "";
     botao.disabled = true;
     const id = vendaEmEdicao.id;
-    const dados = Object.fromEntries(new FormData(formEdicaoVenda));
+    const dados = camposLinhaEdicao(document.getElementById("camposEdicaoVenda"));
+    const decisao = camposLinhaEdicao(decisaoEdicao);
     const itens = Array.from(listaItensEdicao.children, linha => ({
         ...camposLinhaEdicao(linha), id: Number(linha.dataset.id) || undefined,
         tipo: linha.dataset.tipo, variacaoId: Number(linha.dataset.variacaoId)
@@ -183,7 +184,7 @@ formEdicaoVenda.onsubmit = async event => {
     try {
         const resposta = await put(`/vendas/${id}`, {
             ...dados, atualizadoEm: vendaEmEdicao.atualizadoEm, itens, custosInternos,
-            decisaoFinanceira: { tipo: dados.decisaoTipo, valor: dados.decisaoValor, saldo: decisaoEdicao.dataset.saldo }
+            decisaoFinanceira: { tipo: decisao.decisaoTipo, valor: decisao.decisaoValor, saldo: decisaoEdicao.dataset.saldo }
         });
         if (!resposta?.sucesso) throw new Error(resposta?.mensagem || "Não foi possível salvar a venda.");
         if (resposta.decisaoFinanceira) return perguntarDecisaoEdicao(resposta.decisaoFinanceira);
