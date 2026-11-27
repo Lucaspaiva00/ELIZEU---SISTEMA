@@ -197,6 +197,50 @@
                     </article>
                 </section>
 
+                <section class="dashboard-card" id="painelDespesasFixas" hidden aria-labelledby="tituloDespesasFixas">
+                    <style>
+                        #painelDespesasFixas { margin-block: 20px; }
+                        #mesDespesasFixas { width: auto; }
+                        #formDespesasFixas { border: 0; }
+                        #painelDespesasFixas details, #acoesDespesasFixas { margin-top: 12px; }
+                        #painelDespesasFixas summary { cursor: pointer; }
+                        .despesas-fixas-linha { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) auto; gap: 10px; align-items: end; margin: 8px 0; }
+                        @media (max-width: 540px) { .despesas-fixas-linha { grid-template-columns: 1fr; } }
+                    </style>
+                    <div class="dashboard-card-header">
+                        <div><h2 id="tituloDespesasFixas">Cobertura das despesas fixas</h2><p>Calculada pelo lucro estimado das vendas faturadas, na data da venda.</p></div>
+                        <label>Mês <input id="mesDespesasFixas" class="form-control" type="month" required></label>
+                    </div>
+                    <p id="estadoDespesasFixas" role="status"></p>
+                    <div id="resumoDespesasFixas" hidden>
+                        <div class="managerial-kpis">
+                            <article class="mini-kpi"><div><small>Despesas fixas</small><strong id="totalDespesasFixas">—</strong></div></article>
+                            <article class="mini-kpi"><div><small>Lucro acumulado</small><strong id="lucroDespesasFixas">—</strong></div></article>
+                            <article class="mini-kpi"><div><small>Falta cobrir</small><strong id="faltaDespesasFixas">—</strong></div></article>
+                            <article class="mini-kpi"><div><small>Saldo após despesas</small><strong id="saldoDespesasFixas">—</strong></div></article>
+                        </div>
+                        <p id="dataCoberturaDespesasFixas"></p>
+                        <details>
+                            <summary>Ver evolução por dia</summary>
+                            <div class="table-responsive"><table class="table"><thead><tr>
+                                <th>Dia</th><th>Lucro do dia</th><th>Lucro acumulado</th><th>Falta cobrir</th><th>Saldo</th>
+                            </tr></thead><tbody id="evolucaoDespesasFixas"></tbody></table></div>
+                        </details>
+                        <details>
+                            <summary>Despesas cadastradas no mês</summary>
+                            <form>
+                                <fieldset id="formDespesasFixas" disabled>
+                                    <div id="linhasDespesasFixas"></div>
+                                    <div id="acoesDespesasFixas">
+                                        <button type="button" id="adicionarDespesaFixa" class="btn btn-light">Adicionar despesa</button>
+                                        <button type="submit" id="salvarDespesaFixa" class="btn btn-primary">Salvar despesas</button>
+                                    </div>
+                                </fieldset>
+                            </form>
+                        </details>
+                    </div>
+                </section>
+
                 <section class="managerial-section">
                     <div class="section-heading">
                         <div>
@@ -286,6 +330,7 @@
     <script src="../js/app.js"></script>
     <script src="../js/menu.js"></script>
     <script src="../js/dashboard.js"></script>
+    <script src="../js/despesas-fixas.js"></script>
 </body>
 
 </html>

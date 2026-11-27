@@ -221,6 +221,7 @@ model Empresa {
   centrosCusto             CentroCusto[]
   contasReceber            ContaReceber[]
   contasPagar              ContaPagar[]
+  despesasFixasMensais     DespesaFixaMensal[]
   movimentacoesFinanceiras MovimentacaoFinanceira[]
   movimentacoesEstoque     MovimentacaoEstoque[]
   movimentacoesEstoqueProduto MovimentacaoEstoqueProduto[]
@@ -233,6 +234,15 @@ model Empresa {
 
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
+}
+
+model DespesaFixaMensal {
+  empresaId Int
+  empresa   Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  mes       String
+  itens     Json
+
+  @@id([empresaId, mes])
 }
 
 model ConfiguracaoFiscal {
