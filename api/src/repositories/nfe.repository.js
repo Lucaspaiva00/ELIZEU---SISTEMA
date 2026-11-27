@@ -92,6 +92,13 @@ class NfeRepository {
         if (count !== 1) throw new Error("A nota ou a configuração mudou. Consulte a situação antes de tentar novamente.");
     }
 
+    registrarCancelamento(nota, dados) {
+        return prisma.notaFiscal.updateMany({
+            where: { id: nota.id, empresaId: nota.empresaId, status: "AUTORIZADA", chaveAcesso: nota.chaveAcesso },
+            data: dados
+        });
+    }
+
     atualizar(notaId, dados) {
         return prisma.notaFiscal.update({ where: { id: notaId }, data: dados });
     }

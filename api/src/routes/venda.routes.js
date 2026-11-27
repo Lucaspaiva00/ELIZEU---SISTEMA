@@ -36,6 +36,8 @@ router.get("/:id/nfe/previsualizar", auth, autorizar("fiscal.visualizar"), async
         return res.status(422).json({ sucesso: false, mensagem: erro.message });
     }
 });
+router.get("/:id/nfe/xml", auth, autorizar("fiscal.visualizar"), nfeController.baixarXml);
+router.get("/:id/nfe/danfe", auth, autorizar("fiscal.visualizar"), nfeController.baixarDanfe);
 router.get("/:id/nfe/validar", auth, autorizar("fiscal.visualizar"), nfeController.validar);
 router.post("/:id/nfe/preparar", auth, autorizar("fiscal.emitir"), nfeController.preparar);
 router.post("/:id/nfe/emitir", auth, autorizar("fiscal.emitir"), nfeController.emitir);

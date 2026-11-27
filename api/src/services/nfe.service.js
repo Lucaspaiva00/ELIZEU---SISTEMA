@@ -317,8 +317,30 @@ class NfeService {
         return { notaFiscal: atualizada, consulta };
     }
 
-    async cancelar() {
-        throw new Error("O cancelamento direto da NF-e na SEFAZ ainda está indisponível.");
+    async cancelar(vendaId, empresaId, justificativa) {
+        const { notaFiscal: nota } = await this.buscarPorVenda(vendaId, empresaId);
+        if (nota?.modelo !== 55) throw new Error("NF-e de mercadorias não encontrada.");
+        if (nota.status === "CANCELADA") return { notaFiscal: nota };
+        if (nota.status !== "AUTORIZADA" || !nota.protocolo) {
+            throw new Error("A NF-e precisa estar autorizada para solicitar o cancelamento.");
+        }
+        const motivo = typeof justificativa === "string" ? justificativa.replace(/\s+/g, " ").trim() : "";
+        if (motivo.length < 15 || motivo.length > 255 || /[\x00-\x1f\ufffe\uffff]/.test(motivo)) {
+            throw new Error("Informe uma justificativa de cancelamento entre 15 e 255 caracteres.");
+        }
+        const evento = await sefazGoService.cancelarNfe(empresaId, nota, motivo);
+        if (!evento.cancelada) {
+            const atual = await nfeRepository.buscarPorVenda(vendaId, empresaId);
+            if (atual?.status === "CANCELADA") return { notaFiscal: atual };
+            throw new Error([evento.codigo || `HTTP ${evento.httpStatus}`, evento.motivo].filter(Boolean).join(" · "));
+        }
+        await nfeRepository.registrarCancelamento(nota, {
+            status: "CANCELADA",
+            canceladaEm: new Date(evento.registradoEm),
+            motivoStatus: `${evento.codigo} · ${evento.motivo}`,
+            eventoCancelamento: { ...evento, justificativa: motivo }
+        });
+        return this.buscarPorVenda(vendaId, empresaId);
     }
 
     async buscarPorVenda(vendaId, empresaId) {

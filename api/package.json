@@ -15,10 +15,12 @@
   },
   "dependencies": {
     "@prisma/client": "^6.0.0",
+    "@treeunfe/danfe": "3.7.4",
     "bcryptjs": "^3.0.0",
     "cors": "^2.8.5",
     "dotenv": "^17.0.0",
     "express": "^5.0.0",
+    "fast-xml-parser": "5.7.0",
     "jsonwebtoken": "^9.0.0"
   },
   "devDependencies": {

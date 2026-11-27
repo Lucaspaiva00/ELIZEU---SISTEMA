@@ -1,5 +1,6 @@
 const https = require("https");
 const crypto = require("node:crypto");
+const { dataEmissao } = require("./nfeXmlGo");
 const { execFileSync } = require("node:child_process");
 const prisma = require("../config/prisma");
 const { descriptografarCertificado } = require("../utils/certificadoCrypto");
@@ -47,7 +48,7 @@ function request({url,pfx,passphrase,body,action}){
 }
 
 
-function assinarNfe(nfe, pfx, senha) {
+function assinarXml({ xml, inf, id, fechamento }, pfx, senha) {
   const pem = execFileSync("openssl", ["pkcs12", "-nodes", "-passin", "env:ELIAN_NFE_A1"], {
     input: pfx, encoding: "utf8", env: { ...process.env, ELIAN_NFE_A1: senha },
     stdio: ["pipe", "pipe", "pipe"]
@@ -60,16 +61,16 @@ function assinarNfe(nfe, pfx, senha) {
   if (!certificado) throw new Error("O A1 não contém o certificado correspondente à chave.");
   const ds = "http://www.w3.org/2000/09/xmldsig#";
   const c14n = "http://www.w3.org/TR/2001/REC-xml-c14n-20010315";
-  const digest = crypto.createHash("sha1").update(nfe.infNFe).digest("base64");
+  const digest = crypto.createHash("sha1").update(inf).digest("base64");
   const info = [
     `<SignedInfo xmlns="${ds}"><CanonicalizationMethod Algorithm="${c14n}"></CanonicalizationMethod>`,
-    `<SignatureMethod Algorithm="${ds}rsa-sha1"></SignatureMethod><Reference URI="#NFe${nfe.chave}">`,
+    `<SignatureMethod Algorithm="${ds}rsa-sha1"></SignatureMethod><Reference URI="#${id}">`,
     `<Transforms><Transform Algorithm="${ds}enveloped-signature"></Transform><Transform Algorithm="${c14n}"></Transform></Transforms>`,
     `<DigestMethod Algorithm="${ds}sha1"></DigestMethod><DigestValue>${digest}</DigestValue></Reference></SignedInfo>`
   ].join("");
   const assinatura = crypto.sign("RSA-SHA1", Buffer.from(info), chave).toString("base64");
   const xmlSignature = `<Signature xmlns="${ds}">${info}<SignatureValue>${assinatura}</SignatureValue><KeyInfo><X509Data><X509Certificate>${certificado.raw.toString("base64")}</X509Certificate></X509Data></KeyInfo></Signature>`;
-  return nfe.xml.replace("</NFe>", xmlSignature + "</NFe>");
+  return xml.replace(fechamento, xmlSignature + fechamento);
 }
 
 class SefazGoService {
@@ -85,7 +86,7 @@ class SefazGoService {
     if (!empresa?.certificadoDigital?.ativo) throw new Error("Certificado A1 não configurado.");
     const certificado = descriptografarCertificado(empresa.certificadoDigital);
     const pfx = Buffer.from(certificado.arquivoBase64, "base64");
-    const xml = assinarNfe(nfe, pfx, certificado.senha);
+    const xml = assinarXml({ xml: nfe.xml, inf: nfe.infNFe, id: "NFe" + nfe.chave, fechamento: "</NFe>" }, pfx, certificado.senha);
     if (antesDeEnviar) await antesDeEnviar(xml);
     return this.enviarXmlAssinado({ xml, chave: nfe.chave, lote, ambiente, pfx, senha: certificado.senha });
   }
@@ -133,6 +134,46 @@ class SefazGoService {
       ambiente, autorizada, codigo, motivo, httpStatus: resposta.status,
       chave, protocolo: autorizada ? numeroProtocolo : null,
       recibo: extrair(resposta.body, "nRec")
+    };
+  }
+
+  async cancelarNfe(empresaId, nota, justificativa) {
+    const { chaveAcesso: chave, ambiente, protocolo, id: lote } = nota;
+    if (!/^52\d{42}$/.test(chave || "") || !/^\d{15}$/.test(protocolo || "")
+      || !["PRODUCAO", "HOMOLOGACAO"].includes(ambiente)) throw new Error("Chave, ambiente ou protocolo inválido.");
+    const empresa = await prisma.empresa.findUnique({ where: { id: empresaId }, include: { certificadoDigital: true } });
+    if (!empresa?.certificadoDigital?.ativo) throw new Error("Certificado A1 não configurado.");
+    const cnpj = String(empresa.cnpj || "").replace(/\D/g, "");
+    if (chave.slice(6, 20) !== cnpj) throw new Error("A chave da NF-e não pertence à empresa emitente.");
+    const certificado = descriptografarCertificado(empresa.certificadoDigital);
+    const pfx = Buffer.from(certificado.arquivoBase64, "base64");
+    const tpAmb = ambiente === "PRODUCAO" ? "1" : "2";
+    const host = tpAmb === "1" ? "nfe.sefaz.go.gov.br" : "homolog.sefaz.go.gov.br";
+    const ns = "http://www.portalfiscal.inf.br/nfe";
+    const id = `ID110111${chave}01`;
+    const texto = justificativa.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+    const inf = `<infEvento xmlns="${ns}" Id="${id}"><cOrgao>52</cOrgao><tpAmb>${tpAmb}</tpAmb><CNPJ>${cnpj}</CNPJ><chNFe>${chave}</chNFe><dhEvento>${dataEmissao(new Date())}</dhEvento><tpEvento>110111</tpEvento><nSeqEvento>1</nSeqEvento><verEvento>1.00</verEvento><detEvento versao="1.00"><descEvento>Cancelamento</descEvento><nProt>${protocolo}</nProt><xJust>${texto}</xJust></detEvento></infEvento>`;
+    const evento = assinarXml({
+      xml: `<evento xmlns="${ns}" versao="1.00">${inf}</evento>`, inf, id, fechamento: "</evento>"
+    }, pfx, certificado.senha);
+    const wsdl = ns + "/wsdl/NFeRecepcaoEvento4";
+    const body = `<soap12:Envelope xmlns:soap12="http://www.w3.org/2003/05/soap-envelope"><soap12:Body><nfeDadosMsg xmlns="${wsdl}"><envEvento xmlns="${ns}" versao="1.00"><idLote>${lote}</idLote>${evento}</envEvento></nfeDadosMsg></soap12:Body></soap12:Envelope>`;
+    const resposta = await request({
+      url: `https://${host}/nfe/services/NFeRecepcaoEvento4`, pfx,
+      passphrase: certificado.senha, body, action: wsdl + "/nfeRecepcaoEvento"
+    });
+    const infRet = resposta.body.match(/<(?:[\w.-]+:)?infEvento\b[^>]*>[\s\S]*?<\/(?:[\w.-]+:)?infEvento>/)?.[0];
+    const codigo = extrair(infRet || resposta.body, "cStat");
+    const motivo = extrair(infRet || resposta.body, "xMotivo");
+    const nProt = extrair(infRet, "nProt");
+    const registradoEm = extrair(infRet, "dhRegEvento");
+    const cancelada = resposta.status === 200 && ["135", "155"].includes(codigo)
+      && extrair(infRet, "tpAmb") === tpAmb && extrair(infRet, "chNFe") === chave
+      && extrair(infRet, "tpEvento") === "110111" && /^\d{15}$/.test(nProt || "")
+      && Number.isFinite(Date.parse(registradoEm));
+    return {
+      cancelada, codigo, motivo, protocolo: nProt, registradoEm,
+      xmlEnvio: evento, xmlRetorno: resposta.body, httpStatus: resposta.status
     };
   }
 

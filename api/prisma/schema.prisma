@@ -1016,6 +1016,7 @@ model NotaFiscal {
 
   xmlEnvio     String? @db.Text
   xmlRetorno   String? @db.Text
+  eventoCancelamento Json?
   motivoStatus String? @db.Text
 
   referenciaFocus String? @unique

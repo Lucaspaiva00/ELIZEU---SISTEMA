@@ -126,4 +126,4 @@ function montarNfeHomologacao(nota, codigoNumerico, data) {
     return montarNfe(nota, codigoNumerico, data);
 }
 
-module.exports = { montarNfe, montarNfeHomologacao, chaveNfe };
+module.exports = { montarNfe, montarNfeHomologacao, chaveNfe, dataEmissao };

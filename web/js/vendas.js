@@ -292,6 +292,9 @@ async function visualizarVenda(id) {
         detalhes.push(`Ambiente ${nfe.ambiente === "PRODUCAO" ? "Produção" : "Homologação"}`);
         if (nfe.chaveAcesso) detalhes.push(`Chave: ${esc(nfe.chaveAcesso)}`);
         if (nfe.protocolo) detalhes.push(`Protocolo: ${esc(nfe.protocolo)}`);
+        if (nfe.eventoCancelamento?.protocolo) {
+            detalhes.push(`Protocolo de cancelamento: ${esc(nfe.eventoCancelamento.protocolo)}`);
+        }
 
         fiscalStatus.innerHTML = `
             <strong>${esc(fiscal.texto)}</strong>
@@ -473,8 +476,19 @@ async function visualizarVenda(id) {
         v.status === "FATURADA" && temProdutos && (!nfe || ["PRONTA_TRANSMISSAO", "REJEITADA", "ERRO"].includes(nfe.status)) ? "inline-flex" : "none";
     document.getElementById("btnEmitirNfse").style.display =
         v.status === "FATURADA" && temServicos && (!v.notaFiscalServico || ["PRONTA_TRANSMISSAO", "REJEITADA", "ERRO","PENDENTE_CONFIGURACAO"].includes(v.notaFiscalServico.status)) ? "inline-flex" : "none";
-    document.getElementById("btnDanfeNfe").style.display = nfe?.caminhoDanfe ? "inline-flex" : "none";
-    document.getElementById("btnXmlNfe").style.display = nfe?.caminhoXml ? "inline-flex" : "none";
+    const documentoDisponivel = nfe?.protocolo && ["AUTORIZADA", "CANCELADA"].includes(nfe.status);
+    const podeConsultarFiscal = window.temPermissao?.("fiscal.visualizar");
+    document.getElementById("btnDanfeNfe").style.display = podeConsultarFiscal && (documentoDisponivel || nfe?.caminhoDanfe) ? "inline-flex" : "none";
+    document.getElementById("btnXmlNfe").style.display = podeConsultarFiscal && (documentoDisponivel || nfe?.caminhoXml) ? "inline-flex" : "none";
+    document.getElementById("btnCancelarNfe").style.display =
+        documentoDisponivel && nfe.status === "AUTORIZADA" && window.temPermissao?.("fiscal.emitir") ? "inline-flex" : "none";
+
+    const btnDanfe = document.getElementById("btnDanfeNfe");
+    const btnXml = document.getElementById("btnXmlNfe");
+    const btnCancelar = document.getElementById("btnCancelarNfe");
+    btnDanfe.onclick = () => baixarDocumentoNfe(nfe, v.id, "danfe", btnDanfe);
+    btnXml.onclick = () => baixarDocumentoNfe(nfe, v.id, "xml", btnXml);
+    btnCancelar.onclick = () => cancelarNfeVenda(nfe, v.id, btnCancelar);
 
     document.getElementById("btnFaturarVenda").style.display = v.status === "CONFIRMADA" ? "inline-flex" : "none";
     document.getElementById("btnCancelarVenda").style.display = v.status === "CONFIRMADA" ? "inline-flex" : "none";
@@ -525,16 +539,62 @@ async function verificarPendenciasNfe() {
     document.querySelector('#modalVenda [data-modal-tab="fiscal"]')?.click();
 }
 
-function notaAtual() { return vendas.find(item => item.id === vendaAtualId)?.notaFiscal || null; }
-function abrirDanfeAtual() {
-    const url = notaAtual()?.caminhoDanfe;
-    if (!url) return mostrarMensagem("DANFE ainda não disponível.");
-    window.open(url, "_blank", "noopener,noreferrer");
+async function baixarDocumentoNfe(nota, id, tipo, botao) {
+    const pdf = tipo === "danfe";
+    const urlLegada = pdf ? nota.caminhoDanfe : nota.caminhoXml;
+    if (urlLegada && !nota.protocolo) {
+        window.open(urlLegada, "_blank", "noopener,noreferrer");
+        return;
+    }
+    botao.disabled = true;
+    try {
+        const resposta = await fetch(`${API}/vendas/${id}/nfe/${tipo}`, {
+            headers: { Authorization: `Bearer ${getToken()}` }
+        });
+        if (!resposta.ok) {
+            const erro = await resposta.json().catch(() => null);
+            throw new Error(erro?.mensagem || "Não foi possível baixar o documento fiscal.");
+        }
+        const url = URL.createObjectURL(await resposta.blob());
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = pdf ? `DANFE-${nota.chaveAcesso}.pdf` : `${nota.chaveAcesso}-procNFe.xml`;
+        document.body.append(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (error) {
+        mostrarMensagem(error.message, { tipo: "erro" });
+    } finally {
+        botao.disabled = false;
+    }
 }
-function abrirXmlAtual() {
-    const url = notaAtual()?.caminhoXml;
-    if (!url) return mostrarMensagem("XML ainda não disponível.");
-    window.open(url, "_blank", "noopener,noreferrer");
+
+async function cancelarNfeVenda(nota, id, botao) {
+    botao.disabled = true;
+    try {
+        const texto = await solicitarTexto("Informe a justificativa fiscal do cancelamento (15 a 255 caracteres).");
+        if (texto == null || vendaAtualId !== id) return;
+        const justificativa = texto.replace(/\s+/g, " ").trim();
+        if (justificativa.length < 15 || justificativa.length > 255) {
+            return mostrarMensagem("Informe uma justificativa entre 15 e 255 caracteres.", { tipo: "erro" });
+        }
+        const ambiente = nota.ambiente === "PRODUCAO" ? "produção" : "homologação";
+        if (!await confirmarAcao(`Enviar à SEFAZ o cancelamento da NF-e nº ${nota.numero}, série ${nota.serie}, em ${ambiente}?`)
+            || vendaAtualId !== id) return;
+        const resposta = await post(`/vendas/${id}/nfe/cancelar`, { confirmado: true, justificativa });
+        const evento = resposta?.notaFiscal?.eventoCancelamento;
+        if (resposta?.notaFiscal?.status !== "CANCELADA" || !evento?.protocolo) {
+            return mostrarMensagem(resposta?.mensagem || "Cancelamento ainda não confirmado pela SEFAZ.", { tipo: "erro" });
+        }
+        await carregarVendas();
+        if (vendaAtualId === id) await abrirFiscalVenda(id);
+        mostrarMensagem(`NF-e cancelada pela SEFAZ. Protocolo ${evento.protocolo}.`, { tipo: "sucesso" });
+    } catch (error) {
+        mostrarMensagem(error.message, { tipo: "erro" });
+    } finally {
+        botao.disabled = false;
+    }
 }
 
 async function emitirNfse(id) {
